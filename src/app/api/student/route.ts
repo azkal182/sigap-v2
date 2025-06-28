@@ -3,125 +3,152 @@ import type { NextRequest } from 'next/server'
 import db from '@/lib/prisma'
 
 export async function GET(request: NextRequest) {
-  // Ambil query parameters dari URL
   const { searchParams } = new URL(request.url)
 
-  // Pagination
   const page = parseInt(searchParams.get('page') || '1')
   const limit = parseInt(searchParams.get('limit') || '10')
   const skip = (page - 1) * limit
 
-  // Filter
   const search = searchParams.get('search') || ''
   const grade = searchParams.get('grade') || ''
+  const fan = searchParams.get('fan') || ''
+  const dormitory = searchParams.get('dormitory') || ''
 
-  // Sort
   const sortBy = searchParams.get('sortBy') || 'name'
-  const sortOrder = searchParams.get('sortOrder') || 'asc'
+  const sortOrder = searchParams.get('sortOrder') === 'desc' ? 'desc' : 'asc'
+
+  const allowedSortFields = ['name', 'nis', 'id']
+  const safeSortBy = allowedSortFields.includes(sortBy) ? sortBy : 'name'
 
   try {
-    // Hitung total data untuk pagination
-    const total = await db.student.count({
-      where: {
-        AND: [
-          search
-            ? {
+    const whereCondition = {
+      AND: [
+        ...(search
+          ? [
+              {
                 OR: [
-                  { name: { contains: search, mode: 'insensitive' } },
-                  { nis: { contains: search, mode: 'insensitive' } }
+                  { name: { contains: search, mode: 'insensitive' as const } },
+                  { nis: { contains: search, mode: 'insensitive' as const } }
                 ]
               }
-            : {},
-          grade
-            ? {
+            ]
+          : []),
+        ...(grade
+          ? [
+              {
                 studentGradeHistory: {
                   some: {
                     grade: {
-                      name: { equals: grade, mode: 'insensitive' }
+                      name: { equals: grade, mode: 'insensitive' as const }
                     },
                     endDate: null
                   }
                 }
               }
-            : {}
-        ]
-      }
-    })
+            ]
+          : []),
+        ...(fan
+          ? [
+              {
+                studentFanHistory: {
+                  some: {
+                    fan: {
+                      name: { equals: fan, mode: 'insensitive' as const }
+                    },
+                    endDate: null
+                  }
+                }
+              }
+            ]
+          : []),
+        ...(dormitory
+          ? [
+              {
+                studentDormitoryHistory: {
+                  some: {
+                    dormitory: {
+                      name: { equals: dormitory, mode: 'insensitive' as const }
+                    },
+                    endDate: null
+                  }
+                }
+              }
+            ]
+          : [])
+      ]
+    }
 
-    // Ambil data dengan pagination, filter, dan sort
+    const total = await db.student.count({ where: whereCondition })
+
     const students = await db.student.findMany({
       skip,
       take: limit,
-      where: {
-        AND: [
-          search
-            ? {
-                OR: [
-                  { name: { contains: search, mode: 'insensitive' } },
-                  { nis: { contains: search, mode: 'insensitive' } }
-                ]
-              }
-            : {},
-          grade
-            ? {
-                studentGradeHistory: {
-                  some: {
-                    grade: {
-                      name: { equals: grade, mode: 'insensitive' }
-                    },
-                    endDate: null
-                  }
-                }
-              }
-            : {}
-        ]
-      },
+      where: whereCondition,
       orderBy: {
-        [sortBy]: sortOrder
+        [safeSortBy]: sortOrder
       },
       select: {
         id: true,
         name: true,
         nis: true,
         studentGradeHistory: {
-          where: {
-            endDate: null
-          },
-          orderBy: {
-            startDate: 'desc'
-          },
+          where: { endDate: null },
+          orderBy: { startDate: 'desc' },
+          take: 1,
+          select: {
+            startDate: true,
+            grade: {
+              select: { name: true }
+            }
+          }
+        },
+        studentDormitoryHistory: {
+          where: { endDate: null },
+          orderBy: { startDate: 'desc' },
           take: 1,
           select: {
             startDate: true,
             dormitory: {
-              select: {
-                name: true
-              }
-            },
-            grade: {
-              select: {
-                name: true
-              }
+              select: { name: true }
+            }
+          }
+        },
+        studentFanHistory: {
+          where: { endDate: null },
+          orderBy: { startDate: 'desc' },
+          take: 1,
+          select: {
+            startDate: true,
+            fan: {
+              select: { name: true }
             }
           }
         }
       }
     })
 
-    // Format data
-    const formattedStudents = students.map(s => ({
-      ...s,
-      StudentGradeHistory: s.studentGradeHistory.length > 0 ? s.studentGradeHistory[0] : null
-    }))
+    const formattedStudents = students.map(s => {
+      const gradeHistory = s.studentGradeHistory?.[0]
+      const dormHistory = s.studentDormitoryHistory?.[0]
+      const fanHistory = s.studentFanHistory?.[0]
 
-    // Hitung total halaman
+      return {
+        id: s.id,
+        name: s.name,
+        nis: s.nis,
+        grade: gradeHistory?.grade?.name || null,
+        gradeStartDate: gradeHistory?.startDate || null,
+        dormitory: dormHistory?.dormitory?.name || null,
+        dormitoryStartDate: dormHistory?.startDate || null,
+        fan: fanHistory?.fan?.name || null,
+        fanStartDate: fanHistory?.startDate || null
+      }
+    })
+
     const totalPages = Math.ceil(total / limit)
-
-    // Tentukan hasNext dan hasPrev
     const hasNext = page < totalPages
     const hasPrev = page > 1
 
-    // Response dengan informasi pagination yang diperbarui
     return Response.json({
       data: formattedStudents,
       pagination: {

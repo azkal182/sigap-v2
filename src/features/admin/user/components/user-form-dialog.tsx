@@ -1,4 +1,5 @@
-// File: UserFormDialog.tsx
+// Enhancement untuk UserFormDialog.tsx - Menampilkan info dormitory dari role
+
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
@@ -13,7 +14,10 @@ import {
   FormControlLabel,
   Typography,
   Alert,
-  Button
+  Button,
+  Chip,
+  Box,
+  Divider
 } from '@mui/material'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -54,20 +58,24 @@ export function UserFormDialog({ open, editing, onClose, onSubmit, roles, dorms,
 
   const { control, handleSubmit, setValue, watch, reset } = form
 
-  const selectedRolePermissions = useMemo(() => {
-    const role = roles.find(r => r.id === watch('roleId'))
-
-    return role?.rolePermissions?.map((rp: any) => rp.permission.id) || []
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  const selectedRole = useMemo(() => {
+    return roles.find(r => r.id === watch('roleId'))
   }, [roles, watch('roleId')])
+
+  const selectedRolePermissions = useMemo(() => {
+    return selectedRole?.rolePermissions?.map((rp: any) => rp.permission.id) || []
+  }, [selectedRole])
+
+  const selectedRoleDormitories = useMemo(() => {
+    return selectedRole?.roleDormitories?.map((rd: any) => rd.dormitory.id) || []
+  }, [selectedRole])
 
   useEffect(() => {
     const current = watch('permissionOverrides') || []
     const filtered = current.filter(o => !selectedRolePermissions.includes(o.permissionId))
 
     setValue('permissionOverrides', filtered)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedRolePermissions])
+  }, [selectedRolePermissions, setValue, watch])
 
   useEffect(() => {
     if (editing && open) {
@@ -153,43 +161,74 @@ export function UserFormDialog({ open, editing, onClose, onSubmit, roles, dorms,
               >
                 {roles.map(role => (
                   <MenuItem key={role.id} value={role.id}>
-                    {role.name}
+                    {role.name} ({role.roleDormitories?.length || 0} dormitories)
                   </MenuItem>
                 ))}
               </CustomTextField>
             )}
           />
 
-          <Typography variant='subtitle2'>Dormitories</Typography>
+          <Divider />
+
+          <Typography variant='subtitle2'>Dormitory Access</Typography>
+
+          {/* Show dormitories from role */}
+          {selectedRole && selectedRoleDormitories.length > 0 && (
+            <Box>
+              <Typography variant='body2' color='textSecondary' gutterBottom>
+                From Role {selectedRole.name}
+              </Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                {selectedRole.roleDormitories.map((rd: any) => (
+                  <Chip
+                    key={rd.dormitory.id}
+                    label={`${rd.dormitory.name} (Level ${rd.dormitory.level})`}
+                    size='small'
+                    color='primary'
+                    variant='outlined'
+                  />
+                ))}
+              </Box>
+            </Box>
+          )}
+
+          {/* Additional dormitory access */}
+          <Typography variant='body2' color='textSecondary'>
+            Additional Dormitory Access:
+          </Typography>
           <Controller
             name='dormitoryIds'
             control={control}
             render={({ field }) => (
               <div className='flex flex-wrap gap-3'>
-                {dorms.map(d => (
-                  <FormControlLabel
-                    key={d.id}
-                    control={
-                      <Checkbox
-                        value={d.id}
-                        checked={field.value?.includes(d.id) || false}
-                        onChange={e => {
-                          const checked = e.target.checked
+                {dorms
+                  .filter(d => !selectedRoleDormitories.includes(d.id))
+                  .map(d => (
+                    <FormControlLabel
+                      key={d.id}
+                      control={
+                        <Checkbox
+                          value={d.id}
+                          checked={field.value?.includes(d.id) || false}
+                          onChange={e => {
+                            const checked = e.target.checked
 
-                          const next = checked
-                            ? [...(field.value || []), d.id]
-                            : (field.value || []).filter(v => v !== d.id)
+                            const next = checked
+                              ? [...(field.value || []), d.id]
+                              : (field.value || []).filter(v => v !== d.id)
 
-                          field.onChange(next)
-                        }}
-                      />
-                    }
-                    label={d.name}
-                  />
-                ))}
+                            field.onChange(next)
+                          }}
+                        />
+                      }
+                      label={`${d.name} (Level ${d.level})`}
+                    />
+                  ))}
               </div>
             )}
           />
+
+          <Divider />
 
           <Typography variant='subtitle2'>Override Permissions</Typography>
           {roleChanged && <Alert severity='info'>Only permissions not included in the role can be overridden.</Alert>}

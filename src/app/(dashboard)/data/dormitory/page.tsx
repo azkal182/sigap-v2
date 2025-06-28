@@ -1,7 +1,5 @@
-import React from 'react'
+import DormitoryPageView from '@/features/data/dormitory/dormitory-page-view'
 
-const DormitoryPage = () => {
-  return <div>DormitoryPage</div>
+export default function DormitoryListPage() {
+  return <DormitoryPageView />
 }
-
-export default DormitoryPage

@@ -29,6 +29,7 @@ model Role {
 
     users           User[]
     rolePermissions RolePermission[]
+    roleDormitories RoleDormitory[]
 }
 
 model Permission {
@@ -69,6 +70,16 @@ model UserDormitory {
     @@id([userId, dormitoryId])
 }
 
+model RoleDormitory {
+    roleId      String
+    dormitoryId String    @map("dormitory_id")
+    role        Role      @relation(fields: [roleId], references: [id], onDelete: Cascade)
+    dormitory   Dormitory @relation(fields: [dormitoryId], references: [id], onDelete: Cascade)
+
+    @@id([roleId, dormitoryId])
+    @@map("role_dormitory")
+}
+
 model Student {
     id                      String                    @id @default(uuid()) @map("id")
     name                    String                    @map("name")
@@ -100,6 +111,7 @@ model Dormitory {
     toMutations             MutationHistory[]         @relation("ToDorm")
 
     userDormitories UserDormitory[]
+    roleDormitories RoleDormitory[]
 
     @@map("dormitory")
 }
@@ -185,7 +197,7 @@ model Schedule {
 
 model Fan {
     id                String              @id @default(uuid()) @map("id")
-    name              String              @unique @map("name")
+    name              String              @map("name")
     level             Int                 @default(1) @map("level")
     dormitoryId       String?             @map("dormitory_id")
     dormitory         Dormitory?          @relation(fields: [dormitoryId], references: [id], onDelete: Cascade)
@@ -196,6 +208,7 @@ model Fan {
     fanSubject        FanSubject[]
     fanProgressTarget FanProgressTarget[]
 
+    @@unique([name, dormitoryId])
     @@index([dormitoryId])
     @@map("fan")
 }

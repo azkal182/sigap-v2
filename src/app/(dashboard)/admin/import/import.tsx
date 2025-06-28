@@ -9,7 +9,7 @@ import type { GridColDef } from '@mui/x-data-grid'
 import { DataGrid } from '@mui/x-data-grid'
 
 import { importSchema } from '@/schemas/import-data-schema'
-import { createStudentWithDormitoryId } from '@/actions/import-data-action'
+import { createStudentFromImportData } from '@/actions/import-data-action'
 
 export default function ImportComponent() {
   const [previewData, setPreviewData] = useState<any[]>([])
@@ -147,7 +147,7 @@ export default function ImportComponent() {
     for (let i = 0; i < previewData.length; i += batchSize) {
       const batch = previewData.slice(i, i + batchSize)
 
-      await Promise.all(batch.map(createStudentWithDormitoryId))
+      await Promise.all(batch.map(createStudentFromImportData))
       setImportProgress(prev => ({
         current: Math.min(prev.current + batch.length, previewData.length),
         total: previewData.length

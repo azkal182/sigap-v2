@@ -1,3 +1,4 @@
+//features/admin/role/components/role-card
 'use client'
 
 // MUI Imports
@@ -7,10 +8,12 @@ import Grid from '@mui/material/Grid2'
 import Typography from '@mui/material/Typography'
 import IconButton from '@mui/material/IconButton'
 import Button from '@mui/material/Button'
+import Chip from '@mui/material/Chip'
 
 const RoleCards = ({
   label,
   count,
+  dormitoryCount = 0, // New prop
   id,
   onDelete,
   onEdit,
@@ -18,6 +21,7 @@ const RoleCards = ({
 }: {
   label: string
   count: number
+  dormitoryCount?: number // New prop
   id: string
   onDelete: (id: string) => void
   onEdit: () => void
@@ -29,7 +33,16 @@ const RoleCards = ({
         <Card>
           <CardContent className='flex flex-col gap-4'>
             <div className='flex items-center justify-between'>
-              <Typography className='flex-grow'>{`Total ${count} users`}</Typography>
+              <div className='flex flex-col gap-1'>
+                <Typography className='flex-grow'>{`Total ${count} users`}</Typography>
+                <Typography variant='body2' color='textSecondary'>
+                  {`${dormitoryCount} dormitory access`}
+                </Typography>
+              </div>
+              <div className='flex gap-1'>
+                <Chip label={`${count} users`} size='small' variant='outlined' color='primary' />
+                <Chip label={`${dormitoryCount} dorms`} size='small' variant='outlined' color='secondary' />
+              </div>
             </div>
             <div className='flex justify-between items-end'>
               <div className='flex flex-col items-start gap-1'>

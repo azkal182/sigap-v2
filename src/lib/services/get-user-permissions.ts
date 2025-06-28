@@ -1,4 +1,4 @@
-import prisma from '../prisma'
+import prisma from '@/lib/prisma'
 
 export async function getUserPermissionData(userId: string) {
   const user = await prisma.user.findUnique({
@@ -6,16 +6,18 @@ export async function getUserPermissionData(userId: string) {
     include: {
       role: {
         include: {
-          rolePermissions: { include: { permission: true } }
+          rolePermissions: { include: { permission: true } },
+          roleDormitories: { include: { dormitory: true } }
         }
       },
       userPermissions: { include: { permission: true } },
-      userDormitories: true
+      userDormitories: { include: { dormitory: true } }
     }
   })
 
   if (!user || !user.role) throw new Error('User not found or no role assigned')
 
+  // Process permissions (existing logic)
   const permissions = new Set<string>()
 
   user.role.rolePermissions.forEach(rp => {
@@ -29,11 +31,36 @@ export async function getUserPermissionData(userId: string) {
     else permissions.delete(key)
   })
 
+  // Process dormitory access (new logic)
+  const dormitoryAccess = new Set<string>()
+
+  // Add dormitories from role
+  user.role.roleDormitories.forEach(rd => {
+    dormitoryAccess.add(rd.dormitoryId)
+  })
+
+  // Add user-specific dormitories (these are additional access, not overrides)
+  user.userDormitories.forEach(ud => {
+    dormitoryAccess.add(ud.dormitoryId)
+  })
+
   return {
     id: user.id,
     name: user.name,
     role: user.role.name,
     permissions: Array.from(permissions),
-    allowedDormitoryIds: user.userDormitories.map(ud => ud.dormitoryId)
+    allowedDormitoryIds: Array.from(dormitoryAccess),
+
+    // Optional: return detailed dormitory info
+    allowedDormitories: [
+      ...user.role.roleDormitories.map(rd => ({
+        ...rd.dormitory,
+        source: 'role' as const
+      })),
+      ...user.userDormitories.map(ud => ({
+        ...ud.dormitory,
+        source: 'user' as const
+      }))
+    ].filter((dorm, index, self) => index === self.findIndex(d => d.id === dorm.id))
   }
 }

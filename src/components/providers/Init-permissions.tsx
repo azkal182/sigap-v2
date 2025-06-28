@@ -36,22 +36,17 @@
 // }
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 
 import { getSession } from 'next-auth/react'
 
 import { usePermissionStore } from '@/store/permission'
 
 export function InitPermissions() {
-  const [loadedSession, setLoadedSession] = useState(false)
-
-  const setUser = usePermissionStore(s => s.setUser)
-  const setPermissions = usePermissionStore(s => s.setPermissions)
-  const setAllowedDormitoryIds = usePermissionStore(s => s.setAllowedDormitoryIds)
-  const setLoaded = usePermissionStore(s => s.setLoaded)
+  const { updateUserData, setLoaded, loaded } = usePermissionStore()
 
   useEffect(() => {
-    if (loadedSession) return
+    if (loaded) return
 
     getSession().then(session => {
       if (!session) {
@@ -64,19 +59,21 @@ export function InitPermissions() {
         .then(res => res.json())
         .then(data => {
           if (!data || data.error) return
-          setUser({ id: data.id, name: data.name, role: data.role })
-          setPermissions(data.permissions)
-          setAllowedDormitoryIds(data.allowedDormitoryIds)
+          updateUserData({
+            user: { id: data.id, name: data.name, role: data.role },
+            permissions: data.permissions,
+            allowedDormitoryIds: data.allowedDormitoryIds,
+            allowedDormitories: data.allowedDormitories || []
+          })
         })
         .catch(err => {
           console.error('Failed to load permissions', err)
         })
         .finally(() => {
           setLoaded(true)
-          setLoadedSession(true)
         })
     })
-  }, [loadedSession, setUser, setPermissions, setAllowedDormitoryIds, setLoaded])
+  }, [updateUserData, loaded, setLoaded])
 
   return null
 }

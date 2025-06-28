@@ -23,12 +23,10 @@ export const getUsersAction = async () => {
   } catch (error) {
     console.error('[getUsersAction] Failed to fetch users:', error)
 
-    // Hindari membungkus error yang sudah berupa Error instance
     if (error instanceof Error) {
       throw new Error(`[getUsersAction] ${error.message}`)
     }
 
-    // Jika error bukan instance Error, jadikan string
     throw new Error('[getUsersAction] Unknown error occurred')
   }
 }
@@ -36,7 +34,12 @@ export const getUsersAction = async () => {
 export async function getAllUsersWithRoleAndPermissions() {
   return prisma.user.findMany({
     include: {
-      role: true,
+      role: {
+        include: {
+          rolePermissions: { include: { permission: true } },
+          roleDormitories: { include: { dormitory: true } }
+        }
+      },
       userPermissions: { include: { permission: true } },
       userDormitories: { include: { dormitory: true } }
     },
@@ -47,7 +50,8 @@ export async function getAllUsersWithRoleAndPermissions() {
 export async function getAllRoles() {
   return prisma.role.findMany({
     include: {
-      rolePermissions: { include: { permission: true } }
+      rolePermissions: { include: { permission: true } },
+      roleDormitories: { include: { dormitory: true } }
     },
     orderBy: { name: 'asc' }
   })
@@ -111,24 +115,35 @@ export async function updateUser(
       data: updates
     })
 
-    if (data.dormitoryIds) {
+    if (data.dormitoryIds !== undefined) {
       await tx.userDormitory.deleteMany({ where: { userId } })
-      await tx.userDormitory.createMany({
-        data: data.dormitoryIds.map(dormitoryId => ({ userId, dormitoryId }))
-      })
+
+      if (data.dormitoryIds.length > 0) {
+        await tx.userDormitory.createMany({
+          data: data.dormitoryIds.map(dormitoryId => ({ userId, dormitoryId }))
+        })
+      }
     }
 
-    if (data.permissionOverrides) {
+    if (data.permissionOverrides !== undefined) {
       await tx.userPermission.deleteMany({ where: { userId } })
-      await tx.userPermission.createMany({
-        data: data.permissionOverrides.map(p => ({ userId, permissionId: p.permissionId, allow: p.allow }))
-      })
+
+      if (data.permissionOverrides.length > 0) {
+        await tx.userPermission.createMany({
+          data: data.permissionOverrides.map(p => ({ userId, permissionId: p.permissionId, allow: p.allow }))
+        })
+      }
     }
 
     return tx.user.findUnique({
       where: { id: userId },
       include: {
-        role: true,
+        role: {
+          include: {
+            rolePermissions: { include: { permission: true } },
+            roleDormitories: { include: { dormitory: true } }
+          }
+        },
         userPermissions: { include: { permission: true } },
         userDormitories: { include: { dormitory: true } }
       }
@@ -140,4 +155,43 @@ export async function updateUser(
 
 export async function deleteUser(userId: string) {
   return prisma.user.delete({ where: { id: userId } })
+}
+
+// Helper function to get user's effective dormitory access
+export async function getUserEffectiveDormitoryAccess(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: {
+      role: {
+        include: {
+          roleDormitories: { include: { dormitory: true } }
+        }
+      },
+      userDormitories: { include: { dormitory: true } }
+    }
+  })
+
+  if (!user) return []
+
+  // Get dormitories from role
+  const roleDormitories = user.role.roleDormitories.map(rd => rd.dormitory)
+
+  // Get user-specific dormitories (overrides/additions)
+  const userDormitories = user.userDormitories.map(ud => ud.dormitory)
+
+  // Combine and deduplicate
+  const allDormitories = [...roleDormitories, ...userDormitories]
+
+  const uniqueDormitories = allDormitories.filter(
+    (dorm, index, self) => index === self.findIndex(d => d.id === dorm.id)
+  )
+
+  return uniqueDormitories
+}
+
+// Check if user has access to specific dormitory
+export async function checkUserDormitoryAccess(userId: string, dormitoryId: string) {
+  const accessibleDormitories = await getUserEffectiveDormitoryAccess(userId)
+
+  return accessibleDormitories.some(dorm => dorm.id === dormitoryId)
 }
