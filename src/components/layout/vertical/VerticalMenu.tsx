@@ -74,6 +74,32 @@ export const menuItems: MenuConfigSection[] = [
     ]
   },
   {
+    label: 'Asrama',
+    items: [
+      { title: 'Santri', href: '/dormitory/student', icon: 'tabler-school', permissions: ['student:view'] },
+      { title: 'Izin', href: '/dormitory/permit', icon: 'tabler-license-off', permissions: ['student:view'] },
+      { title: 'Laporan', href: '/dormitory/report', icon: 'tabler-report', permissions: ['student:view'] },
+      {
+        title: 'Validasi Absensi',
+        href: '/dormitory/validate',
+        icon: 'tabler-copy-check',
+        permissions: ['student:view']
+      },
+      {
+        title: 'Jadwal Pelajaran',
+        href: '/dormitory/schedule',
+        icon: 'tabler-calendar-due',
+        permissions: ['student:view']
+      },
+      {
+        title: 'Pengajar',
+        href: '/dormitory/teacher',
+        icon: 'tabler-brand-tether',
+        permissions: ['student:view']
+      }
+    ]
+  },
+  {
     label: 'Data',
     items: [
       { title: 'Santri', href: '/data/student', icon: 'tabler-school', permissions: ['student:view'] },

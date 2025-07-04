@@ -26,6 +26,7 @@ import { signOut } from 'next-auth/react'
 
 import { useSettings } from '@core/hooks/useSettings'
 import { usePermissionStore } from '@/store/permission'
+import ResetPasswordDialog from '@/components/reset-password-dialog'
 
 // Styled component for badge content
 const BadgeContentSpan = styled('span')({
@@ -40,6 +41,7 @@ const BadgeContentSpan = styled('span')({
 const UserDropdown = () => {
   // States
   const [open, setOpen] = useState(false)
+  const [resetPasswordDialog, setResetPasswordDialog] = useState(false)
 
   // Refs
   const anchorRef = useRef<HTMLDivElement>(null)
@@ -117,7 +119,7 @@ const UserDropdown = () => {
                     </div>
                   </div>
                   <Divider className='mlb-1' />
-                  <MenuItem className='mli-2 gap-3'>
+                  <MenuItem className='mli-2 gap-3' onClick={() => setResetPasswordDialog(true)}>
                     <i className='tabler-user' />
                     <Typography color='text.primary'>Ganti Password</Typography>
                   </MenuItem>
@@ -141,6 +143,12 @@ const UserDropdown = () => {
           </Fade>
         )}
       </Popper>
+
+      <ResetPasswordDialog
+        id={user?.id || ''}
+        open={resetPasswordDialog}
+        onClose={() => setResetPasswordDialog(false)}
+      />
     </>
   )
 }

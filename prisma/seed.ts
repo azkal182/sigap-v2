@@ -3,11 +3,84 @@
 
 import { hashSync } from 'bcryptjs'
 
+import Provinces from './json/provinsi.json'
+import Regencies from './json/kabupaten.json'
+import Districts from './json/kecamatan.json'
+import Villages from './json/kelurahan.json'
 import { PrismaClient } from '@/generated/prisma'
 
 const prisma = new PrismaClient()
 
+type village = {
+  id: number
+  name: string
+  code: string
+  full_code: string
+  pos_code: string
+  kecamatan_id: number
+}
+
 export async function main() {
+  const formattedProvinces = Provinces.map(item => ({
+    id: item.id,
+    name: item.name,
+    code: item.code
+  }))
+
+  await prisma.province.createMany({
+    data: formattedProvinces
+  })
+  console.log('province done')
+
+  console.log('insert regencies ...')
+
+  const formattedRegencies = Regencies.map(item => ({
+    id: item.id,
+    name: item.name,
+    code: item.code,
+    label: `${item.type === 'Kota' ? 'Kota.' : 'Kab.'} ${item.name}`,
+    type: item.type,
+    fullCode: item.full_code,
+    provinceId: item.provinsi_id
+  }))
+
+  await prisma.regency.createMany({
+    data: formattedRegencies
+  })
+
+  console.log('regencies done')
+
+  console.log('insert districts ...')
+
+  const formattedDistricts = Districts.map(item => ({
+    id: item.id,
+    name: item.name,
+    code: item.code,
+    fullCode: item.full_code,
+    regencyId: item.kabupaten_id
+  }))
+
+  await prisma.district.createMany({
+    data: formattedDistricts
+  })
+  console.log('districts done')
+
+  const formattedVillages = (Villages as village[]).map(item => ({
+    id: item.id,
+    name: item.name,
+    code: item.code,
+    fullCode: item.full_code,
+    postalCode: item.pos_code,
+    districtId: item.kecamatan_id
+  }))
+
+  await prisma.village.createMany({
+    data: formattedVillages,
+    skipDuplicates: true
+  })
+
+  console.log('village done')
+
   // 1. Seed Roles
   await prisma.role.createMany({
     data: [{ name: 'ADMIN' }, { name: 'OPERATOR_PUSAT' }, { name: 'OPERATOR_DORM' }, { name: 'GURU' }],

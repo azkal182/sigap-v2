@@ -351,7 +351,7 @@ const Customizer = ({ breakpoint = 'lg', dir = 'ltr', disableDirection = false }
               <Chip label='Layout' variant='tonal' size='small' color='primary' className='self-start rounded-sm' />
               <div className='flex flex-col gap-2'>
                 <p className='font-medium'>Layouts</p>
-                <div className='flex items-center justify-between'>
+                <div className='flex items-center gap-4'>
                   <div className='flex flex-col items-start gap-0.5'>
                     <div
                       className={classnames(styles.itemWrapper, { [styles.active]: settings.layout === 'vertical' })}
@@ -372,17 +372,6 @@ const Customizer = ({ breakpoint = 'lg', dir = 'ltr', disableDirection = false }
                     </div>
                     <p className={styles.itemLabel} onClick={() => handleChange('layout', 'collapsed')}>
                       Collapsed
-                    </p>
-                  </div>
-                  <div className='flex flex-col items-start gap-0.5'>
-                    <div
-                      className={classnames(styles.itemWrapper, { [styles.active]: settings.layout === 'horizontal' })}
-                      onClick={() => handleChange('layout', 'horizontal')}
-                    >
-                      <LayoutHorizontal />
-                    </div>
-                    <p className={styles.itemLabel} onClick={() => handleChange('layout', 'horizontal')}>
-                      Horizontal
                     </p>
                   </div>
                 </div>

@@ -80,263 +80,562 @@ model RoleDormitory {
     @@map("role_dormitory")
 }
 
+// ENUMS
+enum StudentStatus {
+    ACTIVE
+    INACTIVE
+    TRANSFERRED
+}
+
+enum HistoryStatus {
+    STUDYING
+    GRADUATED
+    REPEATED
+    TRANSFERRED
+}
+
+enum AbsenceStatus {
+    PRESENT
+    SICK
+    PERMIT
+    ABSENT
+}
+
+enum DormitoryStatus {
+    ACTIVE
+    GRADUATED
+    TRANSFERRED
+}
+
+// MASTER DATA
 model Student {
-    id                      String                    @id @default(uuid()) @map("id")
-    name                    String                    @map("name")
-    nis                     String?                   @map("nis")
-    attendance              Attendance[]
-    studentGradeHistory     StudentGradeHistory[]
-    archiveEmis             ArchiveEmis?              @relation(fields: [archiveEmisId], references: [id])
-    archiveEmisId           String?                   @map("archive_emis_id")
-    studentFanHistory       StudentFanHistory[]
-    studentDormitoryHistory StudentDormitoryHistory[]
-    mutationHistories       MutationHistory[]
-    fanSubjectAssessment    FanSubjectAssessment[]
-    fanProgressTarget       FanProgressTarget[]
-    status                  Boolean?                  @default(false)
+    id           String   @id @default(uuid())
+    nis          String   @unique
+    name         String
+    placeOfBirth String
+    dateOfBirth  DateTime
+    address      String?
+    fatherName   String?
+    motherName   String?
+    parrentPhone String?
 
-    @@map("student")
-}
+    dormitoryId String
+    dormitory   Dormitory @relation(fields: [dormitoryId], references: [id])
+    villageId   Int?
+    village     Village?  @relation(fields: [villageId], references: [id])
 
-model Dormitory {
-    id                      String                    @id @default(uuid()) @map("id")
-    name                    String                    @map("name")
-    level                   Int                       @default(1) @map("level")
-    studentGradeHistory     StudentGradeHistory[]
-    grade                   Grade[]
-    fan                     Fan[]
-    studentDormitoryHistory StudentDormitoryHistory[]
-    // Relation ke MutationHistory
-    fromMutations           MutationHistory[]         @relation("FromDorm")
-    toMutations             MutationHistory[]         @relation("ToDorm")
+    histories          History[]
+    absences           Absence[]
+    permits            Permit[]
+    dormitoryHistories DormitoryHistory[]
 
-    userDormitories UserDormitory[]
-    roleDormitories RoleDormitory[]
+    status StudentStatus? @default(ACTIVE)
 
-    @@map("dormitory")
-}
-
-model Grade {
-    id                  String                @id @default(uuid()) @map("id")
-    name                String                @map("name")
-    level               Int                   @default(1) @map("level")
-    dormitoryId         String?               @map("dormitory_id")
-    dormitory           Dormitory?            @relation(fields: [dormitoryId], references: [id], onDelete: Cascade)
-    teachers            GradeTeacher[]
-    homeroomTeacherId   String?               @unique @map("homeroom_teacher_id")
-    homeroomTeacher     Teacher?              @relation("HomeroomTeacher", fields: [homeroomTeacherId], references: [id], onDelete: SetNull)
-    schedules           Schedule[]
-    fan                 Fan?                  @relation(fields: [fanId], references: [id])
-    fanId               String?               @map("fan_id")
-    studentGradeHistory StudentGradeHistory[]
-    fromMutations       MutationHistory[]     @relation("FromGrade")
-    toMutations         MutationHistory[]     @relation("ToGrade")
-
-    @@index([dormitoryId])
-    @@map("grade")
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 }
 
 model Teacher {
-    id        String           @id @default(uuid()) @map("id")
-    name      String           @map("name")
-    subjects  TeacherSubject[]
-    grades    GradeTeacher[]
-    homeroom  Grade?           @relation("HomeroomTeacher")
+    id        String                @id @default(uuid())
+    name      String
+    subjects  TeacherSubjectClass[]
     schedules Schedule[]
+    absences  TeacherAbsence[]
+    createdAt DateTime              @default(now())
+    updatedAt DateTime              @updatedAt
+    absence   Absence[]
+}
 
-    @@map("teacher")
+model Dormitory {
+    id               String             @id @default(uuid())
+    name             String
+    level            Int
+    students         Student[]
+    classes          Class[]
+    userDormitories  UserDormitory[]
+    roleDormitories  RoleDormitory[]
+    createdAt        DateTime           @default(now())
+    updatedAt        DateTime           @updatedAt
+    dormitoryHistory DormitoryHistory[]
+}
+
+model DormitoryHistory {
+    id                 String          @id @default(uuid())
+    studentId          String
+    dormitoryId        String
+    startDate          DateTime
+    endDate            DateTime?
+    status             DormitoryStatus
+    dormNameAtThatTime String
+
+    student   Student   @relation(fields: [studentId], references: [id])
+    dormitory Dormitory @relation(fields: [dormitoryId], references: [id])
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
+// AKADEMIK
+model Track {
+    id        String    @id @default(uuid()) // Fan
+    name      String
+    classes   Class[]
+    subjects  Subject[]
+    createdAt DateTime  @default(now())
+    updatedAt DateTime  @updatedAt
 }
 
 model Subject {
-    id        String           @id @default(uuid()) @map("id")
-    name      String           @unique @map("name")
-    teachers  TeacherSubject[]
+    id           String                @id @default(uuid())
+    name         String
+    trackId      String
+    track        Track                 @relation(fields: [trackId], references: [id])
+    histories    History[]
+    schedules    Schedule[]
+    teacherLinks TeacherSubjectClass[]
+    createdAt    DateTime              @default(now())
+    updatedAt    DateTime              @updatedAt
+}
+
+model Class {
+    id          String @id @default(uuid())
+    name        String // e.g., "Ubudiyah - Ust Umam"
+    teacher     String // Wali kelas
+    trackId     String
+    dormitoryId String
+
+    track     Track     @relation(fields: [trackId], references: [id])
+    dormitory Dormitory @relation(fields: [dormitoryId], references: [id])
+
+    histories    History[]
+    schedules    Schedule[]
+    teacherLinks TeacherSubjectClass[]
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
+model TeacherSubjectClass {
+    id        String @id @default(uuid())
+    teacherId String
+    subjectId String
+    classId   String
+
+    teacher Teacher @relation(fields: [teacherId], references: [id])
+    subject Subject @relation(fields: [subjectId], references: [id])
+    class   Class   @relation(fields: [classId], references: [id])
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
+model History {
+    id        String        @id @default(uuid())
+    studentId String
+    classId   String
+    subjectId String
+    date      DateTime      @default(now())
+    status    HistoryStatus
+    score     Int?
+
+    classNameAtThatTime    String
+    classTeacherAtThatTime String
+    dormNameAtThatTime     String
+
+    student Student @relation(fields: [studentId], references: [id])
+    class   Class   @relation(fields: [classId], references: [id])
+    subject Subject @relation(fields: [subjectId], references: [id])
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
+// JADWAL
+model ScheduleSlot {
+    id        String @id @default(uuid())
+    slot      Int // Jam ke-n
+    startTime String // ex: "07:00"
+    endTime   String
+
     schedules Schedule[]
 
-    @@map("subject")
-}
-
-model TeacherSubject {
-    teacherId String  @map("teacher_id")
-    subjectId String  @map("subject_id")
-    teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
-    subject   Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
-
-    @@id([teacherId, subjectId])
-    @@map("teacher_subject")
-}
-
-model GradeTeacher {
-    teacherId String  @map("teacher_id")
-    gradeId   String  @map("grade_id")
-    teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
-    grade     Grade   @relation(fields: [gradeId], references: [id], onDelete: Cascade)
-
-    @@id([teacherId, gradeId])
-    @@map("grade_teacher")
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 }
 
 model Schedule {
-    id         String       @id @default(uuid()) @map("id")
-    period     Int          @map("period")
-    dayOfWeek  Int          @map("day_of_week")
-    timeStart  String       @map("time_start")
-    timeEnd    String       @map("time_end")
-    jamKe      Int          @map("jam_ke")
-    gradeId    String       @map("grade_id")
-    subjectId  String       @map("subject_id")
-    teacherId  String       @map("teacher_id")
-    teacher    Teacher      @relation(fields: [teacherId], references: [id], onDelete: Cascade)
-    grade      Grade        @relation(fields: [gradeId], references: [id], onDelete: Cascade)
-    subject    Subject      @relation(fields: [subjectId], references: [id], onDelete: Cascade)
-    attendance Attendance[]
+    id             String @id @default(uuid())
+    classId        String
+    subjectId      String
+    teacherId      String
+    scheduleSlotId String
+    dayOfWeek      Int // 1 = Senin, ..., 7 = Ahad
 
-    @@index([gradeId, subjectId, teacherId, dayOfWeek])
-    @@map("schedule")
+    class        Class        @relation(fields: [classId], references: [id])
+    subject      Subject      @relation(fields: [subjectId], references: [id])
+    teacher      Teacher      @relation(fields: [teacherId], references: [id])
+    scheduleSlot ScheduleSlot @relation(fields: [scheduleSlotId], references: [id])
+
+    absences Absence[]
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 }
 
-model Fan {
-    id                String              @id @default(uuid()) @map("id")
-    name              String              @map("name")
-    level             Int                 @default(1) @map("level")
-    dormitoryId       String?             @map("dormitory_id")
-    dormitory         Dormitory?          @relation(fields: [dormitoryId], references: [id], onDelete: Cascade)
-    grades            Grade[]
-    studentFanHistory StudentFanHistory[]
-    fromMutations     MutationHistory[]   @relation("FromFan")
-    toMutations       MutationHistory[]   @relation("ToFan")
-    fanSubject        FanSubject[]
-    fanProgressTarget FanProgressTarget[]
+// ABSENSI SANTRI
+model Absence {
+    id             String        @id @default(uuid())
+    studentId      String
+    scheduleId     String
+    date           DateTime
+    status         AbsenceStatus
+    autoFromPermit Boolean       @default(false)
+    note           String?
 
-    @@unique([name, dormitoryId])
-    @@index([dormitoryId])
-    @@map("fan")
+    filledByTeacherId String? // Guru yang melakukan absensi
+    filledByTeacher   Teacher? @relation(fields: [filledByTeacherId], references: [id])
+
+    student  Student  @relation(fields: [studentId], references: [id])
+    schedule Schedule @relation(fields: [scheduleId], references: [id])
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 }
 
-model Attendance {
-    id         String   @id @default(uuid()) @map("id")
-    date       DateTime @map("date")
-    status     String   @map("status")
-    studentId  String   @map("student_id")
-    student    Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
-    scheduleId String   @map("schedule_id")
-    schedule   Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
-    createdAt  DateTime @default(now()) @map("created_at")
+// PERIZINAN SANTRI
+model Permit {
+    id           String   @id @default(uuid())
+    studentId    String
+    startDate    DateTime
+    endDate      DateTime
+    allowedSlots Int[] // Contoh: [1, 3, 5]
+    reason       String
 
-    @@index([studentId, date, scheduleId])
-    @@map("attendance")
+    student   Student  @relation(fields: [studentId], references: [id])
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 }
 
-model StudentGradeHistory {
-    id          String     @id @default(uuid()) @map("id")
-    studentId   String     @map("student_id")
-    gradeId     String?    @map("grade_id")
-    startDate   DateTime   @map("start_date")
-    endDate     DateTime?  @map("end_date")
-    student     Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
-    grade       Grade?     @relation(fields: [gradeId], references: [id], onDelete: Cascade)
-    dormitory   Dormitory? @relation(fields: [dormitoryId], references: [id])
-    dormitoryId String?
+// ABSENSI GURU PER HARI
+model TeacherAbsence {
+    id        String        @id @default(uuid())
+    teacherId String
+    date      DateTime
+    status    AbsenceStatus
+    note      String?
 
-    @@index([studentId, gradeId, endDate])
-    @@map("student_grade_history")
+    teacher   Teacher  @relation(fields: [teacherId], references: [id])
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 }
 
-model StudentFanHistory {
-    id        String    @id @default(uuid()) @map("id")
-    studentId String    @map("student_id")
-    fanId     String    @map("fan_id")
-    startDate DateTime  @map("start_date")
-    endDate   DateTime? @map("end_date")
-    student   Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
-    fan       Fan       @relation(fields: [fanId], references: [id], onDelete: Cascade)
+model Province {
+    id   Int    @id @default(autoincrement())
+    name String
+    code String
 
-    @@index([studentId, fanId, endDate])
-    @@map("student_fan_history")
+    regencies Regency[]
 }
 
-model StudentDormitoryHistory {
-    id          String    @id @default(uuid()) @map("id")
-    studentId   String    @map("student_id")
-    dormitoryId String    @map("dormitory_id")
-    startDate   DateTime  @map("start_date")
-    endDate     DateTime? @map("end_date")
-    student     Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
-    dormitory   Dormitory @relation(fields: [dormitoryId], references: [id], onDelete: Cascade)
+model Regency {
+    id        Int        @id @default(autoincrement())
+    name      String
+    label     String?
+    type      String?
+    code      String
+    fullCode  String
+    districts District[]
 
-    @@index([studentId, dormitoryId, startDate])
-    @@map("student_dormitory_history")
+    provinceId Int
+    province   Province @relation(fields: [provinceId], references: [id])
+
+    @@index([provinceId])
 }
 
-model MutationHistory {
-    id              String     @id @default(uuid()) @map("id")
-    studentId       String     @map("student_id")
-    fromGradeId     String?    @map("from_grade_id")
-    toGradeId       String?    @map("to_grade_id")
-    fromFanId       String?    @map("from_fan_id")
-    toFanId         String?    @map("to_fan_id")
-    fromDormitoryId String?    @map("from_dormitory_id")
-    toDormitoryId   String?    @map("to_dormitory_id")
-    reason          String?    @map("reason")
-    date            DateTime   @default(now()) @map("date")
-    student         Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
-    fromGrade       Grade?     @relation("FromGrade", fields: [fromGradeId], references: [id], onDelete: SetNull)
-    toGrade         Grade?     @relation("ToGrade", fields: [toGradeId], references: [id], onDelete: SetNull)
-    fromFan         Fan?       @relation("FromFan", fields: [fromFanId], references: [id], onDelete: SetNull)
-    toFan           Fan?       @relation("ToFan", fields: [toFanId], references: [id], onDelete: SetNull)
-    fromDormitory   Dormitory? @relation("FromDorm", fields: [fromDormitoryId], references: [id], onDelete: SetNull)
-    toDormitory     Dormitory? @relation("ToDorm", fields: [toDormitoryId], references: [id], onDelete: SetNull)
+model District {
+    id       Int       @id @default(autoincrement())
+    name     String
+    code     String
+    fullCode String
+    villages Village[]
 
-    @@index([studentId, date])
-    @@map("mutation_history")
+    regencyId Int
+    regency   Regency @relation(fields: [regencyId], references: [id])
+
+    @@index([regencyId])
 }
 
-model FanSubject {
-    id          String                 @id @default(uuid()) @map("id")
-    fanId       String                 @map("fan_id")
-    title       String                 @map("title")
-    order       Int                    @map("order")
-    fan         Fan                    @relation(fields: [fanId], references: [id], onDelete: Cascade)
-    assessments FanSubjectAssessment[]
+model Village {
+    id         Int    @id @default(autoincrement())
+    name       String
+    code       String
+    fullCode   String
+    postalCode String
 
-    @@index([fanId, order])
-    @@map("fan_subject")
+    districtId Int
+    district   District  @relation(fields: [districtId], references: [id])
+    students   Student[]
+
+    @@index([districtId])
 }
 
-model FanSubjectAssessment {
-    id           String     @id @default(uuid()) @map("id")
-    studentId    String     @map("student_id")
-    fanSubjectId String     @map("fan_subject_id")
-    score        Int        @map("score")
-    passed       Boolean    @map("passed")
-    testedAt     DateTime   @default(now()) @map("tested_at")
-    student      Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
-    fanSubject   FanSubject @relation(fields: [fanSubjectId], references: [id], onDelete: Cascade)
+// model Student {
+//     id                      String                    @id @default(uuid()) @map("id")
+//     name                    String                    @map("name")
+//     nis                     String?                   @map("nis")
+//     attendance              Attendance[]
+//     studentGradeHistory     StudentGradeHistory[]
+//     archiveEmis             ArchiveEmis?              @relation(fields: [archiveEmisId], references: [id])
+//     archiveEmisId           String?                   @map("archive_emis_id")
+//     studentFanHistory       StudentFanHistory[]
+//     studentDormitoryHistory StudentDormitoryHistory[]
+//     mutationHistories       MutationHistory[]
+//     fanSubjectAssessment    FanSubjectAssessment[]
+//     fanProgressTarget       FanProgressTarget[]
+//     status                  Boolean?                  @default(false)
 
-    @@index([studentId, fanSubjectId])
-    @@map("fan_subject_assessment")
-}
+//     @@map("student")
+// }
 
-model FanProgressTarget {
-    id          String    @id @default(uuid()) @map("id")
-    studentId   String    @map("student_id")
-    fanId       String    @map("fan_id")
-    startDate   DateTime  @default(now()) @map("start_date")
-    targetEnd   DateTime  @map("target_end")
-    completedAt DateTime? @map("completed_at")
-    student     Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
-    fan         Fan       @relation(fields: [fanId], references: [id], onDelete: Cascade)
+// model Dormitory {
+//     id                      String                    @id @default(uuid()) @map("id")
+//     name                    String                    @map("name")
+//     level                   Int                       @default(1) @map("level")
+//     studentGradeHistory     StudentGradeHistory[]
+//     grade                   Grade[]
+//     fan                     Fan[]
+//     studentDormitoryHistory StudentDormitoryHistory[]
+//     // Relation ke MutationHistory
+//     fromMutations           MutationHistory[]         @relation("FromDorm")
+//     toMutations             MutationHistory[]         @relation("ToDorm")
 
-    @@index([studentId, fanId])
-    @@map("fan_progress_target")
-}
+//     userDormitories UserDormitory[]
+//     roleDormitories RoleDormitory[]
 
-model ArchiveEmis {
-    id        String    @id @default(uuid()) @map("id")
-    students  Student[]
-    kkUrl     String    @map("kk_url")
-    ijazahUrl String    @map("ijazah_url")
-    createdAt DateTime  @default(now()) @map("created_at")
+//     @@map("dormitory")
+// }
 
-    @@map("archive_emis")
-}
+// model Grade {
+//     id                  String                @id @default(uuid()) @map("id")
+//     name                String                @map("name")
+//     level               Int                   @default(1) @map("level")
+//     dormitoryId         String?               @map("dormitory_id")
+//     dormitory           Dormitory?            @relation(fields: [dormitoryId], references: [id], onDelete: Cascade)
+//     teachers            GradeTeacher[]
+//     homeroomTeacherId   String?               @unique @map("homeroom_teacher_id")
+//     homeroomTeacher     Teacher?              @relation("HomeroomTeacher", fields: [homeroomTeacherId], references: [id], onDelete: SetNull)
+//     schedules           Schedule[]
+//     fan                 Fan?                  @relation(fields: [fanId], references: [id])
+//     fanId               String?               @map("fan_id")
+//     studentGradeHistory StudentGradeHistory[]
+//     fromMutations       MutationHistory[]     @relation("FromGrade")
+//     toMutations         MutationHistory[]     @relation("ToGrade")
+
+//     @@index([dormitoryId])
+//     @@map("grade")
+// }
+
+// model Teacher {
+//     id        String           @id @default(uuid()) @map("id")
+//     name      String           @map("name")
+//     subjects  TeacherSubject[]
+//     grades    GradeTeacher[]
+//     homeroom  Grade?           @relation("HomeroomTeacher")
+//     schedules Schedule[]
+
+//     @@map("teacher")
+// }
+
+// model Subject {
+//     id        String           @id @default(uuid()) @map("id")
+//     name      String           @unique @map("name")
+//     teachers  TeacherSubject[]
+//     schedules Schedule[]
+
+//     @@map("subject")
+// }
+
+// model TeacherSubject {
+//     teacherId String  @map("teacher_id")
+//     subjectId String  @map("subject_id")
+//     teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+//     subject   Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+//     @@id([teacherId, subjectId])
+//     @@map("teacher_subject")
+// }
+
+// model GradeTeacher {
+//     teacherId String  @map("teacher_id")
+//     gradeId   String  @map("grade_id")
+//     teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+//     grade     Grade   @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+
+//     @@id([teacherId, gradeId])
+//     @@map("grade_teacher")
+// }
+
+// model Schedule {
+//     id         String       @id @default(uuid()) @map("id")
+//     period     Int          @map("period")
+//     dayOfWeek  Int          @map("day_of_week")
+//     timeStart  String       @map("time_start")
+//     timeEnd    String       @map("time_end")
+//     jamKe      Int          @map("jam_ke")
+//     gradeId    String       @map("grade_id")
+//     subjectId  String       @map("subject_id")
+//     teacherId  String       @map("teacher_id")
+//     teacher    Teacher      @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+//     grade      Grade        @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+//     subject    Subject      @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+//     attendance Attendance[]
+
+//     @@index([gradeId, subjectId, teacherId, dayOfWeek])
+//     @@map("schedule")
+// }
+
+// model Fan {
+//     id                String              @id @default(uuid()) @map("id")
+//     name              String              @map("name")
+//     level             Int                 @default(1) @map("level")
+//     dormitoryId       String?             @map("dormitory_id")
+//     dormitory         Dormitory?          @relation(fields: [dormitoryId], references: [id], onDelete: Cascade)
+//     grades            Grade[]
+//     studentFanHistory StudentFanHistory[]
+//     fromMutations     MutationHistory[]   @relation("FromFan")
+//     toMutations       MutationHistory[]   @relation("ToFan")
+//     fanSubject        FanSubject[]
+//     fanProgressTarget FanProgressTarget[]
+
+//     @@unique([name, dormitoryId])
+//     @@index([dormitoryId])
+//     @@map("fan")
+// }
+
+// model Attendance {
+//     id         String   @id @default(uuid()) @map("id")
+//     date       DateTime @map("date")
+//     status     String   @map("status")
+//     studentId  String   @map("student_id")
+//     student    Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+//     scheduleId String   @map("schedule_id")
+//     schedule   Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+//     createdAt  DateTime @default(now()) @map("created_at")
+
+//     @@index([studentId, date, scheduleId])
+//     @@map("attendance")
+// }
+
+// model StudentGradeHistory {
+//     id          String     @id @default(uuid()) @map("id")
+//     studentId   String     @map("student_id")
+//     gradeId     String?    @map("grade_id")
+//     startDate   DateTime   @map("start_date")
+//     endDate     DateTime?  @map("end_date")
+//     student     Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+//     grade       Grade?     @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+//     dormitory   Dormitory? @relation(fields: [dormitoryId], references: [id])
+//     dormitoryId String?
+
+//     @@index([studentId, gradeId, endDate])
+//     @@map("student_grade_history")
+// }
+
+// model StudentFanHistory {
+//     id        String    @id @default(uuid()) @map("id")
+//     studentId String    @map("student_id")
+//     fanId     String    @map("fan_id")
+//     startDate DateTime  @map("start_date")
+//     endDate   DateTime? @map("end_date")
+//     student   Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+//     fan       Fan       @relation(fields: [fanId], references: [id], onDelete: Cascade)
+
+//     @@index([studentId, fanId, endDate])
+//     @@map("student_fan_history")
+// }
+
+// model StudentDormitoryHistory {
+//     id          String    @id @default(uuid()) @map("id")
+//     studentId   String    @map("student_id")
+//     dormitoryId String    @map("dormitory_id")
+//     startDate   DateTime  @map("start_date")
+//     endDate     DateTime? @map("end_date")
+//     student     Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+//     dormitory   Dormitory @relation(fields: [dormitoryId], references: [id], onDelete: Cascade)
+
+//     @@index([studentId, dormitoryId, startDate])
+//     @@map("student_dormitory_history")
+// }
+
+// model MutationHistory {
+//     id              String     @id @default(uuid()) @map("id")
+//     studentId       String     @map("student_id")
+//     fromGradeId     String?    @map("from_grade_id")
+//     toGradeId       String?    @map("to_grade_id")
+//     fromFanId       String?    @map("from_fan_id")
+//     toFanId         String?    @map("to_fan_id")
+//     fromDormitoryId String?    @map("from_dormitory_id")
+//     toDormitoryId   String?    @map("to_dormitory_id")
+//     reason          String?    @map("reason")
+//     date            DateTime   @default(now()) @map("date")
+//     student         Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+//     fromGrade       Grade?     @relation("FromGrade", fields: [fromGradeId], references: [id], onDelete: SetNull)
+//     toGrade         Grade?     @relation("ToGrade", fields: [toGradeId], references: [id], onDelete: SetNull)
+//     fromFan         Fan?       @relation("FromFan", fields: [fromFanId], references: [id], onDelete: SetNull)
+//     toFan           Fan?       @relation("ToFan", fields: [toFanId], references: [id], onDelete: SetNull)
+//     fromDormitory   Dormitory? @relation("FromDorm", fields: [fromDormitoryId], references: [id], onDelete: SetNull)
+//     toDormitory     Dormitory? @relation("ToDorm", fields: [toDormitoryId], references: [id], onDelete: SetNull)
+
+//     @@index([studentId, date])
+//     @@map("mutation_history")
+// }
+
+// model FanSubject {
+//     id          String                 @id @default(uuid()) @map("id")
+//     fanId       String                 @map("fan_id")
+//     title       String                 @map("title")
+//     order       Int                    @map("order")
+//     fan         Fan                    @relation(fields: [fanId], references: [id], onDelete: Cascade)
+//     assessments FanSubjectAssessment[]
+
+//     @@index([fanId, order])
+//     @@map("fan_subject")
+// }
+
+// model FanSubjectAssessment {
+//     id           String     @id @default(uuid()) @map("id")
+//     studentId    String     @map("student_id")
+//     fanSubjectId String     @map("fan_subject_id")
+//     score        Int        @map("score")
+//     passed       Boolean    @map("passed")
+//     testedAt     DateTime   @default(now()) @map("tested_at")
+//     student      Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+//     fanSubject   FanSubject @relation(fields: [fanSubjectId], references: [id], onDelete: Cascade)
+
+//     @@index([studentId, fanSubjectId])
+//     @@map("fan_subject_assessment")
+// }
+
+// model FanProgressTarget {
+//     id          String    @id @default(uuid()) @map("id")
+//     studentId   String    @map("student_id")
+//     fanId       String    @map("fan_id")
+//     startDate   DateTime  @default(now()) @map("start_date")
+//     targetEnd   DateTime  @map("target_end")
+//     completedAt DateTime? @map("completed_at")
+//     student     Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+//     fan         Fan       @relation(fields: [fanId], references: [id], onDelete: Cascade)
+
+//     @@index([studentId, fanId])
+//     @@map("fan_progress_target")
+// }
+
+// model ArchiveEmis {
+//     id        String    @id @default(uuid()) @map("id")
+//     students  Student[]
+//     kkUrl     String    @map("kk_url")
+//     ijazahUrl String    @map("ijazah_url")
+//     createdAt DateTime  @default(now()) @map("created_at")
+
+//     @@map("archive_emis")
+// }

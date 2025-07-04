@@ -18,6 +18,7 @@ import '@/app/globals.css'
 import '@assets/iconify-icons/generated-icons.css'
 import NextAuthProviders from '@/components/providers/next-auth-providers'
 import { auth } from '@/lib/auth'
+import ReactQueryProviders from './react-query-provider'
 
 export const metadata = {
   title: 'Sigap - PPDF',
@@ -38,7 +39,9 @@ const RootLayout = async (props: ChildrenType) => {
     <html id='__next' lang='en' dir={direction} suppressHydrationWarning>
       <body className='flex is-full min-bs-full flex-auto flex-col'>
         <InitColorSchemeScript attribute='data' defaultMode={systemMode} />
-        <NextAuthProviders session={session}>{children}</NextAuthProviders>
+        <NextAuthProviders session={session}>
+          <ReactQueryProviders>{children}</ReactQueryProviders>
+        </NextAuthProviders>
         <ToastContainer
           position='bottom-right'
           autoClose={5000}

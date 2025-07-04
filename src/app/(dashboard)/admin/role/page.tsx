@@ -195,7 +195,12 @@ export default function RoleManagerPage() {
       <Dialog open={open} onClose={handleClose} maxWidth='md' fullWidth>
         <DialogTitle>{editId ? 'Edit Role' : 'Add Role'}</DialogTitle>
         <DialogContent className='space-y-4'>
-          <CustomTextField label='Role Name' fullWidth value={newRole} onChange={e => setNewRole(e.target.value)} />
+          <CustomTextField
+            label='Role Name'
+            fullWidth
+            value={newRole}
+            onChange={e => setNewRole(e.target.value.toUpperCase())}
+          />
 
           <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
             <Tabs value={tabValue} onChange={(_, newValue) => setTabValue(newValue)}>

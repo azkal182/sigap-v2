@@ -1,4 +1,102 @@
+// import { create } from 'zustand'
+
+// type DormitoryInfo = {
+//   id: string
+//   name: string
+//   level: number
+//   source: 'role' | 'user'
+// }
+
+// type PermissionStore = {
+//   user: { id: string; name: string; role: string } | null
+//   permissions: string[]
+//   allowedDormitoryIds: string[]
+//   allowedDormitories: DormitoryInfo[]
+//   loaded: boolean
+
+//   // Setters
+//   setUser: (user: PermissionStore['user']) => void
+//   setPermissions: (permissions: string[]) => void
+//   setAllowedDormitoryIds: (ids: string[]) => void
+//   setAllowedDormitories: (dormitories: DormitoryInfo[]) => void
+//   setLoaded: (loaded: boolean) => void
+
+//   // Helper methods
+//   hasPermission: (permission: string) => boolean
+//   hasDormitoryAccess: (dormitoryId: string) => boolean
+//   getDormitoryById: (dormitoryId: string) => DormitoryInfo | undefined
+//   getDormitoriesBySource: (source: 'role' | 'user') => DormitoryInfo[]
+
+//   // Batch update method
+//   updateUserData: (data: {
+//     user: PermissionStore['user']
+//     permissions: string[]
+//     allowedDormitoryIds: string[]
+//     allowedDormitories: DormitoryInfo[]
+//   }) => void
+// }
+
+// export const usePermissionStore = create<PermissionStore>()((set, get) => ({
+//   user: null,
+//   permissions: [],
+//   allowedDormitoryIds: [],
+//   allowedDormitories: [],
+//   loaded: false,
+
+//   // Setters
+//   setUser: user => set({ user }),
+//   setPermissions: permissions => set({ permissions }),
+//   setAllowedDormitoryIds: ids => set({ allowedDormitoryIds: ids }),
+//   setAllowedDormitories: dormitories => set({ allowedDormitories: dormitories }),
+//   setLoaded: loaded => set({ loaded }),
+
+//   // Helper methods
+//   hasPermission: (permission: string) => {
+//     const { permissions } = get()
+
+//     return permissions.includes(permission)
+//   },
+
+//   hasDormitoryAccess: (dormitoryId: string) => {
+//     const { allowedDormitoryIds } = get()
+
+//     return allowedDormitoryIds.includes(dormitoryId)
+//   },
+
+//   getDormitoryById: (dormitoryId: string) => {
+//     const { allowedDormitories } = get()
+
+//     return allowedDormitories.find(d => d.id === dormitoryId)
+//   },
+
+//   getDormitoriesBySource: (source: 'role' | 'user') => {
+//     const { allowedDormitories } = get()
+
+//     return allowedDormitories.filter(d => d.source === source)
+//   },
+
+//   // Batch update method for better performance
+//   updateUserData: data => {
+//     set({
+//       user: data.user,
+//       permissions: data.permissions,
+//       allowedDormitoryIds: data.allowedDormitoryIds,
+//       allowedDormitories: data.allowedDormitories,
+//       loaded: true
+//     })
+//   }
+// }))
+
+// // Selector hooks for better performance (optional)
+// export const useUser = () => usePermissionStore(state => state.user)
+// export const usePermissions = () => usePermissionStore(state => state.permissions)
+// export const useAllowedDormitoryIds = () => usePermissionStore(state => state.allowedDormitoryIds)
+// export const useAllowedDormitories = () => usePermissionStore(state => state.allowedDormitories)
+// export const useHasPermission = () => usePermissionStore(state => state.hasPermission)
+// export const useHasDormitoryAccess = () => usePermissionStore(state => state.hasDormitoryAccess)
+
 import { create } from 'zustand'
+import { shallow } from 'zustand/shallow' // Import shallow for comparison
 
 type DormitoryInfo = {
   id: string
@@ -45,30 +143,54 @@ export const usePermissionStore = create<PermissionStore>()((set, get) => ({
 
   // Setters
   setUser: user => set({ user }),
-  setPermissions: permissions => set({ permissions }),
-  setAllowedDormitoryIds: ids => set({ allowedDormitoryIds: ids }),
-  setAllowedDormitories: dormitories => set({ allowedDormitories: dormitories }),
+
+  // Optimized setters for arrays
+  setPermissions: newPermissions => {
+    const currentPermissions = get().permissions
+
+    // Compare content, not just reference
+    if (!shallow(currentPermissions, newPermissions)) {
+      set({ permissions: newPermissions })
+    }
+  },
+  setAllowedDormitoryIds: newIds => {
+    const currentIds = get().allowedDormitoryIds
+
+    // Compare content, not just reference
+    if (!shallow(currentIds, newIds)) {
+      set({ allowedDormitoryIds: newIds })
+    }
+  },
+  setAllowedDormitories: newDormitories => {
+    const currentDormitories = get().allowedDormitories
+
+    // For arrays of objects, you might need a deeper comparison if order doesn't matter
+    // For now, a shallow comparison of the array elements themselves (which are objects)
+    // might be enough if you always pass new object references for changes.
+    // If object identity within the array changes but their content is the same,
+    // you'll need a custom deep comparison function here or a consistent way to update DormitoryInfo objects.
+    if (!shallow(currentDormitories, newDormitories)) {
+      set({ allowedDormitories: newDormitories })
+    }
+  },
   setLoaded: loaded => set({ loaded }),
 
-  // Helper methods
+  // Helper methods (remain unchanged)
   hasPermission: (permission: string) => {
     const { permissions } = get()
 
     return permissions.includes(permission)
   },
-
   hasDormitoryAccess: (dormitoryId: string) => {
     const { allowedDormitoryIds } = get()
 
     return allowedDormitoryIds.includes(dormitoryId)
   },
-
   getDormitoryById: (dormitoryId: string) => {
     const { allowedDormitories } = get()
 
     return allowedDormitories.find(d => d.id === dormitoryId)
   },
-
   getDormitoriesBySource: (source: 'role' | 'user') => {
     const { allowedDormitories } = get()
 
@@ -77,17 +199,31 @@ export const usePermissionStore = create<PermissionStore>()((set, get) => ({
 
   // Batch update method for better performance
   updateUserData: data => {
-    set({
-      user: data.user,
-      permissions: data.permissions,
-      allowedDormitoryIds: data.allowedDormitoryIds,
-      allowedDormitories: data.allowedDormitories,
-      loaded: true
+    set(state => {
+      const updates: Partial<PermissionStore> = {
+        user: data.user,
+        loaded: true
+      }
+
+      // Apply shallow comparison for arrays in batch update
+      if (!shallow(state.permissions, data.permissions)) {
+        updates.permissions = data.permissions
+      }
+
+      if (!shallow(state.allowedDormitoryIds, data.allowedDormitoryIds)) {
+        updates.allowedDormitoryIds = data.allowedDormitoryIds
+      }
+
+      if (!shallow(state.allowedDormitories, data.allowedDormitories)) {
+        updates.allowedDormitories = data.allowedDormitories
+      }
+
+      return updates
     })
   }
 }))
 
-// Selector hooks for better performance (optional)
+// Selector hooks remain the same
 export const useUser = () => usePermissionStore(state => state.user)
 export const usePermissions = () => usePermissionStore(state => state.permissions)
 export const useAllowedDormitoryIds = () => usePermissionStore(state => state.allowedDormitoryIds)

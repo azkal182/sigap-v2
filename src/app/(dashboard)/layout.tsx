@@ -21,6 +21,7 @@ import ScrollToTop from '@core/components/scroll-to-top'
 // Util Imports
 import { getMode, getSystemMode } from '@core/utils/serverHelpers'
 import { InitPermissions } from '@/components/providers/Init-permissions'
+import Customizer from '@/@core/components/customizer'
 
 const Layout = async (props: ChildrenType) => {
   const { children } = props
@@ -51,6 +52,7 @@ const Layout = async (props: ChildrenType) => {
           <i className='tabler-arrow-up' />
         </Button>
       </ScrollToTop>
+      <Customizer dir={direction} disableDirection />
     </Providers>
   )
 }
