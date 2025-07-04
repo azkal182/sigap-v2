@@ -10,9 +10,6 @@ import styled from '@emotion/styled'
 // Type Imports
 import type { VerticalNavContextProps } from '@menu/contexts/verticalNavContext'
 
-// Component Imports
-import VuexyLogo from '@core/svg/Logo'
-
 // Config Imports
 import themeConfig from '@configs/themeConfig'
 

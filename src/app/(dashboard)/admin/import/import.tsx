@@ -456,6 +456,7 @@ export default function ImportComponent() {
 
     const batchSize = 20
     const newPreviewData: ExcelRowData[] = [...previewData]
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     let actualHasInvalidRows = false // Variabel baru untuk melacak secara akurat
     let actualInvalidRowCount = 0 // Variabel baru untuk menghitung baris invalid
 
