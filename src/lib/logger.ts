@@ -48,54 +48,54 @@ const logger = createLogger({
       ),
   transports: [
     new transports.Console(),
-    new TelegramLogger({
-      level: 'error',
-
-      token: process.env.TELEGRAM_BOT_TOKEN!,
-      chatId: Number(process.env.TELEGRAM_CHAT_ID!),
-
-      // Optional but good to add:
-      silent: false,
-      disableNotification: false,
-      batchingDelay: 5000,
-      parseMode: 'Markdown', // or 'HTML' if you prefer
-
-      // ✅ Template (digunakan jika formatMessage tidak digunakan)
-      template: `*🚨 [{{level}}]*\n{{message}}\n\n\`\`\`{{stack}}\`\`\``,
-
-      // ✅ Atau gunakan custom formatMessage (lebih fleksibel)
-      formatMessage: ({ level, message, metadata }) => {
-        const levelStr = level.toUpperCase()
-
-        const date = new Date()
-
-        const timeString = date.toLocaleString('id-ID', {
-          timeZone: 'Asia/Jakarta',
-          weekday: 'short',
-          day: '2-digit',
-          month: 'short',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit'
-        })
-
-        const stack = metadata instanceof Error ? metadata.stack : metadata?.stack || ''
-
-        const safeMessage = message.replace(/[`*_[\]()~>#+\-=|{}.!]/g, '\\$&') // escape karakter Markdown
-
-        const safeStack = stack
-          ? '```\n' + stack.slice(0, 3500) + '\n```' // Telegram limit: 4096 chars
-          : ''
-
-        return [`*🚨 ${levelStr} - ${timeString}*`, `❌ ${safeMessage}`, safeStack].filter(Boolean).join('\n\n')
-      }
-    }),
 
     ...(isProduction
       ? [
-          new transports.File({ filename: 'logs/error.log', level: 'error' }),
-          new transports.File({ filename: 'logs/combined.log' })
+          //   new transports.File({ filename: 'logs/error.log', level: 'error' }),
+          //   new transports.File({ filename: 'logs/combined.log' })
+          new TelegramLogger({
+            level: 'error',
+
+            token: process.env.TELEGRAM_BOT_TOKEN!,
+            chatId: Number(process.env.TELEGRAM_CHAT_ID!),
+
+            // Optional but good to add:
+            silent: false,
+            disableNotification: false,
+            batchingDelay: 5000,
+            parseMode: 'Markdown', // or 'HTML' if you prefer
+
+            // ✅ Template (digunakan jika formatMessage tidak digunakan)
+            template: `*🚨 [{{level}}]*\n{{message}}\n\n\`\`\`{{stack}}\`\`\``,
+
+            // ✅ Atau gunakan custom formatMessage (lebih fleksibel)
+            formatMessage: ({ level, message, metadata }) => {
+              const levelStr = level.toUpperCase()
+
+              const date = new Date()
+
+              const timeString = date.toLocaleString('id-ID', {
+                timeZone: 'Asia/Jakarta',
+                weekday: 'short',
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+              })
+
+              const stack = metadata instanceof Error ? metadata.stack : metadata?.stack || ''
+
+              const safeMessage = message.replace(/[`*_[\]()~>#+\-=|{}.!]/g, '\\$&') // escape karakter Markdown
+
+              const safeStack = stack
+                ? '```\n' + stack.slice(0, 3500) + '\n```' // Telegram limit: 4096 chars
+                : ''
+
+              return [`*🚨 ${levelStr} - ${timeString}*`, `❌ ${safeMessage}`, safeStack].filter(Boolean).join('\n\n')
+            }
+          })
 
           // 🔔 Telegram logger for error only
         ]
