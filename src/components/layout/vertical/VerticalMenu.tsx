@@ -96,6 +96,12 @@ export const menuItems: MenuConfigSection[] = [
         href: '/dormitory/teacher',
         icon: 'tabler-brand-tether',
         permissions: ['student:view']
+      },
+      {
+        title: 'AKademik',
+        href: '/dormitory/academic',
+        icon: 'tabler-brand-tether',
+        permissions: ['student:view']
       }
     ]
   },

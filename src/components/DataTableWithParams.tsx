@@ -401,6 +401,7 @@ interface DataTableWithParamsProps<TData, TValue, TParams extends z.ZodSchema> {
   customFilters?: React.ReactNode
   className?: string
   onRefresh?: () => void
+  addButton?: React.ReactNode // Tambahkan properti untuk tombol tambahan
 }
 
 // Perbaikan di sini: TParams harus extends z.ZodSchema
@@ -415,7 +416,8 @@ export function DataTableWithParams<TData, TValue, TParams extends z.ZodSchema>(
   showColumnToggle = true,
   customFilters,
   className = '',
-  onRefresh
+  onRefresh,
+  addButton
 }: DataTableWithParamsProps<TData, TValue, TParams>) {
   const [showColumnPanel, setShowColumnPanel] = React.useState<HTMLElement | null>(null)
 
@@ -587,16 +589,15 @@ export function DataTableWithParams<TData, TValue, TParams extends z.ZodSchema>(
               Refresh
             </button>
           )}
-
+          {addButton}
           {showColumnToggle && (
             <div className='relative'>
               <Button
                 startIcon={<i className='tabler-settings h-4 w-4 ' />}
                 endIcon={<i className='tabler-chevron-down h-4 w-4 ' />}
                 variant='contained'
-                size='small'
                 onClick={handleClick}
-                className='flex items-center gap-2 px-3 py-2 '
+                className='flex items-center gap-2 '
               >
                 Kolom
               </Button>

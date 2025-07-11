@@ -132,46 +132,92 @@ const StudentPageView = () => {
 
   const { data, isLoading: queryLoading } = useStudents(searchParams.params, searchParams.isReady)
 
-  const columns: ColumnDef<StudentItem>[] = [
-    {
-      id: 'No',
-      header: 'No',
-      cell: ({ row }) => (searchParams.params.page - 1) * searchParams.params.limit + (row.index + 1),
-      enableSorting: false
-    },
-    { accessorKey: 'nis', header: 'NIS' },
-    { accessorKey: 'name', header: 'Nama' },
-    { accessorKey: 'fatherName', header: 'Nama Ayah', enableSorting: false },
-    { accessorKey: 'motherName', header: 'Nama Ibu', enableSorting: false },
-    {
-      accessorKey: 'parrentPhone',
-      header: 'No Wali',
-      enableSorting: false,
-      cell: ({ row }) => (row.original.parrentPhone ? convertPhoneNumber(row.original.parrentPhone) : '-')
-    },
-    { accessorKey: 'dormitory', header: 'Asrama' },
-    {
-      id: 'actions',
-      header: 'Aksi',
-      enableHiding: false,
+  const columns = useMemo<ColumnDef<StudentItem>[]>(
+    () => [
+      {
+        id: 'No',
+        header: 'No',
+        cell: ({ row }) => (searchParams.params.page - 1) * searchParams.params.limit + (row.index + 1),
+        enableSorting: false
+      },
+      { accessorKey: 'nis', header: 'NIS' },
+      { accessorKey: 'name', header: 'Nama' },
+      { accessorKey: 'ttl', header: 'TTL', enableSorting: false },
+      { accessorKey: 'fatherName', header: 'Nama Ayah', enableSorting: false },
+      { accessorKey: 'motherName', header: 'Nama Ibu', enableSorting: false },
+      {
+        accessorKey: 'parrentPhone',
+        header: 'No Wali',
+        enableSorting: false,
+        cell: ({ row }) => (row.original.parrentPhone ? convertPhoneNumber(row.original.parrentPhone) : '-')
+      },
+      { accessorKey: 'dormitory', header: 'Asrama' },
+      {
+        id: 'actions',
+        header: 'Aksi',
+        enableHiding: false,
 
-      // @ts-ignore
-      cell: ({ row }) => {
-        const student = row.original
+        // @ts-ignore
+        cell: ({ row }) => {
+          const student = row.original
 
-        return (
-          <div className='flex gap-2'>
-            <IconButton size='small' onClick={() => console.log('Edit', student.id)}>
-              <i className='tabler-edit text-green-400' />
-            </IconButton>
-            <IconButton size='small' onClick={() => console.log('Delete', student.id)}>
-              <i className='tabler-trash text-red-400' />
-            </IconButton>
-          </div>
-        )
+          return (
+            <div className='flex gap-2'>
+              <IconButton size='small' onClick={() => console.log('Edit', student.id)}>
+                <i className='tabler-edit text-green-400' />
+              </IconButton>
+              <IconButton size='small' onClick={() => console.log('Delete', student.id)}>
+                <i className='tabler-trash text-red-400' />
+              </IconButton>
+            </div>
+          )
+        }
       }
-    }
-  ]
+    ],
+    [searchParams.params.page, searchParams.params.limit]
+  )
+
+  //   const columns: ColumnDef<StudentItem>[] = [
+  //     {
+  //       id: 'No',
+  //       header: 'No',
+  //       cell: ({ row }) => (searchParams.params.page - 1) * searchParams.params.limit + (row.index + 1),
+  //       enableSorting: false
+  //     },
+  //     { accessorKey: 'nis', header: 'NIS' },
+  //     { accessorKey: 'name', header: 'Nama' },
+  //     { accessorKey: 'ttl', header: 'TTL', enableSorting: false },
+  //     { accessorKey: 'fatherName', header: 'Nama Ayah', enableSorting: false },
+  //     { accessorKey: 'motherName', header: 'Nama Ibu', enableSorting: false },
+  //     {
+  //       accessorKey: 'parrentPhone',
+  //       header: 'No Wali',
+  //       enableSorting: false,
+  //       cell: ({ row }) => (row.original.parrentPhone ? convertPhoneNumber(row.original.parrentPhone) : '-')
+  //     },
+  //     { accessorKey: 'dormitory', header: 'Asrama' },
+  //     {
+  //       id: 'actions',
+  //       header: 'Aksi',
+  //       enableHiding: false,
+
+  //       // @ts-ignore
+  //       cell: ({ row }) => {
+  //         const student = row.original
+
+  //         return (
+  //           <div className='flex gap-2'>
+  //             <IconButton size='small' onClick={() => console.log('Edit', student.id)}>
+  //               <i className='tabler-edit text-green-400' />
+  //             </IconButton>
+  //             <IconButton size='small' onClick={() => console.log('Delete', student.id)}>
+  //               <i className='tabler-trash text-red-400' />
+  //             </IconButton>
+  //           </div>
+  //         )
+  //       }
+  //     }
+  //   ]
 
   return (
     <div>

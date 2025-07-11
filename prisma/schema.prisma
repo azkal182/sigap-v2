@@ -2,8 +2,9 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-    provider = "prisma-client-js"
-    output   = "../src/generated/prisma"
+    provider        = "prisma-client-js"
+    output          = "../src/generated/prisma"
+    previewFeatures = ["metrics"]
 }
 
 datasource db {
@@ -157,6 +158,7 @@ model Dormitory {
     createdAt        DateTime           @default(now())
     updatedAt        DateTime           @updatedAt
     dormitoryHistory DormitoryHistory[]
+    dormitoryTracks  DormitoryTrack[] // pivot relasi ke track
 }
 
 model DormitoryHistory {
@@ -177,12 +179,13 @@ model DormitoryHistory {
 
 // AKADEMIK
 model Track {
-    id        String    @id @default(uuid()) // Fan
-    name      String
-    classes   Class[]
-    subjects  Subject[]
-    createdAt DateTime  @default(now())
-    updatedAt DateTime  @updatedAt
+    id              String           @id @default(uuid()) // Fan
+    name            String
+    classes         Class[]
+    subjects        Subject[]
+    createdAt       DateTime         @default(now())
+    updatedAt       DateTime         @updatedAt
+    dormitoryTracks DormitoryTrack[] // pivot relasi ke dormitory
 }
 
 model Subject {
@@ -197,6 +200,16 @@ model Subject {
     updatedAt    DateTime              @updatedAt
 }
 
+model DormitoryTrack {
+    dormitoryId String
+    trackId     String
+
+    dormitory Dormitory @relation(fields: [dormitoryId], references: [id])
+    track     Track     @relation(fields: [trackId], references: [id])
+
+    @@id([dormitoryId, trackId])
+}
+
 model Class {
     id          String @id @default(uuid())
     name        String // e.g., "Ubudiyah - Ust Umam"
@@ -206,6 +219,8 @@ model Class {
 
     track     Track     @relation(fields: [trackId], references: [id])
     dormitory Dormitory @relation(fields: [dormitoryId], references: [id])
+
+    active Boolean? @default(true)
 
     histories    History[]
     schedules    Schedule[]
@@ -335,6 +350,8 @@ model Province {
     code String
 
     regencies Regency[]
+
+    @@index([name])
 }
 
 model Regency {
@@ -350,6 +367,8 @@ model Regency {
     province   Province @relation(fields: [provinceId], references: [id])
 
     @@index([provinceId])
+    @@index([name])
+    @@index([label])
 }
 
 model District {
@@ -363,6 +382,7 @@ model District {
     regency   Regency @relation(fields: [regencyId], references: [id])
 
     @@index([regencyId])
+    @@index([name])
 }
 
 model Village {
@@ -377,6 +397,7 @@ model Village {
     students   Student[]
 
     @@index([districtId])
+    @@index([name])
 }
 
 // model Student {

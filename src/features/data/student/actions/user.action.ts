@@ -3,6 +3,7 @@
 import { getStudentsWithFilter } from '../student.service'
 import type { FilterStudentParams } from '../schemas/student-schema'
 import type { StudentListResponse } from '../student.service'
+import { handleServerError } from '@/lib/handle-error'
 
 export async function getFilteredStudents(params: FilterStudentParams): Promise<StudentListResponse> {
   try {
@@ -13,11 +14,13 @@ export async function getFilteredStudents(params: FilterStudentParams): Promise<
       ...result
     }
   } catch (error) {
-    console.error('❌ Server Action Error:', error)
+    // console.error('❌ Server Action Error:', error)
+
+    const message = handleServerError('Gagal mengambil data siswa', error)
 
     return {
       success: false,
-      error: 'Failed to fetch students'
+      error: message
     }
   }
 }

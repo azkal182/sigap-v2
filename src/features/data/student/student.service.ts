@@ -200,7 +200,7 @@
 
 import db from '@/lib/prisma'
 import type { FilterStudentParams } from './schemas/student-schema'
-import { HistoryStatus, StudentStatus, type Prisma } from '@/generated/prisma'
+import { HistoryStatus, Prisma, StudentStatus } from '@/generated/prisma'
 
 export type StudentItem = {
   id: string
@@ -211,6 +211,7 @@ export type StudentItem = {
   dormitory: string | null
   parrentPhone: string | null
   class: string | null
+  ttl: string | null
 }
 
 export type PaginationMeta = {
@@ -329,8 +330,8 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
         ? [
             {
               OR: [
-                { name: { contains: search }, status: StudentStatus.ACTIVE },
-                { nis: { contains: search }, status: StudentStatus.ACTIVE }
+                { name: { contains: search, mode: Prisma.QueryMode.insensitive }, status: StudentStatus.ACTIVE },
+                { nis: { contains: search, mode: Prisma.QueryMode.insensitive }, status: StudentStatus.ACTIVE }
               ]
             }
           ]
@@ -418,7 +419,8 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
       fatherName: true,
       motherName: true,
       parrentPhone: true,
-
+      placeOfBirth: true,
+      dateOfBirth: true,
       dormitory: {
         select: { name: true }
       },
@@ -448,7 +450,15 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
         motherName: s.motherName || null,
         parrentPhone: s.parrentPhone || null,
         class: history?.class?.name || null,
-        dormitory: s.dormitory.name || null
+        dormitory: s.dormitory.name || null,
+        ttl:
+          s.placeOfBirth && s.dateOfBirth
+            ? `${s.placeOfBirth}, ${new Date(s.dateOfBirth).toLocaleDateString('id-ID', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })}`
+            : null
       }
     })
     .sort((a, b) => {
@@ -464,6 +474,15 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
 
   //   console.log({ formattedStudents })
   const totalPages = Math.ceil(total / limit)
+
+  //   logger.info(`Fetched ${total} students with filter: ${JSON.stringify(options, null, 2)}`, {
+  //     total,
+  //     page,
+  //     limit,
+  //     totalPages,
+  //     hasNext: page < totalPages,
+  //     hasPrev: page > 1
+  //   })
 
   return {
     success: true,

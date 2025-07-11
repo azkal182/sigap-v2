@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 
 import { MenuItem } from '@mui/material'
 
-import { getDormitories } from '../../dormitory/actions/dormitory.action'
+import { getDormitoryList } from '../../dormitory/actions/dormitory.action'
 import CustomTextField from '@/@core/components/mui/TextField'
 import { usePermissionStore } from '@/store/permission'
 
@@ -24,7 +24,7 @@ export default function DormitorySelect() {
   const selectedDormitory = searchParams.get('dormitoryId') || ''
 
   useEffect(() => {
-    getDormitories().then(data => setDormitories(data.filter(student => allowedDormitoryIds.includes(student.id))))
+    getDormitoryList().then(data => setDormitories(data.filter(student => allowedDormitoryIds.includes(student.id))))
   }, [])
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
