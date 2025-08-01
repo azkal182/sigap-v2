@@ -402,6 +402,12 @@ interface DataTableWithParamsProps<TData, TValue, TParams extends z.ZodSchema> {
   className?: string
   onRefresh?: () => void
   addButton?: React.ReactNode // Tambahkan properti untuk tombol tambahan
+  /**
+   * Optional function to get a CSS class name for a row based on its data.
+   * @param rowData The data object for the current row.
+   * @returns A string of CSS class names.
+   */
+  getRowColorClass?: (rowData: TData) => string
 }
 
 // Perbaikan di sini: TParams harus extends z.ZodSchema
@@ -417,7 +423,8 @@ export function DataTableWithParams<TData, TValue, TParams extends z.ZodSchema>(
   customFilters,
   className = '',
   onRefresh,
-  addButton
+  addButton,
+  getRowColorClass
 }: DataTableWithParamsProps<TData, TValue, TParams>) {
   const [showColumnPanel, setShowColumnPanel] = React.useState<HTMLElement | null>(null)
 
@@ -704,8 +711,10 @@ export function DataTableWithParams<TData, TValue, TParams extends z.ZodSchema>(
             ) : (
               <TableBody>
                 {table.getRowModel().rows.map(row => {
+                  const rowClass = getRowColorClass ? getRowColorClass(row.original) : ''
+
                   return (
-                    <TableRow key={row.id}>
+                    <TableRow key={row.id} className={rowClass}>
                       {row.getVisibleCells().map(cell => {
                         return (
                           <TableCell key={cell.id}>

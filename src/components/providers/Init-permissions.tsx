@@ -38,7 +38,7 @@
 
 import { useEffect } from 'react'
 
-import { getSession } from 'next-auth/react'
+import { getSession, signOut } from 'next-auth/react'
 
 import { usePermissionStore } from '@/store/permission'
 
@@ -60,13 +60,14 @@ export function InitPermissions() {
         .then(data => {
           if (!data || data.error) return
           updateUserData({
-            user: { id: data.id, name: data.name, role: data.role },
+            user: { id: data.id, name: data.name, role: data.role, mustChangeCredentials: data.mustChangeCredentials },
             permissions: data.permissions,
             allowedDormitoryIds: data.allowedDormitoryIds,
             allowedDormitories: data.allowedDormitories || []
           })
         })
         .catch(err => {
+          signOut()
           console.error('Failed to load permissions', err)
         })
         .finally(() => {

@@ -74,11 +74,11 @@ export default function RoleManagerPage() {
   }, [])
 
   const groupedPermissions = useMemo(() => {
-    const map: Record<string, { id: string; label: string; action: string }[]> = {}
+    const map: Record<string, { id: string; label: string; action: string; title: string }[]> = {}
 
     for (const p of permissions) {
       if (!map[p.resource]) map[p.resource] = []
-      map[p.resource].push({ id: p.id, label: p.action, action: p.action })
+      map[p.resource].push({ id: p.id, label: p.action, action: p.action, title: p.label })
     }
 
     return map
@@ -235,7 +235,7 @@ export default function RoleManagerPage() {
                   <div key={resource} className='border rounded p-2'>
                     <div className='flex justify-between items-center'>
                       <Typography variant='subtitle2' className='uppercase'>
-                        {resource}
+                        {perms[0]?.title}
                       </Typography>
                       <FormControlLabel
                         control={

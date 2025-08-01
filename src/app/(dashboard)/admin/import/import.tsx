@@ -775,6 +775,7 @@ import { createStudentFromImportData } from '@/actions/import-data-action'
 
 // Import Server Action validasi baru
 import { validateImportDataOnServer } from '@/actions/validate-import-data-action'
+import GenerateDormitoryExcelButton from './generate'
 
 // --- Definisi Tipe untuk Data Baris Excel yang Sudah Diformat ---
 // Sesuaikan agar properti validasi menjadi opsional di awal
@@ -1119,6 +1120,7 @@ export default function ImportComponent() {
 
   return (
     <Box sx={{ p: 3 }}>
+      <GenerateDormitoryExcelButton />{' '}
       <Typography variant='h4' mb={2}>
         Upload Excel File
       </Typography>
@@ -1128,13 +1130,11 @@ export default function ImportComponent() {
         onChange={handleFileUpload}
         disabled={isImporting || isValidationRunning}
       />
-
       {errorMessage && (
         <Alert severity='error' sx={{ mt: 2 }}>
           {errorMessage}
         </Alert>
       )}
-
       {previewData.length > 0 && (
         <>
           <Typography variant='h6' mt={4} mb={2}>
@@ -1222,7 +1222,6 @@ export default function ImportComponent() {
           </Box>
         </>
       )}
-
       <Snackbar
         open={toastOpen}
         autoHideDuration={6000}

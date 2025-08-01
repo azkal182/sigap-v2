@@ -131,3 +131,16 @@ code {
   background-color: rgb(var(--mui-palette-info-mainChannel) / 0.08);
   border: 0;
 }
+
+@layer base {
+  .fc .fc-col-header .fc-col-header-cell-cushion {
+    @apply bg-transparent text-neutral-800 font-semibold border-b border-gray-300;
+  }
+}
+
+.fc .fc-col-header .fc-col-header-cell-cushion {
+  background-color: transparent !important;
+  color: #333; /* Warna teks, bisa disesuaikan agar tetap terbaca */
+  font-weight: 600;
+  border-bottom: 1px solid #ddd; /* Opsional, garis pemisah */
+}

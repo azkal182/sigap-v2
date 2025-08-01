@@ -48,6 +48,7 @@ export async function getUserPermissionData(userId: string) {
     id: user.id,
     name: user.name,
     role: user.role.name,
+    mustChangeCredentials: user.mustChangeCredentials,
     permissions: Array.from(permissions),
     allowedDormitoryIds: Array.from(dormitoryAccess),
 

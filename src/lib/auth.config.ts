@@ -20,7 +20,13 @@ const authConfig = {
 
         if (!user) return null
 
-        return { id: user.id, name: user.name, role: user.role.name }
+        return {
+          id: user.id,
+          name: user.name,
+          username: user.username,
+          role: user.role.name,
+          mustChangeCredentials: user.mustChangeCredentials
+        }
       }
     })
   ],
@@ -31,11 +37,18 @@ const authConfig = {
     signIn: '/login'
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id
         token.name = user.name
+        token.username = user.username
         token.role = user.role
+        token.mustChangeCredentials = user.mustChangeCredentials
+      }
+
+      if (trigger === 'update' && session) {
+        token.username = session.username
+        token.mustChangeCredentials = session.mustChangeCredentials
       }
 
       return token
@@ -44,7 +57,9 @@ const authConfig = {
       if (token && session.user) {
         session.user.id = token.id as string
         session.user.name = token.name as string
+        session.user.username = token.username as string
         session.user.role = token.role as string
+        session.user.mustChangeCredentials = token.mustChangeCredentials as boolean
       }
 
       return session

@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 
 import type { StudentListResponse } from './student.service'
-import { getFilteredStudents } from './actions/user.action'
+import { getFilteredStudents, getStudentOptionAction } from './actions/user.action'
 import type { FilterStudentParams } from './schemas/student-schema'
 
 export const fetchStudents = async (params: Record<string, any>): Promise<StudentListResponse> => {
@@ -29,5 +29,18 @@ export function useStudents(params: FilterStudentParams, isValid: boolean) {
       }
     },
     enabled: isValid
+  })
+}
+
+export function useStudentOption() {
+  return useQuery({
+    queryKey: ['student_options'],
+    queryFn: async () => {
+      const res = await getStudentOptionAction()
+
+      return {
+        data: res.data
+      }
+    }
   })
 }

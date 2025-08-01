@@ -106,7 +106,7 @@ type DormitoryInfo = {
 }
 
 type PermissionStore = {
-  user: { id: string; name: string; role: string } | null
+  user: { id: string; name: string; role: string; mustChangeCredentials: boolean } | null
   permissions: string[]
   allowedDormitoryIds: string[]
   allowedDormitories: DormitoryInfo[]

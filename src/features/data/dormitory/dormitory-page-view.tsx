@@ -133,6 +133,7 @@ const DormitoryPageView = () => {
         accessorKey: 'name',
         header: 'Nama'
       },
+
       {
         id: 'actions',
         header: 'Aksi',

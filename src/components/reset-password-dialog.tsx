@@ -7,7 +7,6 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  TextField,
   Button,
   IconButton,
   InputAdornment,
@@ -18,6 +17,7 @@ import {
 // Import Server Actions
 
 import { verifyOldPassword, updateNewPassword } from '@/actions/reset-password' // Sesuaikan path jika berbeda
+import CustomTextField from '@/@core/components/mui/TextField'
 
 interface ResetPasswordDialogProps {
   id: string // ID pengguna yang akan direset passwordnya
@@ -129,13 +129,12 @@ const ResetPasswordDialog: React.FC<ResetPasswordDialogProps> = ({ id, open, onC
         )}
         {step === 1 && (
           <div>
-            <TextField
-              label='Old Password'
+            <CustomTextField
+              label='Password Lama'
               type={showOldPassword ? 'text' : 'password'}
               value={oldPassword}
               onChange={e => setOldPassword(e.target.value)}
               fullWidth
-              margin='normal'
               variant='outlined'
               error={!!error && !successMessage} // Hanya tampilkan error jika tidak ada pesan sukses
               helperText={!!error && !successMessage ? error : ' '}
@@ -163,13 +162,12 @@ const ResetPasswordDialog: React.FC<ResetPasswordDialogProps> = ({ id, open, onC
         )}
         {step === 2 && (
           <div>
-            <TextField
-              label='New Password'
+            <CustomTextField
+              label='Password Baru'
               type={showNewPassword ? 'text' : 'password'}
               value={newPassword}
               onChange={e => setNewPassword(e.target.value)}
               fullWidth
-              margin='normal'
               variant='outlined'
               error={!!error && !successMessage}
               helperText={!!error && !successMessage ? error : ' '}

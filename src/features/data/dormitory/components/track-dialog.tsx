@@ -44,12 +44,11 @@ const TrackFormDialog: React.FC<TrackFormDialogProps> = ({
   // Handler saat tombol "Kirim" ditekan di dalam CreateFormDialog
   const handleSubmit = () => {
     onSubmit(trackName) // Panggil fungsi onSubmit dari props dengan nama trek
-    // onClose(); // Biarkan komponen induk yang menutup dialog setelah submit
   }
 
   // Tentukan judul dialog dan teks tombol submit berdasarkan mode
   const dialogTitle = isEditMode ? 'Edit Fan' : 'Buat Fan Baru'
-  const submitButtonText = isEditMode ? 'Simpan Perubahan' : 'Buat Trek'
+  const submitButtonText = isEditMode ? 'Simpan Perubahan' : 'Simpan'
 
   return (
     <FormDialog

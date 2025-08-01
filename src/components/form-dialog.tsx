@@ -32,18 +32,12 @@ const FormDialog = ({
   return (
     <Dialog open={open} onClose={onClose} maxWidth={width} fullWidth>
       <DialogTitle>{title}</DialogTitle>
-      <DialogContent className='p-6'>{children}</DialogContent>
+      <DialogContent className=''>{children}</DialogContent>
       <DialogActions className='p-4 border-t border-gray-200 flex justify-end space-x-2'>
-        <Button onClick={onClose} color='secondary' className='text-gray-700 hover:bg-gray-200 px-4 py-2 rounded-md'>
+        <Button onClick={onClose} variant='outlined'>
           Batal
         </Button>
-        <Button
-          onClick={onSubmit}
-          color='primary'
-          variant='contained'
-          className='bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md'
-          disabled={isSubmitDisabled}
-        >
+        <Button onClick={onSubmit} variant='contained' disabled={isSubmitDisabled}>
           {submitButtonText}
         </Button>
       </DialogActions>

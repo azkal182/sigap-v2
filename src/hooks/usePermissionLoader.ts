@@ -18,8 +18,10 @@ export function usePermissionLoader() {
       const response = await fetch('/api/permission/me')
       const data = await response.json()
 
+      console.log(JSON.stringify(data, null, 2))
+
       updateUserData({
-        user: { id: data.id, name: data.name, role: data.role },
+        user: { id: data.id, name: data.name, role: data.role, mustChangeCredentials: data.mustChangeCredentials },
         permissions: data.permissions,
         allowedDormitoryIds: data.allowedDormitoryIds,
         allowedDormitories: data.allowedDormitories || []

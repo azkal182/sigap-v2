@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 
 import Link from 'next/link'
 
-import { Button, IconButton, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material'
+import { Button, Card, IconButton, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material'
 
 import TrackFormDialog from './components/track-dialog'
 import {
@@ -17,6 +17,7 @@ import {
 interface Track {
   id: string
   name: string
+  targetDays: number
 }
 
 interface DormitoryDetailPageViewProps {
@@ -66,9 +67,12 @@ const DormitoryDetailPageView: React.FC<DormitoryDetailPageViewProps> = ({ id })
   }
 
   return (
-    <div>
+    <Card className='p-4'>
+      <Typography variant='h4' className='text-center'>
+        Daftar Fan {data?.name}
+      </Typography>
       <Button onClick={handleOpenCreateDialog} variant='contained' color='primary' className='mb-4'>
-        Add New Track
+        Tambah Fan
       </Button>
 
       <Table>
@@ -76,6 +80,7 @@ const DormitoryDetailPageView: React.FC<DormitoryDetailPageViewProps> = ({ id })
           <TableRow>
             <TableCell className='w-6'>NO</TableCell>
             <TableCell>NAMA</TableCell>
+            <TableCell>TARGET</TableCell>
             <TableCell>AKSI</TableCell>
           </TableRow>
         </TableHead>
@@ -88,7 +93,7 @@ const DormitoryDetailPageView: React.FC<DormitoryDetailPageViewProps> = ({ id })
                 </Typography>
               </TableCell>
             </TableRow>
-          ) : data?.tracks?.length === 0 ? (
+          ) : !data?.tracks || data?.tracks?.length === 0 ? (
             <TableRow>
               <TableCell colSpan={3} align='center'>
                 <Typography variant='body2' color='textSecondary'>
@@ -97,10 +102,11 @@ const DormitoryDetailPageView: React.FC<DormitoryDetailPageViewProps> = ({ id })
               </TableCell>
             </TableRow>
           ) : (
-            data?.tracks.map((track: Track, index: number) => (
+            data?.tracks.map((track, index: number) => (
               <TableRow key={track.id}>
                 <TableCell>{index + 1}</TableCell>
                 <TableCell>{track.name}</TableCell>
+                <TableCell>{track.targetDays} Hari</TableCell>
                 <TableCell>
                   <div className='flex gap-2'>
                     <IconButton size='small' onClick={() => handleOpenEditDialog(track)}>
@@ -129,7 +135,7 @@ const DormitoryDetailPageView: React.FC<DormitoryDetailPageViewProps> = ({ id })
         initialTrackName={editingTrack?.name || ''}
         isEditMode={dialogMode === 'edit'}
       />
-    </div>
+    </Card>
   )
 }
 

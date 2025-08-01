@@ -393,7 +393,9 @@ export function useCustomSearchParams<T extends z.ZodSchema>(
     }
 
     // Dependency array yang sudah diperbaiki - hanya dependencies yang benar-benar berubah
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     currentSearchParams.toString(), // Gunakan string untuk perbandingan yang stabil
     pathname,
 
@@ -422,6 +424,7 @@ export function useCustomSearchParams<T extends z.ZodSchema>(
 
       setParams(combinedParams)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentSearchParams.toString(), isReady, zodSchema, memoizedInitialParams])
 
   /**

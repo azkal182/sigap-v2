@@ -65,51 +65,94 @@ export const menuItems: MenuConfigSection[] = [
         icon: 'tabler-presentation-analytics',
         permissions: ['attendance:view']
       },
+
       {
-        title: 'Daftar Absensi',
-        href: '/attendance/list-attendance',
+        title: 'Daftar Absensi Santri',
+        href: '/attendance/list-attendance-student',
+        icon: 'tabler-report',
+        permissions: ['report-attend:view']
+      },
+      {
+        title: 'Daftar Absensi Pengajar',
+        href: '/attendance/list-attendance-teacher',
         icon: 'tabler-report',
         permissions: ['report-attend:view']
       }
     ]
   },
   {
+    label: 'Pengajar',
+    items: [
+      {
+        title: 'Jadwal Pelajaran',
+        href: '/schedule',
+        icon: 'tabler-presentation-analytics',
+        permissions: ['attendance:view']
+      }
+    ]
+  },
+  {
     label: 'Asrama',
     items: [
-      { title: 'Santri', href: '/dormitory/student', icon: 'tabler-school', permissions: ['student:view'] },
-      { title: 'Izin', href: '/dormitory/permit', icon: 'tabler-license-off', permissions: ['student:view'] },
-      { title: 'Laporan', href: '/dormitory/report', icon: 'tabler-report', permissions: ['student:view'] },
+      { title: 'Santri', href: '/dormitory/student', icon: 'tabler-school', permissions: ['dormitory.student:view'] },
+      { title: 'Izin', href: '/dormitory/permit', icon: 'tabler-license-off', permissions: ['dormitory.permit:view'] },
+      { title: 'Laporan', href: '/dormitory/report', icon: 'tabler-report', permissions: ['dormitory.report:view'] },
       {
-        title: 'Validasi Absensi',
-        href: '/dormitory/validate',
+        title: 'Validasi Absensi Santri',
+        href: '/dormitory/validate-student',
         icon: 'tabler-copy-check',
-        permissions: ['student:view']
+        permissions: ['dormitory.validation.student:view']
+      },
+      {
+        title: 'Validasi Absensi Pengajar',
+        href: '/dormitory/validate-teacher',
+        icon: 'tabler-copy-check',
+        permissions: ['dormitory.validation.teacher:view']
       },
       {
         title: 'Jadwal Pelajaran',
         href: '/dormitory/schedule',
         icon: 'tabler-calendar-due',
-        permissions: ['student:view']
+        permissions: ['dormitory.schedul:view']
       },
       {
         title: 'Pengajar',
         href: '/dormitory/teacher',
         icon: 'tabler-brand-tether',
-        permissions: ['student:view']
+        permissions: ['dormitory.teacher:view']
       },
       {
-        title: 'AKademik',
-        href: '/dormitory/academic',
+        title: 'Fan',
+        href: '/dormitory/track',
         icon: 'tabler-brand-tether',
-        permissions: ['student:view']
+        permissions: ['dormitory.track:view']
       }
+    ]
+  },
+  {
+    label: 'AKADEMIK',
+    items: [
+      { title: 'Daftar Tes', href: '/academic/test-registration', icon: 'tabler-users', permissions: ['user:view'] },
+      { title: 'Hasil Tes', href: '/academic/result-registration', icon: 'tabler-key', permissions: ['role:view'] }
     ]
   },
   {
     label: 'Data',
     items: [
       { title: 'Santri', href: '/data/student', icon: 'tabler-school', permissions: ['student:view'] },
-      { title: 'Asrama', href: '/data/dormitory', icon: 'tabler-building-skyscraper', permissions: ['dormitory:view'] }
+      { title: 'Asrama', href: '/data/dormitory', icon: 'tabler-building-skyscraper', permissions: ['dormitory:view'] },
+      {
+        title: 'Pengajar',
+        href: '/data/teacher',
+        icon: 'tabler-brand-tether',
+        permissions: ['student:view']
+      },
+      {
+        title: 'Kelas',
+        href: '/data/class',
+        icon: 'tabler-brand-tether',
+        permissions: ['student:view']
+      }
     ]
   },
   {

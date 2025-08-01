@@ -29,6 +29,8 @@ declare module 'next-auth' {
       id: string
       role: string
       name: string
+      username: string
+      mustChangeCredentials: boolean
     } & DefaultSession['user']
   }
 }
@@ -38,6 +40,8 @@ declare module 'next-auth' {
     id: string
     role: string
     name: string
+    username: string
+    mustChangeCredentials: boolean
   }
 }
 
@@ -46,5 +50,7 @@ declare module '@auth/core/jwt' {
     id: string
     role: string
     name: string
+    username: string
+    mustChangeCredentials: boolean
   }
 }

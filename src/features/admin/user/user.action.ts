@@ -1,7 +1,9 @@
 'use server'
 import { hash } from 'bcryptjs'
 
-import { getUsers } from './user.service'
+import { z } from 'zod'
+
+import { getUsers, updateCredentials } from './user.service'
 import { requirePermission } from '@/utils/require-permission'
 import prisma from '@/lib/prisma'
 
@@ -194,4 +196,37 @@ export async function checkUserDormitoryAccess(userId: string, dormitoryId: stri
   const accessibleDormitories = await getUserEffectiveDormitoryAccess(userId)
 
   return accessibleDormitories.some(dorm => dorm.id === dormitoryId)
+}
+
+const updateSchema = z.object({
+  userId: z.string(),
+  username: z.string(),
+  password: z.string().min(6, 'Password minimal 6 karakter')
+})
+
+export async function updateCredentialsAction(input: z.infer<typeof updateSchema>) {
+  console.log('[SERVER] triggered', input)
+
+  const parsed = updateSchema.safeParse(input)
+
+  if (!parsed.success) {
+    const errorMessage = Object.values(parsed.error.flatten().fieldErrors).flat().join(', ')
+
+    return {
+      success: false,
+      errors: errorMessage
+    }
+  }
+
+  try {
+    const { userId, ...data } = parsed.data
+
+    const result = await updateCredentials(userId, { username: data.username, password: data.password })
+
+    return { success: true, data: result }
+  } catch (error) {
+    console.error('Error updating credentials:', error)
+
+    return { success: false, message: 'Gagal memperbarui kredensial' }
+  }
 }
