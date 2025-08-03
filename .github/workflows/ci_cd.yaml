@@ -122,13 +122,10 @@ jobs:
       - name: Build Next.js app
         run: pnpm build
 
-      # --- Implementasi Artefak seperti pada referensi ---
+      # --- Mengelola Artefak ---
       - name: Package artifacts
         run: |
-          # Hapus .next jika ada dan buat ulang
-          rm -rf .next/
-          # Ini adalah langkah yang sama seperti di referensi MQKAN
-          # Namun, kita tidak akan menyalin node_modules/ untuk menghemat ukuran artefak
+          # Perbaikan di sini: Hapus baris 'rm -rf .next/' yang menyebabkan error
           tar -czf build-files.tar.gz .next/ public/ package.json pnpm-lock.yaml
 
       - name: Upload build artifacts
@@ -137,7 +134,7 @@ jobs:
           name: absensi-build-tarball
           path: build-files.tar.gz
           retention-days: 1
-      # --- Akhir Implementasi Artefak ---
+      # --- Akhir Mengelola Artefak ---
 
   #---
 
@@ -171,20 +168,15 @@ jobs:
         run: |
           ssh-keyscan ${{ secrets.VPS_IP }} >> ~/.ssh/known_hosts
 
-      # --- Implementasi Deployment seperti pada referensi ---
       - name: Deploy to VPS
         run: |
-          # Rsync file tarball tunggal ke server
           rsync -avz build-files.tar.gz ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }}:/home/${{ secrets.VPS_USER }}/project/${{ matrix.folder }}/
 
-          # Masuk ke server untuk mengekstrak dan me-restart aplikasi
           ssh -tt ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} << EOF
           cd /home/${{ secrets.VPS_USER }}/project/${{ matrix.folder }}
 
-          # Hapus file-file lama sebelum ekstrak yang baru
           rm -rf .next/ public/ package.json pnpm-lock.yaml
 
-          # Ekstrak file tarball
           tar -xzf build-files.tar.gz
           rm build-files.tar.gz
 
@@ -193,10 +185,8 @@ jobs:
             pm2 delete ${{ matrix.app }}
           fi
 
-          # Install ulang dependensi di VPS karena tidak disertakan dalam artefak
           pnpm install --production
 
-          # Buat file .env di server VPS
           echo "DIRECT_DATABASE_URL=\"postgresql://azkal:azkal@localhost:5432/${{ matrix.db }}?pgbouncer=true\"" > .env
           echo "DATABASE_URL=\"postgresql://azkal:azkal@localhost:6432/pool_${{ matrix.db }}?pgbouncer=true\"" >> .env
           echo "NEXTAUTH_URL=\"${{ matrix.url }}\"" >> .env
@@ -209,7 +199,6 @@ jobs:
 
           exit
           EOF
-      # --- Akhir Implementasi Deployment ---
 
   #---
 
