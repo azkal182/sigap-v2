@@ -13,11 +13,9 @@ jobs:
       project_name: ${{ steps.get_project_info.outputs.project_name }}
       project_version: ${{ steps.get_project_info.outputs.project_version }}
     steps:
-      # Checkout code di awal agar bisa mengakses package.json
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Ekstrak informasi proyek dari package.json dan simpan ke output job
       - name: Get Project Info
         id: get_project_info # ID ini penting untuk mengakses output
         run: |
@@ -56,43 +54,48 @@ jobs:
 
     # Hapus output project_name dan project_version dari sini, karena sudah ada di start_notify
     outputs:
-      # Anda mungkin tidak memerlukan output di sini lagi jika notifikasi mengambil dari start_notify
-      # Namun, jika ada kebutuhan lain di masa depan, bisa dipertahankan
-      # Misalnya, untuk memastikan build job berhasil mendapatkan info proyek
-      # project_name: ${{ steps.set_project_info.outputs.project_name }}
-      # project_version: ${{ steps.set_project_info.outputs.project_version }}
       build_status: ${{ job.status }} # Tambahkan status build untuk notifikasi
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # --- PERUBAHAN DI SINI: MENAMBAHKAN CACHE ---
+      - name: Verify pnpm-lock.yaml exists
+        run: |
+          if [ -f "pnpm-lock.yaml" ]; then
+            echo "pnpm-lock.yaml found"
+          else
+            echo "Error: pnpm-lock.yaml not found. Please commit it."
+            exit 1
+          fi
 
-      # Langkah cache untuk pnpm (dependencies)
-      - name: Setup pnpm cache
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20.x'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9.15.4 # Gunakan versi pnpm yang spesifik
+
+      # --- Implementasi Cache ---
+      - name: Cache pnpm store
         uses: actions/cache@v3
         with:
           path: ~/.pnpm-store
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-pnpm-
+            ${{ runner.os }}-pnpm-store-
 
-      # Langkah cache untuk Next.js (build files)
-      # Gunakan hash dari package.json dan pnpm-lock.yaml untuk invalidasi cache
-      - name: Cache Next.js build
+      - name: Cache node_modules
         uses: actions/cache@v3
         with:
-          path: |
-            ${{ github.workspace }}/.next/cache
-            ${{ github.workspace }}/.next/static
-          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package.json', '**/pnpm-lock.yaml') }}
+          path: node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-nextjs-
-
-      # --- END PERUBAHAN CACHE ---
-
-      # Buat file .env terlebih dahulu agar semua variabel tersedia
+            ${{ runner.os }}-node-modules-
+      # --- Akhir Implementasi Cache ---
       - name: Create .env file
         run: |
           echo "DATABASE_URL=postgresql://${{ secrets.DB_USER }}:${{ secrets.DB_PASS }}@${{ secrets.DB_HOST }}:5432/${{ matrix.db }}?pgbouncer=true" > .env
@@ -103,36 +106,44 @@ jobs:
           echo "TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}" >> .env
           echo "TELEGRAM_CHAT_ID=${{ secrets.TELEGRAM_CHAT_ID }}" >> .env
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '20.x'
-
-      - name: Install pnpm
-        run: npm install -g pnpm
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Run Prisma Migrations
+        env:
+          DATABASE_URL: postgresql://${{ secrets.DB_USER }}:${{ secrets.DB_PASS }}@${{ secrets.DB_HOST }}:5432/${{ matrix.db }}?pgbouncer=true
+        run: |
+          for i in {1..3}; do
+            npx prisma migrate deploy && exit 0 || true
+            echo "Migration failed, retrying in 5 seconds ($i/3)..."
+            sleep 5
+          done
+          echo "Failed to run Prisma migrations after 3 attempts."
+          exit 1 # Pastikan job gagal jika migrasi benar-benar gagal
+
       - name: Build Next.js app
+        env:
+          echo "DATABASE_URL=postgresql://${{ secrets.DB_USER }}:${{ secrets.DB_PASS }}@${{ secrets.DB_HOST }}:5432/${{ matrix.db }}?pgbouncer=true" > .env
+          echo "DIRECT_DATABASE_URL=postgresql://${{ secrets.DB_USER }}:${{ secrets.DB_PASS }}@${{ secrets.DB_HOST }}:5432/${{ matrix.db }}?pgbouncer=true" >> .env
+          echo "NEXTAUTH_URL=${{ matrix.url }}" >> .env
+          echo "AUTH_TRUST_HOST=${{ matrix.url }}" >> .env
+          echo "AUTH_SECRET=${{ secrets.AUTH_SECRET }}" >> .env
+          echo "TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}" >> .env
+          echo "TELEGRAM_CHAT_ID=${{ secrets.TELEGRAM_CHAT_ID }}" >> .env
         run: pnpm build
 
-      # Tidak perlu lagi Get Project Info for Output di sini
-      # karena sudah diambil di job start_notify
-
-      # --- PERUBAHAN DI SINI: MENYIMPAN ARTIFAK ---
-      # Upload hasil build sebagai artefak untuk job 'deploy'
+      # --- Mengelola Artefak ---
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4 # Menggunakan v4 untuk fitur terbaru
         with:
-          name: build-artifacts
+          name: absensi-build-artifacts # Nama artefak yang unik
           path: |
             .next/
             public/
             package.json
             pnpm-lock.yaml
-          # Jika Anda memiliki file lain yang perlu disalin ke VPS, tambahkan di sini
-      # --- END PERUBAHAN ---
+          retention-days: 1 # Berapa lama artefak akan disimpan
+      # --- Akhir Mengelola Artefak ---
 
   #---
 
@@ -151,13 +162,13 @@ jobs:
             url: https://staging.amtsilatipusat.com
 
     steps:
-      # --- PERUBAHAN DI SINI: MENGUNDUH ARTIFAK ---
-      # Download artefak dari job 'build'
+      # --- Mengunduh Artefak ---
       - name: Download build artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
-          name: build-artifacts
-      # --- END PERUBAHAN ---
+          name: absensi-build-artifacts # Nama artefak harus sama dengan yang diupload
+          path: ./ # Akan mengunduh ke direktori kerja saat ini
+      # --- Akhir Mengunduh Artefak ---
 
       - name: Add SSH key
         uses: webfactory/ssh-agent@v0.9.0
@@ -165,13 +176,17 @@ jobs:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
       - name: Add server to known_hosts
-        run: ssh-keyscan ${{ secrets.VPS_IP }} >> ~/.ssh/known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
 
       - name: Clone or pull on VPS
         run: |
           ssh -tt ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} << EOF
           if [ ! -d "/home/${{ secrets.VPS_USER }}/project/${{ matrix.folder }}" ]; then
             echo "Directory not found, cloning..."
+            # Pastikan GIT_URL memiliki token jika repo private
             GIT_URL="https://${{ secrets.GH_PAT }}@github.com/azkal182/sigap-v2.git"
             git clone "\$GIT_URL" /home/${{ secrets.VPS_USER }}/project/${{ matrix.folder }}
             cd /home/${{ secrets.VPS_USER }}/project/${{ matrix.folder }}
@@ -184,9 +199,9 @@ jobs:
           exit
           EOF
 
-      - name: Copy build files
+      - name: Copy build files to VPS
         run: |
-          # Perintah rsync sekarang akan berhasil karena file sudah ada di runner
+          # Rsync file-file yang sudah diunduh dari artefak
           rsync -avz --delete .next/ ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }}:/home/${{ secrets.VPS_USER }}/project/${{ matrix.folder }}/.next/
           rsync -avz --delete public/ ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }}:/home/${{ secrets.VPS_USER }}/project/${{ matrix.folder }}/public/
           rsync -avz --delete package.json pnpm-lock.yaml ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }}:/home/${{ secrets.VPS_USER }}/project/${{ matrix.folder }}/
@@ -201,6 +216,7 @@ jobs:
             pm2 delete ${{ matrix.app }}
           fi
 
+          # Install dependensi di VPS. Ini penting karena node_modules tidak ditransfer via artefak.
           pnpm install --production
 
           # Buat file .env di server VPS
@@ -211,6 +227,9 @@ jobs:
           echo "AUTH_SECRET=${{ secrets.AUTH_SECRET }}" >> .env
           echo "TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}" >> .env
           echo "TELEGRAM_CHAT_ID=${{ secrets.TELEGRAM_CHAT_ID }}" >> .env
+          # Tambahkan variabel lingkungan spesifik aplikasi lain jika ada
+          # echo "SUPABASE_KEY=${{ secrets.SUPABASE_KEY }}" >> .env
+          # echo "SUPABASE_PROJECT_URL=${{ secrets.SUPABASE_PROJECT_URL }}" >> .env
 
           pm2 start npm --name "${{ matrix.app }}" -- start -- -p ${{ matrix.port }}
 
@@ -221,7 +240,6 @@ jobs:
 
   # Job untuk notifikasi
   notify:
-    # Pastikan 'needs' mencakup 'start_notify' untuk mendapatkan outputnya
     needs: [start_notify, build, deploy]
     if: always()
     runs-on: ubuntu-latest
@@ -235,18 +253,27 @@ jobs:
       - name: Set Timestamp
         run: echo "TIMESTAMP=$(date +'%Y-%m-%d %H:%M:%S %Z')" >> $GITHUB_ENV
 
-      - name: Notify Success
-        # Kondisi ini akan mengecek status dari semua job yang dibutuhkan
-        if: success() && needs.build.result == 'success' && needs.deploy.result == 'success'
+      - name: Send Telegram Notification
         run: |
-          curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-          -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
-          -d "text=✅ CI/CD Success%0A📦 Project: ${{ env.PROJECT_NAME }}%0A🔖 Version: ${{ env.PROJECT_VERSION }}%0A🌍 URL: https://staging.amtsilatipusat.com%0A🕒 Time: ${{ env.TIMESTAMP }}%0AGithub Run: ${{ env.GITHUB_RUN_URL }}"
+          STATUS_ICON="✅"
+          STATUS_TEXT="CI/CD Success"
+          # Cek status dari semua job yang dibutuhkan
+          if [[ "${{ needs.build.result }}" != "success" || "${{ needs.deploy.result }}" != "success" ]]; then
+            STATUS_ICON="❌"
+            STATUS_TEXT="CI/CD Failed"
+          fi
 
-      - name: Notify Failure
-        # Kondisi ini akan dievaluasi jika ada job yang gagal atau di-skip karena kegagalan
-        if: failure() || (needs.build.result == 'failure' || needs.deploy.result == 'failure' || needs.deploy.result == 'skipped')
-        run: |
+          MESSAGE="<b>$STATUS_ICON $STATUS_TEXT</b>%0A"
+          MESSAGE+="📦 Project: ${{ env.PROJECT_NAME }}%0A"
+          MESSAGE+="🔖 Version: ${{ env.PROJECT_VERSION }}%0A"
+          MESSAGE+="🌍 URL: https://staging.amtsilatipusat.com%0A"
+          MESSAGE+="🕒 Time: ${{ env.TIMESTAMP }}%0A"
+
+          if [[ "$STATUS_TEXT" == "CI/CD Failed" ]]; then
+            MESSAGE+="🚨 Please check logs!"
+          fi
+
           curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
           -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
-          -d "text=❌ CI/CD Failed%0A📦 Project: ${{ env.PROJECT_NAME }}%0A🔖 Version: ${{ env.PROJECT_VERSION }}%0A🕒 Time: ${{ env.TIMESTAMP }}%0AGithub Run: ${{ env.GITHUB_RUN_URL }}%0APlease check logs!"
+          -d "parse_mode=HTML" \
+          -d "text=$MESSAGE"
