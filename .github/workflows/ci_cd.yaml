@@ -152,27 +152,25 @@ jobs:
             url: https://staging.amtsilatipusat.com
 
     steps:
+      # --- Mengunduh Artefak ---
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
           name: absensi-build-artifacts
-          path: ./
+          path: ./ # <--- Perbaikan di sini: Unduh langsung ke direktori kerja utama
+      # --- Akhir Mengunduh Artefak ---
 
       - name: Add SSH key
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      # --- PERBAIKAN DI SINI ---
-      # Tambahkan host key ke known_hosts dengan cara yang lebih andal
       - name: Add known hosts entry
         run: |
           ssh-keyscan ${{ secrets.VPS_IP }} >> ~/.ssh/known_hosts
-      # --- AKHIR PERBAIKAN ---
+
       - name: Clone or pull on VPS
         run: |
-          # Gunakan heredoc dengan tanda petik tunggal 'EOF' untuk menghindari
-          # interpolasi variabel shell di dalam heredoc.
           ssh -tt ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} << 'EOF'
           if [ ! -d "/home/${{ secrets.VPS_USER }}/project/${{ matrix.folder }}" ]; then
             echo "Directory not found, cloning..."
@@ -190,6 +188,7 @@ jobs:
 
       - name: Copy build files to VPS
         run: |
+          # Perintah rsync sekarang akan menemukan file-file karena sudah diunduh ke direktori yang benar
           rsync -avz --delete .next/ ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }}:/home/${{ secrets.VPS_USER }}/project/${{ matrix.folder }}/.next/
           rsync -avz --delete public/ ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }}:/home/${{ secrets.VPS_USER }}/project/${{ matrix.folder }}/public/
           rsync -avz --delete package.json pnpm-lock.yaml ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }}:/home/${{ secrets.VPS_USER }}/project/${{ matrix.folder }}/
@@ -218,9 +217,7 @@ jobs:
 
           exit
           EOF
-
   #---
-
   # Job untuk notifikasi
   notify:
     needs: [start_notify, build, deploy]
