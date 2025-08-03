@@ -11,6 +11,8 @@ export type StudentItem = {
   fatherName: string | null
   motherName: string | null
   parrentPhone: string | null
+  regency?: string | null
+  regencyId?: number
   activeDormitory: string | null
   activeTrack: string | null
   activeClass: string | null
@@ -334,6 +336,20 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
             }
           }
         }
+      },
+      village: {
+        select: {
+          district: {
+            select: {
+              regency: {
+                select: {
+                  id: true,
+                  label: true
+                }
+              }
+            }
+          }
+        }
       }
     }
   })
@@ -364,6 +380,8 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
         fatherName: s.fatherName || null,
         motherName: s.motherName || null,
         parrentPhone: s.parrentPhone || null,
+        regency: s.village?.district.regency.label,
+        regencyId: s.village?.district.regency.id,
         ttl:
           s.placeOfBirth && s.dateOfBirth
             ? `${s.placeOfBirth}, ${new Date(s.dateOfBirth).toLocaleDateString('id-ID', {
@@ -439,8 +457,6 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
     })
 
   const totalPages = Math.ceil(total / limit)
-
-  console.log(JSON.stringify(formattedStudents, null, 2))
 
   return {
     success: true,
