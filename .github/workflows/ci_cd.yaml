@@ -41,6 +41,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      # --- Langkah utama yang direvisi ---
+      # Buat file .env terlebih dahulu agar semua variabel tersedia untuk
+      # semua langkah berikutnya, termasuk script 'postinstall' pnpm.
+      - name: Create .env file
+        run: |
+          echo "DATABASE_URL=postgresql://${{ secrets.DB_USER }}:${{ secrets.DB_PASS }}@${{ secrets.DB_HOST }}:5432/${{ matrix.db }}?pgbouncer=true" > .env
+          echo "DIRECT_DATABASE_URL=postgresql://${{ secrets.DB_USER }}:${{ secrets.DB_PASS }}@${{ secrets.DB_HOST }}:5432/${{ matrix.db }}?pgbouncer=true" >> .env
+          echo "NEXTAUTH_URL=${{ matrix.url }}" >> .env
+          echo "AUTH_TRUST_HOST=${{ matrix.url }}" >> .env
+          echo "AUTH_SECRET=${{ secrets.AUTH_SECRET }}" >> .env
+      # --- End revisi utama ---
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
@@ -52,37 +63,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # Langkah ini sekarang akan secara eksplisit gagal jika Prisma tidak dapat menemukan DATABASE_URL
-      - name: Run Prisma Migrations
-        run: |
-          set -e
-          # Menulis DATABASE_URL ke file .env agar Prisma CLI dapat membacanya
-          echo "DATABASE_URL=postgresql://${{ secrets.DB_USER }}:${{ secrets.DB_PASS }}@${{ secrets.DB_HOST }}:5432/${{ matrix.db }}?pgbouncer=true" > .env
-
-          # Pastikan file .env berhasil dibuat
-          echo "Created .env file with DATABASE_URL"
-
-          # Jalankan migrasi Prisma
-          npx prisma migrate deploy || (sleep 10 && npx prisma migrate deploy)
-
-          # Hapus file .env setelah selesai
-          rm .env
-
-          echo "Prisma migrations completed."
       - name: Build Next.js app
-        env:
-          DATABASE_URL: postgresql://${{ secrets.DB_USER }}:${{ secrets.DB_PASS }}@${{ secrets.DB_HOST }}:6432/pool_${{ matrix.db }}?pgbouncer=true
-          DIRECT_DATABASE_URL: postgresql://${{ secrets.DB_USER }}:${{ secrets.DB_PASS }}@${{ secrets.DB_HOST }}:5432/${{ matrix.db }}?pgbouncer=true
-          NEXTAUTH_URL: ${{ matrix.url }}
-          AUTH_TRUST_HOST: ${{ matrix.url }}
-          AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
         run: pnpm build
 
-      # Langkah ini sekarang memiliki penanganan error yang lebih baik
       - name: Get Project Info
         id: set_project_info
         run: |
-          # Periksa apakah jq tersedia, jika tidak, gunakan nilai default
           if command -v jq &> /dev/null; then
             echo "project_name=$(jq -r .name package.json)" >> $GITHUB_OUTPUT
             echo "project_version=$(jq -r .version package.json)" >> $GITHUB_OUTPUT
@@ -150,6 +136,7 @@ jobs:
 
           pnpm install --production
 
+          # Buat file .env di server VPS
           echo "DIRECT_DATABASE_URL=\"postgresql://azkal:azkal@localhost:5432/${{ matrix.db }}?pgbouncer=true\"" > .env
           echo "DATABASE_URL=\"postgresql://azkal:azkal@localhost:6432/pool_${{ matrix.db }}?pgbouncer=true\"" >> .env
           echo "NEXTAUTH_URL=\"${{ matrix.url }}\"" >> .env
@@ -177,7 +164,6 @@ jobs:
       - name: Set Timestamp
         run: echo "TIMESTAMP=$(date +'%Y-%m-%d %H:%M:%S %Z')" >> $GITHUB_ENV
 
-      # Kondisi akan mengecek status dari setiap job yang dibutuhkan
       - name: Notify Success
         if: success() && needs.build.result == 'success' && needs.deploy.result == 'success'
         run: |
