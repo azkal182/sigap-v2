@@ -1,8 +1,8 @@
 'use server'
 
-import { getStudentOption, getStudentsWithFilter } from '../student.service'
+import { getStudentDetail, getStudentOption, getStudentsWithFilter } from '../student.service'
 import type { FilterStudentParams } from '../schemas/student-schema'
-import type { StudentListResponse, StudentOptionRespose } from '../student.service'
+import type { StudentItem, StudentListResponse, StudentOptionRespose } from '../student.service'
 import { handleServerError } from '@/lib/handle-error'
 
 export async function getFilteredStudents(params: FilterStudentParams): Promise<StudentListResponse> {
@@ -27,4 +27,14 @@ export async function getFilteredStudents(params: FilterStudentParams): Promise<
 
 export async function getStudentOptionAction(): Promise<StudentOptionRespose> {
   return getStudentOption()
+}
+
+export async function getStudentDetailAction(id: string): Promise<StudentItem | null> {
+  try {
+    return await getStudentDetail(id)
+  } catch (error) {
+    console.error('❌ Gagal mengambil detail siswa:', error)
+
+    return null
+  }
 }

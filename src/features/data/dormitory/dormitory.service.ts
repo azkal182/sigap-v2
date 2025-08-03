@@ -1468,7 +1468,10 @@ export async function assignStudentToClass({
   classId: string
 }): Promise<SimpleResponse<{ id: string; name: string }>> {
   try {
-    const classExist = await db.class.findUnique({ where: { id: classId } })
+    const classExist = await db.class.findUnique({
+      where: { id: classId },
+      select: { name: true, track: { select: { name: true } }, dormitory: { select: { name: true } } }
+    })
 
     if (!classExist) {
       return {
@@ -1496,7 +1499,10 @@ export async function assignStudentToClass({
       data: {
         classId,
         studentId,
-        status: HistoryStatus.STUDYING
+        status: HistoryStatus.STUDYING,
+        classNameAtThatTime: classExist.name,
+        dormNameAtThatTime: classExist.dormitory.name,
+        trackNameAtThatTime: classExist.track.name
       },
       select: {
         id: true,

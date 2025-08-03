@@ -93,7 +93,7 @@ const DormitoryStudentPageView = () => {
         data={data?.data ?? []}
         searchParams={searchParams}
         totalItems={data?.pagination.total}
-        customFilters={<DormitorySelect />}
+        customFilters={allowedDormitoryIds.length > 1 ? <DormitorySelect /> : undefined}
         isLoading={queryLoading || !searchParams.isReady} // Gabungkan isLoading dari query dan searchParams
         searchPlaceholder='Cari berdasarkan nama...'
         getRowColorClass={row => getStudentRowColor(row.daysLeft)}

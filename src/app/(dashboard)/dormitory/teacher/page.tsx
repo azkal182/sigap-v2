@@ -1,12 +1,9 @@
-'use client'
 import React from 'react'
 
-import { usePermissionStore } from '@/store/permission'
+import DormitoryTeacherPageView from '@/features/dormitory/teacher/dormitory-teacher-page-view'
 
 const Page = () => {
-  const { allowedDormitoryIds } = usePermissionStore()
-
-  return <div>{JSON.stringify(allowedDormitoryIds)}</div>
+  return <DormitoryTeacherPageView />
 }
 
 export default Page

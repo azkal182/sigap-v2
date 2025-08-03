@@ -893,7 +893,7 @@ export default function ImportComponent() {
 
         const cols: GridColDef<ExcelRowData>[] = [
           { field: 'dormitoryId', headerName: 'Dormitory ID (dari A1)', width: 150, editable: false },
-          { field: 'dormitoryName', headerName: 'Nama Asrama (dari Sheet)', width: 180, editable: false }, // <--- BARU
+
           ...Object.keys(validatedSchemaData[0] || {})
             .filter(key => key !== 'dormitoryId' && key !== 'dormitoryName' && !key.startsWith('__'))
             .map(key => ({
@@ -902,6 +902,7 @@ export default function ImportComponent() {
               width: 150,
               editable: false
             })),
+          { field: 'dormitoryName', headerName: 'Asrama', width: 180, editable: false },
           { field: '__placeOfBirth', headerName: 'Tempat Lahir (Valid)', width: 150, editable: false },
           {
             field: '__dateOfBirth',
@@ -918,7 +919,26 @@ export default function ImportComponent() {
             }
           },
           { field: '__isValid', headerName: 'Valid', width: 80, type: 'boolean', editable: false },
-          { field: '__validationMessage', headerName: 'Pesan Validasi', width: 250, editable: false }
+          {
+            field: '__validationMessage',
+            headerName: 'Pesan Validasi',
+            width: 250,
+            editable: false,
+            renderCell: params => (
+              <div
+                style={{
+                  whiteSpace: 'pre-wrap', // ini agar newline \n juga ditampilkan
+                  wordBreak: 'break-word', // memaksa pemenggalan jika terlalu panjang
+                  lineHeight: 1.5,
+                  overflowWrap: 'anywhere' // bantu penggalan kata
+                }}
+              >
+                {params.value}
+              </div>
+            )
+          }
+
+          //   { field: '__validationMessage', headerName: 'Pesan Validasi', width: 250, editable: false }
         ]
 
         setColumns(cols)
@@ -1123,7 +1143,13 @@ export default function ImportComponent() {
                 pageSizeOptions={[5, 10, 25]}
                 disableRowSelectionOnClick
                 getRowId={(row: any) => row.id}
+                getRowHeight={() => 'auto'}
                 getRowClassName={params => (params.row.__isValid === false ? 'Mui-error' : '')}
+                columnVisibilityModel={{
+                  dormitoryId: false,
+                  id: false,
+                  NO: false
+                }}
               />
             )}
 
@@ -1134,6 +1160,12 @@ export default function ImportComponent() {
                 pageSizeOptions={[5, 10, 25]}
                 disableRowSelectionOnClick
                 getRowId={(row: any) => row.id}
+                getRowHeight={() => 'auto'}
+                columnVisibilityModel={{
+                  dormitoryId: false,
+                  id: false,
+                  NO: false
+                }}
               />
             )}
 
@@ -1144,6 +1176,12 @@ export default function ImportComponent() {
                 pageSizeOptions={[5, 10, 25]}
                 disableRowSelectionOnClick
                 getRowId={(row: any) => row.id}
+                getRowHeight={() => 'auto'}
+                columnVisibilityModel={{
+                  dormitoryId: false,
+                  id: false,
+                  NO: false
+                }}
               />
             )}
           </Box>

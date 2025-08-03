@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 
-import type { StudentListResponse } from './student.service'
-import { getFilteredStudents, getStudentOptionAction } from './actions/user.action'
+import type { StudentItem, StudentListResponse } from './student.service'
+import { getFilteredStudents, getStudentDetailAction, getStudentOptionAction } from './actions/user.action'
 import type { FilterStudentParams } from './schemas/student-schema'
 
 export const fetchStudents = async (params: Record<string, any>): Promise<StudentListResponse> => {
@@ -42,5 +42,17 @@ export function useStudentOption() {
         data: res.data
       }
     }
+  })
+}
+
+export function useStudentDetail(id: string | undefined) {
+  return useQuery<StudentItem | null>({
+    queryKey: ['student_detail', id],
+    queryFn: () => {
+      if (!id) throw new Error('ID tidak valid')
+
+      return getStudentDetailAction(id)
+    },
+    enabled: !!id // hanya jalan jika ID ada
   })
 }

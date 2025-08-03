@@ -134,8 +134,9 @@ model Student {
 
     status StudentStatus? @default(ACTIVE)
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+    createdAt        DateTime           @default(now())
+    updatedAt        DateTime           @updatedAt
+    testRegistration TestRegistration[]
 }
 
 model Teacher {
@@ -199,22 +200,57 @@ model Track {
 }
 
 model Sks {
-    id      String  @id @default(uuid())
-    name    String
-    Track   Track?  @relation(fields: [trackId], references: [id])
-    trackId String?
+    id               String             @id @default(uuid())
+    name             String
+    Track            Track?             @relation(fields: [trackId], references: [id])
+    trackId          String?
+    passingGrade     Int?               @default(0)
+    testRegistration TestRegistration[]
+}
+
+model TestRegistration {
+    id          String             @id @default(uuid())
+    studentId   String
+    sksId       String
+    scheduledAt DateTime?
+    status      RegistrationStatus @default(PENDING)
+    createdAt   DateTime           @default(now())
+
+    student   Student  @relation(fields: [studentId], references: [id])
+    sks       Sks      @relation(fields: [sksId], references: [id])
+    test      Test?
+    Subject   Subject? @relation(fields: [subjectId], references: [id])
+    subjectId String?
+}
+
+model Test {
+    id             String   @id @default(uuid())
+    registrationId String   @unique
+    score          Float
+    passed         Boolean
+    attemptNumber  Int
+    createdAt      DateTime @default(now())
+
+    registration TestRegistration @relation(fields: [registrationId], references: [id])
+}
+
+enum RegistrationStatus {
+    PENDING
+    COMPLETED
+    CANCELLED
 }
 
 model Subject {
-    id           String                @id @default(uuid())
-    name         String
-    trackId      String
-    track        Track                 @relation(fields: [trackId], references: [id])
+    id               String                @id @default(uuid())
+    name             String
+    trackId          String
+    track            Track                 @relation(fields: [trackId], references: [id])
     // histories    History[]
-    schedules    Schedule[]
-    teacherLinks TeacherSubjectClass[]
-    createdAt    DateTime              @default(now())
-    updatedAt    DateTime              @updatedAt
+    schedules        Schedule[]
+    teacherLinks     TeacherSubjectClass[]
+    createdAt        DateTime              @default(now())
+    updatedAt        DateTime              @updatedAt
+    TestRegistration TestRegistration[]
 }
 
 model TeacherDormitory {
@@ -276,13 +312,15 @@ model History {
     studentId String
     classId   String
     // subjectId String
-    date      DateTime      @default(now())
+    startDate DateTime      @default(now())
+    endDate   DateTime?
     status    HistoryStatus
     score     Int?
 
     classNameAtThatTime    String?
     classTeacherAtThatTime String?
     dormNameAtThatTime     String?
+    trackNameAtThatTime    String?
 
     student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
     class   Class   @relation(fields: [classId], references: [id])

@@ -361,7 +361,7 @@
 import type { MouseEvent } from 'react'
 import React, { useEffect } from 'react'
 
-import type { ColumnDef, PaginationState, SortingState, OnChangeFn } from '@tanstack/react-table'
+import type { ColumnDef, PaginationState, SortingState, OnChangeFn, InitialTableState } from '@tanstack/react-table'
 import { flexRender, getCoreRowModel, getSortedRowModel, useReactTable } from '@tanstack/react-table'
 
 import {
@@ -408,6 +408,7 @@ interface DataTableWithParamsProps<TData, TValue, TParams extends z.ZodSchema> {
    * @returns A string of CSS class names.
    */
   getRowColorClass?: (rowData: TData) => string
+  initialState?: InitialTableState
 }
 
 // Perbaikan di sini: TParams harus extends z.ZodSchema
@@ -424,7 +425,8 @@ export function DataTableWithParams<TData, TValue, TParams extends z.ZodSchema>(
   className = '',
   onRefresh,
   addButton,
-  getRowColorClass
+  getRowColorClass,
+  initialState
 }: DataTableWithParamsProps<TData, TValue, TParams>) {
   const [showColumnPanel, setShowColumnPanel] = React.useState<HTMLElement | null>(null)
 
@@ -506,7 +508,8 @@ export function DataTableWithParams<TData, TValue, TParams extends z.ZodSchema>(
       sorting
     },
     onPaginationChange: handlePaginationChange,
-    onSortingChange: handleSortingChange
+    onSortingChange: handleSortingChange,
+    initialState
   })
 
   const clearSearch = () => {

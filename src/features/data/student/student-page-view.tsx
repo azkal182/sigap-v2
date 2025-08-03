@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react'
 
-import { IconButton } from '@mui/material'
+import Link from 'next/link'
+
+import { Button, IconButton } from '@mui/material'
 
 import type { ColumnDef } from '@tanstack/react-table'
 
@@ -75,6 +77,11 @@ const StudentPageView = () => {
               <IconButton size='small' onClick={() => console.log('Delete', student.id)}>
                 <i className='tabler-trash text-red-400' />
               </IconButton>
+              <Link href={`/data/student/${student.id}`}>
+                <IconButton size='small'>
+                  <i className='tabler-eye text-teal-400' />
+                </IconButton>
+              </Link>
             </div>
           )
         }
@@ -93,6 +100,12 @@ const StudentPageView = () => {
         customFilters={<DormitorySelect />}
         isLoading={queryLoading || !searchParams.isReady} // Gabungkan isLoading dari query dan searchParams
         searchPlaceholder='Cari berdasarkan nama...'
+        initialState={{ columnVisibility: {} }}
+        addButton={
+          <Link href={'/data/student/add'}>
+            <Button variant='contained'>Tambah Santri</Button>
+          </Link>
+        }
       />
     </div>
   )
