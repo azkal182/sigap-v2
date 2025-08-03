@@ -1,2 +1,4 @@
 pnpm run build:icons
+git add src/assets/iconify-icons/generated-icons.css
+
 npx lint-staged

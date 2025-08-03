@@ -4,7 +4,7 @@
     "license": "UNLICENSED",
     "private": true,
     "scripts": {
-        "prepare": "[ \"$NODE_ENV\" != \"production\" ] && husky install || echo 'Skipping husky in production'",
+        "prepare": "husky",
         "dev": "next dev --turbopack",
         "build": "next build",
         "start": "next start",
@@ -21,6 +21,7 @@
         "**/*.{js,ts,jsx,tsx}": "prettier . --write"
     },
     "dependencies": {
+        "husky": "^9.1.7",
         "@emotion/cache": "11.14.0",
         "@emotion/react": "11.14.0",
         "@emotion/styled": "11.14.0",
@@ -77,7 +78,6 @@
         "eslint-config-prettier": "9.1.0",
         "eslint-import-resolver-typescript": "3.7.0",
         "eslint-plugin-import": "2.31.0",
-        "husky": "^9.1.7",
         "lint-staged": "^16.1.2",
         "postcss": "8.4.49",
         "postcss-styled-syntax": "0.7.0",
