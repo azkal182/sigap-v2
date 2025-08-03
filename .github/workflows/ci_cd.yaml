@@ -28,7 +28,7 @@ jobs:
         app: [staging]
         include:
           - app: staging
-            port: 4040
+            port: 4242
             folder: staging
             db: staging
             url: https://staging.amtsilatipusat.com
@@ -88,7 +88,7 @@ jobs:
         app: [staging]
         include:
           - app: staging
-            port: 4040
+            port: 4242
             folder: staging
             db: staging
             url: https://staging.amtsilatipusat.com
