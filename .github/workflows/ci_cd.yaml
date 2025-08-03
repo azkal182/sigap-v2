@@ -192,6 +192,8 @@ jobs:
           echo "AUTH_SECRET=${{ secrets.AUTH_SECRET }}" >> .env
           echo "TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}" >> .env
           echo "TELEGRAM_CHAT_ID=${{ secrets.TELEGRAM_CHAT_ID }}" >> .env
+          echo "NEXT_PUBLIC_APP_VERSION=${{ needs.start_notify.outputs.project_version }}" >> .env
+          echo "NODE_ENV=production" >> .env
           pnpm install --production
 
           pm2 start npm --name "${{ matrix.app }}" -- start -- -p ${{ matrix.port }}

@@ -4,7 +4,7 @@
     "license": "UNLICENSED",
     "private": true,
     "scripts": {
-        "prepare": "command -v husky && husky install || echo 'husky not installed (dev only)'",
+        "prepare": "[ \"$NODE_ENV\" != \"production\" ] && husky install || echo 'Skipping husky in production'",
         "dev": "next dev --turbopack",
         "build": "next build",
         "start": "next start",

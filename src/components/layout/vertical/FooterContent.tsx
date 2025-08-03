@@ -12,7 +12,7 @@ import classnames from 'classnames'
 import { verticalLayoutClasses } from '@layouts/utils/layoutClasses'
 
 const FooterContent = () => {
-  // Hooks
+  const appVersion = process.env.NEXT_PUBLIC_APP_VERSION
 
   return (
     <div
@@ -25,6 +25,7 @@ const FooterContent = () => {
         <Link href='https://amtsilatipusat.net/' target='_blank' className='text-primary uppercase'>
           PPDF
         </Link>
+        {appVersion && <span className='text-textSecondary'>{` Versi ${appVersion}`}</span>}
       </p>
     </div>
   )

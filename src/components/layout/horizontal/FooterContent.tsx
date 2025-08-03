@@ -12,6 +12,8 @@ import classnames from 'classnames'
 import { horizontalLayoutClasses } from '@layouts/utils/layoutClasses'
 
 const FooterContent = () => {
+  const appVersion = process.env.NEXT_PUBLIC_APP_VERSION
+
   return (
     <div
       className={classnames(horizontalLayoutClasses.footerContent, 'flex items-center justify-between flex-wrap gap-4')}
@@ -23,6 +25,7 @@ const FooterContent = () => {
         <Link href='https://amtsilatipusat.net/' target='_blank' className='text-primary uppercase'>
           PPDF
         </Link>
+        {appVersion && <span className='text-textSecondary'>{` Versi ${appVersion}`}</span>}
       </p>
     </div>
   )
