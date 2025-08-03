@@ -170,6 +170,23 @@ jobs:
         run: |
           ssh-keyscan ${{ secrets.VPS_IP }} >> ~/.ssh/known_hosts
 
+      - name: Clone or pull on VPS
+        run: |
+          ssh -tt ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} << EOF
+          if [ ! -d "/home/${{ secrets.VPS_USER }}/project/${{ matrix.folder }}" ]; then
+            echo "Directory not found, cloning..."
+            GIT_URL="https://${{ secrets.GH_PAT }}@github.com/azkal182/sigap-v2.git"
+            git clone "\$GIT_URL" /home/${{ secrets.VPS_USER }}/project/${{ matrix.folder }}
+            cd /home/${{ secrets.VPS_USER }}/project/${{ matrix.folder }}
+            git checkout main
+          else
+            echo "Directory exists, pulling latest code..."
+            cd /home/${{ secrets.VPS_USER }}/project/${{ matrix.folder }}
+            git pull origin main
+          fi
+          exit
+          EOF
+
       - name: Deploy to VPS
         run: |
           rsync -avz build-files.tar.gz ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }}:/home/${{ secrets.VPS_USER }}/project/${{ matrix.folder }}/
