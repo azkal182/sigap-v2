@@ -56,7 +56,7 @@ const StudentPageView = () => {
         enableSorting: false,
         cell: ({ row }) => (row.original.parrentPhone ? convertPhoneNumber(row.original.parrentPhone) : '-')
       },
-      { accessorKey: 'dormitory', header: 'Asrama' },
+      { accessorKey: 'activeDormitory', header: 'Asrama' },
       { accessorKey: 'targetDays', header: 'Target Fan', enableSorting: false },
       { accessorKey: 'daysStudied', header: 'Lama di Fan' },
       { accessorKey: 'daysLeft', header: 'Sisa Target di Fan' },

@@ -142,7 +142,7 @@ jobs:
 
   # Job untuk deploy aplikasi
   deploy:
-    needs: build
+    needs: [build, start_notify]
     runs-on: ubuntu-latest
     strategy:
       matrix:

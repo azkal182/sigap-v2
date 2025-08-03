@@ -340,16 +340,15 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
 
   const formattedStudents: StudentItem[] = students
     .map(s => {
-      // Karena kita hanya mengambil 1 history, kita bisa langsung akses indeks 0
       const history = s.histories?.[0]
 
-      let targetDays = null
-      let daysStudied = null
-      let daysLeft = null
+      let targetDays: number | null = null
+      let daysStudied: number | null = null
+      let daysLeft: number | null = null
 
-      // Perhitungan menjadi lebih sederhana karena hanya ada satu history
       if (history) {
         targetDays = history.class?.track?.targetDays || 0
+
         const firstDate = DateTime.fromISO(history.startDate.toISOString())
         const now = DateTime.now()
 
@@ -357,11 +356,29 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
         daysLeft = targetDays - daysStudied
       }
 
+      const baseData = {
+        id: s.id,
+        name: s.name,
+        nis: s.nis,
+        activeDormitory: s.dormitory?.name || null,
+        fatherName: s.fatherName || null,
+        motherName: s.motherName || null,
+        parrentPhone: s.parrentPhone || null,
+        ttl:
+          s.placeOfBirth && s.dateOfBirth
+            ? `${s.placeOfBirth}, ${new Date(s.dateOfBirth).toLocaleDateString('id-ID', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })}`
+            : null
+      }
+
       if (history) {
         const { track } = history.class
 
         const sksList = track.sks.map(sksItem => {
-          const registration = sksItem.testRegistration[0] // Ambil pendaftaran pertama yang ditemukan
+          const registration = sksItem.testRegistration[0]
           const score = registration?.test?.score ?? null
           const passed = registration?.test?.passed ?? false
 
@@ -383,55 +400,29 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
         const totalSks = sksList.length
         const passedCount = sksList.filter(item => item.passed).length
 
+        console.log(JSON.stringify(s.dormitory?.name, null, 2))
+
         return {
-          id: s.id,
-          name: s.name,
-          nis: s.nis,
-          fatherName: s.fatherName || null,
-          motherName: s.motherName || null,
-          parrentPhone: s.parrentPhone || null,
-          activeDormitory: s.dormitory.name || null,
-          activeTrack: history?.class?.track.name || null,
+          ...baseData,
+          activeTrack: track?.name || null,
           activeClass: history?.class?.name || null,
-          ttl:
-            s.placeOfBirth && s.dateOfBirth
-              ? `${s.placeOfBirth}, ${new Date(s.dateOfBirth).toLocaleDateString('id-ID', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric'
-                })}`
-              : null,
           targetDays,
           daysStudied,
           daysLeft,
-          isAheadOfSchedule: daysLeft ? daysLeft < 0 : null,
+          isAheadOfSchedule: daysLeft !== null ? daysLeft < 0 : null,
           totalSks,
           passedCount
         }
       }
 
       return {
-        id: s.id,
-        name: s.name,
-        nis: s.nis,
-        fatherName: s.fatherName || null,
-        motherName: s.motherName || null,
-        parrentPhone: s.parrentPhone || null,
-        activeDormitory: null,
-        activeTrack: null,
+        ...baseData,
+        activeTrack: null, // ⬅️ Diperlukan agar sesuai dengan tipe StudentItem
         activeClass: null,
-        ttl:
-          s.placeOfBirth && s.dateOfBirth
-            ? `${s.placeOfBirth}, ${new Date(s.dateOfBirth).toLocaleDateString('id-ID', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-              })}`
-            : null,
         targetDays,
         daysStudied,
         daysLeft,
-        isAheadOfSchedule: daysLeft ? daysLeft < 0 : null,
+        isAheadOfSchedule: daysLeft !== null ? daysLeft < 0 : null,
         totalSks: 0,
         passedCount: 0
       }
@@ -448,6 +439,8 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
     })
 
   const totalPages = Math.ceil(total / limit)
+
+  console.log(JSON.stringify(formattedStudents, null, 2))
 
   return {
     success: true,
