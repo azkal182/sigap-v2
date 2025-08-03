@@ -122,18 +122,22 @@ jobs:
       - name: Build Next.js app
         run: pnpm build
 
-      # --- Mengelola Artefak ---
+      # --- Implementasi Artefak seperti pada referensi ---
+      - name: Package artifacts
+        run: |
+          # Hapus .next jika ada dan buat ulang
+          rm -rf .next/
+          # Ini adalah langkah yang sama seperti di referensi MQKAN
+          # Namun, kita tidak akan menyalin node_modules/ untuk menghemat ukuran artefak
+          tar -czf build-files.tar.gz .next/ public/ package.json pnpm-lock.yaml
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: absensi-build-artifacts
-          path: |
-            .next/
-            public/
-            package.json
-            pnpm-lock.yaml
+          name: absensi-build-tarball
+          path: build-files.tar.gz
           retention-days: 1
-      # --- Akhir Mengelola Artefak ---
+      # --- Akhir Implementasi Artefak ---
 
   #---
 
@@ -152,13 +156,11 @@ jobs:
             url: https://staging.amtsilatipusat.com
 
     steps:
-      # --- Mengunduh Artefak ---
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
-          name: absensi-build-artifacts
-          path: ./ # <--- Perbaikan di sini: Unduh langsung ke direktori kerja utama
-      # --- Akhir Mengunduh Artefak ---
+          name: absensi-build-tarball
+          path: ./
 
       - name: Add SSH key
         uses: webfactory/ssh-agent@v0.9.0
@@ -169,42 +171,32 @@ jobs:
         run: |
           ssh-keyscan ${{ secrets.VPS_IP }} >> ~/.ssh/known_hosts
 
-      - name: Clone or pull on VPS
+      # --- Implementasi Deployment seperti pada referensi ---
+      - name: Deploy to VPS
         run: |
-          ssh -tt ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} << 'EOF'
-          if [ ! -d "/home/${{ secrets.VPS_USER }}/project/${{ matrix.folder }}" ]; then
-            echo "Directory not found, cloning..."
-            GIT_URL="https://${{ secrets.GH_PAT }}@github.com/azkal182/sigap-v2.git"
-            git clone "\$GIT_URL" /home/${{ secrets.VPS_USER }}/project/${{ matrix.folder }}
-            cd /home/${{ secrets.VPS_USER }}/project/${{ matrix.folder }}
-            git checkout main
-          else
-            echo "Directory exists, pulling latest code..."
-            cd /home/${{ secrets.VPS_USER }}/project/${{ matrix.folder }}
-            git pull origin main
-          fi
-          exit
-          EOF
+          # Rsync file tarball tunggal ke server
+          rsync -avz build-files.tar.gz ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }}:/home/${{ secrets.VPS_USER }}/project/${{ matrix.folder }}/
 
-      - name: Copy build files to VPS
-        run: |
-          # Perintah rsync sekarang akan menemukan file-file karena sudah diunduh ke direktori yang benar
-          rsync -avz --delete .next/ ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }}:/home/${{ secrets.VPS_USER }}/project/${{ matrix.folder }}/.next/
-          rsync -avz --delete public/ ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }}:/home/${{ secrets.VPS_USER }}/project/${{ matrix.folder }}/public/
-          rsync -avz --delete package.json pnpm-lock.yaml ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }}:/home/${{ secrets.VPS_USER }}/project/${{ matrix.folder }}/
-
-      - name: Install deps and restart app on VPS
-        run: |
+          # Masuk ke server untuk mengekstrak dan me-restart aplikasi
           ssh -tt ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} << EOF
           cd /home/${{ secrets.VPS_USER }}/project/${{ matrix.folder }}
+
+          # Hapus file-file lama sebelum ekstrak yang baru
+          rm -rf .next/ public/ package.json pnpm-lock.yaml
+
+          # Ekstrak file tarball
+          tar -xzf build-files.tar.gz
+          rm build-files.tar.gz
 
           if pm2 describe ${{ matrix.app }} > /dev/null; then
             pm2 stop ${{ matrix.app }}
             pm2 delete ${{ matrix.app }}
           fi
 
+          # Install ulang dependensi di VPS karena tidak disertakan dalam artefak
           pnpm install --production
 
+          # Buat file .env di server VPS
           echo "DIRECT_DATABASE_URL=\"postgresql://azkal:azkal@localhost:5432/${{ matrix.db }}?pgbouncer=true\"" > .env
           echo "DATABASE_URL=\"postgresql://azkal:azkal@localhost:6432/pool_${{ matrix.db }}?pgbouncer=true\"" >> .env
           echo "NEXTAUTH_URL=\"${{ matrix.url }}\"" >> .env
@@ -217,7 +209,10 @@ jobs:
 
           exit
           EOF
+      # --- Akhir Implementasi Deployment ---
+
   #---
+
   # Job untuk notifikasi
   notify:
     needs: [start_notify, build, deploy]
