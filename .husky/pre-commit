@@ -1,1 +1,2 @@
+pnpm run build:icons
 npx lint-staged
