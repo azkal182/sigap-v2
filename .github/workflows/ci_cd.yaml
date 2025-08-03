@@ -121,13 +121,6 @@ jobs:
           exit 1 # Pastikan job gagal jika migrasi benar-benar gagal
 
       - name: Build Next.js app
-        env:
-          echo "DATABASE_URL=postgresql://${{ secrets.DB_USER }}:${{ secrets.DB_PASS }}@${{ secrets.DB_HOST }}:5432/${{ matrix.db }}?pgbouncer=true" > .env
-          echo "NEXTAUTH_URL=${{ matrix.url }}" >> .env
-          echo "AUTH_TRUST_HOST=${{ matrix.url }}" >> .env
-          echo "AUTH_SECRET=${{ secrets.AUTH_SECRET }}" >> .env
-          echo "TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}" >> .env
-          echo "TELEGRAM_CHAT_ID=${{ secrets.TELEGRAM_CHAT_ID }}" >> .env
         run: pnpm build
 
       # --- Mengelola Artefak ---
