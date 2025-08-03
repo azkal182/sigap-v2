@@ -129,7 +129,8 @@ jobs:
           ssh -tt ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} << EOF
           if [ ! -d "/home/${{ secrets.VPS_USER }}/project/${{ matrix.folder }}" ]; then
             echo "Directory not found, cloning..."
-            git clone https://github.com/azkal182/sigap-v2.git /home/${{ secrets.VPS_USER }}/project/${{ matrix.folder }}
+            GIT_URL="https://${{ secrets.GH_PAT }}@github.com/azkal182/sigap-v2.git"
+            git clone "\$GIT_URL" /home/${{ secrets.VPS_USER }}/project/${{ matrix.folder }}
             cd /home/${{ secrets.VPS_USER }}/project/${{ matrix.folder }}
             git checkout main
           else
