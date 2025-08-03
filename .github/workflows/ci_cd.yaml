@@ -182,10 +182,8 @@ jobs:
 
           if pm2 describe ${{ matrix.app }} > /dev/null; then
             pm2 stop ${{ matrix.app }}
-            pm2 delete ${{ matrix.app }}
           fi
 
-          pnpm install --production
 
           echo "DIRECT_DATABASE_URL=\"postgresql://azkal:azkal@localhost:5432/${{ matrix.db }}?pgbouncer=true\"" > .env
           echo "DATABASE_URL=\"postgresql://azkal:azkal@localhost:6432/pool_${{ matrix.db }}?pgbouncer=true\"" >> .env
@@ -194,6 +192,7 @@ jobs:
           echo "AUTH_SECRET=${{ secrets.AUTH_SECRET }}" >> .env
           echo "TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}" >> .env
           echo "TELEGRAM_CHAT_ID=${{ secrets.TELEGRAM_CHAT_ID }}" >> .env
+          pnpm install --production
 
           pm2 start npm --name "${{ matrix.app }}" -- start -- -p ${{ matrix.port }}
 
