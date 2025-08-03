@@ -29,8 +29,8 @@ jobs:
         include:
           - app: staging
             port: 4040
-            folder: absensi
-            db: absensi
+            folder: staging
+            db: staging
             url: https://staging.amtsilatipusat.com
 
     outputs:
@@ -89,8 +89,8 @@ jobs:
         include:
           - app: staging
             port: 4040
-            folder: absensi
-            db: absensi
+            folder: staging
+            db: staging
             url: https://staging.amtsilatipusat.com
 
     steps:
@@ -107,7 +107,7 @@ jobs:
           ssh -tt ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} << EOF
           if [ ! -d "/home/${{ secrets.VPS_USER }}/project/${{ matrix.folder }}" ]; then
             echo "Directory not found, cloning..."
-            git clone https://github.com/azkal182/absensi-ppdf.git /home/${{ secrets.VPS_USER }}/project/${{ matrix.folder }}
+            git clone https://github.com/azkal182/sigap-v2.git /home/${{ secrets.VPS_USER }}/project/${{ matrix.folder }}
             cd /home/${{ secrets.VPS_USER }}/project/${{ matrix.folder }}
             git checkout main
           else
