@@ -1212,12 +1212,13 @@ export default function ImportComponent() {
               variant='contained'
               color='primary'
               onClick={handleImport}
-              disabled={
-                isImporting ||
-                isValidationRunning ||
-                validData.length === 0 ||
-                (process.env.NODE_ENV === 'production' && invalidData.length > 0)
-              }
+
+              //   disabled={
+              //     isImporting ||
+              //     isValidationRunning ||
+              //     validData.length === 0 ||
+              //     (process.env.NODE_ENV === 'production' && invalidData.length > 0)
+              //   }
             >
               {isImporting ? 'Importing Data...' : `Import ${validData.length} Data`}
             </Button>
