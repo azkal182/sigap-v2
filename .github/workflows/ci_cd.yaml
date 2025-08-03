@@ -126,7 +126,7 @@ jobs:
       - name: Package artifacts
         run: |
           # Perbaikan di sini: Hapus baris 'rm -rf .next/' yang menyebabkan error
-          tar -czf build-files.tar.gz .next/ public/ node_modules/ package.json pnpm-lock.yaml
+          tar -czf build-files.tar.gz .next/ public/ package.json pnpm-lock.yaml
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -175,7 +175,7 @@ jobs:
           ssh -tt ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} << EOF
           cd /home/${{ secrets.VPS_USER }}/project/${{ matrix.folder }}
 
-          rm -rf .next/ public/ node_modules/ package.json pnpm-lock.yaml
+          rm -rf .next/ public/ package.json pnpm-lock.yaml
 
           tar -xzf build-files.tar.gz
           rm build-files.tar.gz
@@ -192,7 +192,7 @@ jobs:
           echo "AUTH_SECRET=${{ secrets.AUTH_SECRET }}" >> .env
           echo "TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}" >> .env
           echo "TELEGRAM_CHAT_ID=${{ secrets.TELEGRAM_CHAT_ID }}" >> .env
-          # pnpm install --production
+          pnpm install --production
 
           pm2 start npm --name "${{ matrix.app }}" -- start -- -p ${{ matrix.port }}
 
