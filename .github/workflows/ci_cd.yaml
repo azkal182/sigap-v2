@@ -174,37 +174,39 @@ jobs:
         run: |
           rsync -avz build-files.tar.gz ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }}:/home/${{ secrets.VPS_USER }}/project/${{ matrix.folder }}/
 
-          ssh -tt ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} << EOF
+          ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} << EOF
           cd /home/${{ secrets.VPS_USER }}/project/${{ matrix.folder }}
 
+          # Hapus file lama
           rm -rf .next/ public/ package.json pnpm-lock.yaml
 
+          # Ekstrak artefak
           tar -xzf build-files.tar.gz
           rm build-files.tar.gz
 
-          if pm2 describe ${{ matrix.app }} > /dev/null; then
-            pm2 stop ${{ matrix.app }}
-          fi
-
-
-          echo "DATABASE_URL=\"postgresql://azkal:azkal@localhost:6432/pool_${{ matrix.db }}?pgbouncer=true\"" >> .env
-          echo "NEXTAUTH_URL=\"${{ matrix.url }}\"" >> .env
-          echo "AUTH_TRUST_HOST=\"${{ matrix.url }}\"" >> .env
+          # Buat .env
+          rm .env
+          echo "DATABASE_URL=postgresql://azkal:azkal@localhost:6432/pool_${{ matrix.db }}?pgbouncer=true" >> .env
+          echo "NEXTAUTH_URL=${{ matrix.url }}" >> .env
+          echo "AUTH_TRUST_HOST=${{ matrix.url }}" >> .env
           echo "AUTH_SECRET=${{ secrets.AUTH_SECRET }}" >> .env
           echo "TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}" >> .env
           echo "TELEGRAM_CHAT_ID=${{ secrets.TELEGRAM_CHAT_ID }}" >> .env
           echo "NEXT_PUBLIC_APP_VERSION=${{ needs.start_notify.outputs.project_version }}" >> .env
           echo "NODE_ENV=production" >> .env
           echo "HUSKY=0" >> .env
+
+          # Install dependensi
           pnpm install --production
 
+          # Restart PM2, jalankan tanpa "start"
+          if pm2 describe ${{ matrix.app }} > /dev/null; then
+            pm2 stop ${{ matrix.app }}
+            pm2 delete ${{ matrix.app }}
+          fi
           pm2 start npm --name "${{ matrix.app }}" -- start -- -p ${{ matrix.port }}
-
-          exit
           EOF
-
   #---
-
   # Job untuk notifikasi
   notify:
     needs: [start_notify, build, deploy]

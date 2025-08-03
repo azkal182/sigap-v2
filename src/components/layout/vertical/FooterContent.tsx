@@ -25,7 +25,7 @@ const FooterContent = () => {
         <Link href='https://amtsilatipusat.net/' target='_blank' className='text-primary uppercase'>
           PPDF
         </Link>
-        {appVersion && <span className='text-textSecondary'>{` Versi ${appVersion}`}</span>}
+        {appVersion && <span className='text-textSecondary'>{` V${appVersion}`}</span>}
       </p>
     </div>
   )
