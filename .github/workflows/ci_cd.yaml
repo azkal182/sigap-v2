@@ -9,21 +9,24 @@ jobs:
   # Job untuk mengirim notifikasi saat CI/CD dimulai
   start_notify:
     runs-on: ubuntu-latest
+    outputs: # Tambahkan outputs di sini agar bisa diakses job lain
+      project_name: ${{ steps.get_project_info.outputs.project_name }}
+      project_version: ${{ steps.get_project_info.outputs.project_version }}
     steps:
       # Checkout code di awal agar bisa mengakses package.json
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Ekstrak informasi proyek dari package.json dan simpan ke file temporary
+      # Ekstrak informasi proyek dari package.json dan simpan ke output job
       - name: Get Project Info
-        id: get_project_info
+        id: get_project_info # ID ini penting untuk mengakses output
         run: |
           if command -v jq &> /dev/null; then
-            echo "PROJECT_NAME=$(jq -r .name package.json)" >> $GITHUB_ENV
-            echo "PROJECT_VERSION=$(jq -r .version package.json)" >> $GITHUB_ENV
+            echo "project_name=$(jq -r .name package.json)" >> $GITHUB_OUTPUT
+            echo "project_version=$(jq -r .version package.json)" >> $GITHUB_OUTPUT
           else
-            echo "PROJECT_NAME=Absensi Apps" >> $GITHUB_ENV
-            echo "PROJECT_VERSION=v1.0.0" >> $GITHUB_ENV
+            echo "project_name=Absensi Apps" >> $GITHUB_OUTPUT
+            echo "project_version=v1.0.0" >> $GITHUB_OUTPUT
           fi
 
       - name: Set Timestamp
@@ -33,13 +36,12 @@ jobs:
         run: |
           curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
           -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
-          -d "text=🚀 CI/CD Started%0A📦 Project: ${{ env.PROJECT_NAME }}%0A🔖 Version: ${{ env.PROJECT_VERSION }}%0A🕒 Time: ${{ env.TIMESTAMP }}%0AGithub Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          -d "text=🚀 CI/CD Started%0A📦 Project: ${{ steps.get_project_info.outputs.project_name }}%0A🔖 Version: ${{ steps.get_project_info.outputs.project_version }}%0A🕒 Time: ${{ env.TIMESTAMP }}%0AGithub Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
   #---
 
   # Job untuk build aplikasi
   build:
-    # Mengubah 'needs' untuk bergantung pada 'start_notify'
     needs: start_notify
     runs-on: ubuntu-latest
     strategy:
@@ -52,15 +54,43 @@ jobs:
             db: staging
             url: https://staging.amtsilatipusat.com
 
-    # Menambahkan 'outputs' lagi agar bisa diakses oleh job 'notify'
+    # Hapus output project_name dan project_version dari sini, karena sudah ada di start_notify
     outputs:
-      project_name: ${{ github.event.workflow_run.conclusion == 'success' && needs.build.outputs.project_name || 'Absensi Apps' }}
-      project_version: ${{ github.event.workflow_run.conclusion == 'success' && needs.build.outputs.project_version || 'v1.0.0' }}
+      # Anda mungkin tidak memerlukan output di sini lagi jika notifikasi mengambil dari start_notify
+      # Namun, jika ada kebutuhan lain di masa depan, bisa dipertahankan
+      # Misalnya, untuk memastikan build job berhasil mendapatkan info proyek
+      # project_name: ${{ steps.set_project_info.outputs.project_name }}
+      # project_version: ${{ steps.set_project_info.outputs.project_version }}
+      build_status: ${{ job.status }} # Tambahkan status build untuk notifikasi
 
     steps:
-      # Tidak perlu lagi checkout code dan get project info di sini
       - name: Checkout code
         uses: actions/checkout@v3
+
+      # --- PERUBAHAN DI SINI: MENAMBAHKAN CACHE ---
+
+      # Langkah cache untuk pnpm (dependencies)
+      - name: Setup pnpm cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
+      # Langkah cache untuk Next.js (build files)
+      # Gunakan hash dari package.json dan pnpm-lock.yaml untuk invalidasi cache
+      - name: Cache Next.js build
+        uses: actions/cache@v3
+        with:
+          path: |
+            ${{ github.workspace }}/.next/cache
+            ${{ github.workspace }}/.next/static
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package.json', '**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-
+
+      # --- END PERUBAHAN CACHE ---
 
       # Buat file .env terlebih dahulu agar semua variabel tersedia
       - name: Create .env file
@@ -87,17 +117,22 @@ jobs:
       - name: Build Next.js app
         run: pnpm build
 
-      # Tambahkan step get project info untuk output
-      - name: Get Project Info for Output
-        id: set_project_info
-        run: |
-          if command -v jq &> /dev/null; then
-            echo "project_name=$(jq -r .name package.json)" >> $GITHUB_OUTPUT
-            echo "project_version=$(jq -r .version package.json)" >> $GITHUB_OUTPUT
-          else
-            echo "project_name=Absensi Apps" >> $GITHUB_OUTPUT
-            echo "project_version=v1.0.0" >> $GITHUB_OUTPUT
-          fi
+      # Tidak perlu lagi Get Project Info for Output di sini
+      # karena sudah diambil di job start_notify
+
+      # --- PERUBAHAN DI SINI: MENYIMPAN ARTIFAK ---
+      # Upload hasil build sebagai artefak untuk job 'deploy'
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-artifacts
+          path: |
+            .next/
+            public/
+            package.json
+            pnpm-lock.yaml
+          # Jika Anda memiliki file lain yang perlu disalin ke VPS, tambahkan di sini
+      # --- END PERUBAHAN ---
 
   #---
 
@@ -116,6 +151,14 @@ jobs:
             url: https://staging.amtsilatipusat.com
 
     steps:
+      # --- PERUBAHAN DI SINI: MENGUNDUH ARTIFAK ---
+      # Download artefak dari job 'build'
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: build-artifacts
+      # --- END PERUBAHAN ---
+
       - name: Add SSH key
         uses: webfactory/ssh-agent@v0.9.0
         with:
@@ -143,6 +186,7 @@ jobs:
 
       - name: Copy build files
         run: |
+          # Perintah rsync sekarang akan berhasil karena file sudah ada di runner
           rsync -avz --delete .next/ ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }}:/home/${{ secrets.VPS_USER }}/project/${{ matrix.folder }}/.next/
           rsync -avz --delete public/ ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }}:/home/${{ secrets.VPS_USER }}/project/${{ matrix.folder }}/public/
           rsync -avz --delete package.json pnpm-lock.yaml ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }}:/home/${{ secrets.VPS_USER }}/project/${{ matrix.folder }}/
@@ -177,10 +221,12 @@ jobs:
 
   # Job untuk notifikasi
   notify:
+    # Pastikan 'needs' mencakup 'start_notify' untuk mendapatkan outputnya
     needs: [start_notify, build, deploy]
     if: always()
     runs-on: ubuntu-latest
     env:
+      # Ambil PROJECT_NAME dan PROJECT_VERSION dari output job 'start_notify'
       PROJECT_NAME: ${{ needs.start_notify.outputs.project_name || 'Unknown Project' }}
       PROJECT_VERSION: ${{ needs.start_notify.outputs.project_version || 'Unknown Version' }}
       GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -190,6 +236,7 @@ jobs:
         run: echo "TIMESTAMP=$(date +'%Y-%m-%d %H:%M:%S %Z')" >> $GITHUB_ENV
 
       - name: Notify Success
+        # Kondisi ini akan mengecek status dari semua job yang dibutuhkan
         if: success() && needs.build.result == 'success' && needs.deploy.result == 'success'
         run: |
           curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
@@ -197,6 +244,7 @@ jobs:
           -d "text=✅ CI/CD Success%0A📦 Project: ${{ env.PROJECT_NAME }}%0A🔖 Version: ${{ env.PROJECT_VERSION }}%0A🌍 URL: https://staging.amtsilatipusat.com%0A🕒 Time: ${{ env.TIMESTAMP }}%0AGithub Run: ${{ env.GITHUB_RUN_URL }}"
 
       - name: Notify Failure
+        # Kondisi ini akan dievaluasi jika ada job yang gagal atau di-skip karena kegagalan
         if: failure() || (needs.build.result == 'failure' || needs.deploy.result == 'failure' || needs.deploy.result == 'skipped')
         run: |
           curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
