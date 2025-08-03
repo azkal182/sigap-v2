@@ -44,13 +44,13 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        app: [staging]
+        app: [dev]
         include:
-          - app: staging
-            port: 4242
-            folder: staging
-            db: staging
-            url: https://staging.amtsilatipusat.com
+          - app: dev
+            port: 4042
+            folder: dev
+            db: dev
+            url: https://dev.amtsilatipusat.com
 
     outputs:
       build_status: ${{ job.status }}
@@ -146,13 +146,13 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        app: [staging]
+        app: [dev]
         include:
-          - app: staging
-            port: 4242
-            folder: staging
-            db: staging
-            url: https://staging.amtsilatipusat.com
+          - app: dev
+            port: 4042
+            folder: dev
+            db: dev
+            url: https://dev.amtsilatipusat.com
 
     steps:
       - name: Download build artifacts
@@ -233,7 +233,7 @@ jobs:
           MESSAGE="<b>$STATUS_ICON $STATUS_TEXT</b>%0A"
           MESSAGE+="📦 Project: ${{ env.PROJECT_NAME }}%0A"
           MESSAGE+="🔖 Version: ${{ env.PROJECT_VERSION }}%0A"
-          MESSAGE+="🌍 URL: https://staging.amtsilatipusat.com%0A"
+          MESSAGE+="🌍 URL: https://dev.amtsilatipusat.com%0A"
           MESSAGE+="🕒 Time: ${{ env.TIMESTAMP }}%0A"
 
           if [[ "$STATUS_TEXT" == "CI/CD Failed" ]]; then
