@@ -99,7 +99,6 @@ jobs:
       - name: Create .env file
         run: |
           echo "DATABASE_URL=postgresql://${{ secrets.DB_USER }}:${{ secrets.DB_PASS }}@${{ secrets.DB_HOST }}:5432/${{ matrix.db }}?pgbouncer=true" > .env
-          echo "DIRECT_DATABASE_URL=postgresql://${{ secrets.DB_USER }}:${{ secrets.DB_PASS }}@${{ secrets.DB_HOST }}:5432/${{ matrix.db }}?pgbouncer=true" >> .env
           echo "NEXTAUTH_URL=${{ matrix.url }}" >> .env
           echo "AUTH_TRUST_HOST=${{ matrix.url }}" >> .env
           echo "AUTH_SECRET=${{ secrets.AUTH_SECRET }}" >> .env
@@ -124,7 +123,6 @@ jobs:
       - name: Build Next.js app
         env:
           echo "DATABASE_URL=postgresql://${{ secrets.DB_USER }}:${{ secrets.DB_PASS }}@${{ secrets.DB_HOST }}:5432/${{ matrix.db }}?pgbouncer=true" > .env
-          echo "DIRECT_DATABASE_URL=postgresql://${{ secrets.DB_USER }}:${{ secrets.DB_PASS }}@${{ secrets.DB_HOST }}:5432/${{ matrix.db }}?pgbouncer=true" >> .env
           echo "NEXTAUTH_URL=${{ matrix.url }}" >> .env
           echo "AUTH_TRUST_HOST=${{ matrix.url }}" >> .env
           echo "AUTH_SECRET=${{ secrets.AUTH_SECRET }}" >> .env
