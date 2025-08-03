@@ -54,14 +54,21 @@ jobs:
 
       # Langkah ini sekarang akan secara eksplisit gagal jika Prisma tidak dapat menemukan DATABASE_URL
       - name: Run Prisma Migrations
-        env:
-          DATABASE_URL: postgresql://${{ secrets.DB_USER }}:${{ secrets.DB_PASS }}@${{ secrets.DB_HOST }}:5432/${{ matrix.db }}?pgbouncer=true
         run: |
-          set -e # Ini akan membuat job gagal jika perintah di bawahnya gagal
-          echo "Using DATABASE_URL=$DATABASE_URL"
-          npx prisma migrate deploy || (sleep 10 && npx prisma migrate deploy)
-          echo "Prisma migrations completed."
+          set -e
+          # Menulis DATABASE_URL ke file .env agar Prisma CLI dapat membacanya
+          echo "DATABASE_URL=postgresql://${{ secrets.DB_USER }}:${{ secrets.DB_PASS }}@${{ secrets.DB_HOST }}:5432/${{ matrix.db }}?pgbouncer=true" > .env
 
+          # Pastikan file .env berhasil dibuat
+          echo "Created .env file with DATABASE_URL"
+
+          # Jalankan migrasi Prisma
+          npx prisma migrate deploy || (sleep 10 && npx prisma migrate deploy)
+
+          # Hapus file .env setelah selesai
+          rm .env
+
+          echo "Prisma migrations completed."
       - name: Build Next.js app
         env:
           DATABASE_URL: postgresql://${{ secrets.DB_USER }}:${{ secrets.DB_PASS }}@${{ secrets.DB_HOST }}:6432/pool_${{ matrix.db }}?pgbouncer=true
