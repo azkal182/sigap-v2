@@ -121,6 +121,7 @@ jobs:
           echo "TELEGRAM_CHAT_ID=${{ secrets.TELEGRAM_CHAT_ID }}" >> .env
           echo "HUSKY=0" >> .env
           echo "NODE_ENV=${{ matrix.env }}" >> .env
+          echo "NEXT_PUBLIC_IS_PRODUCTION=${{ matrix.env }}" >> .env
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -238,6 +239,7 @@ jobs:
           echo "TELEGRAM_CHAT_ID=${{ secrets.TELEGRAM_CHAT_ID }}" >> .env
           echo "NEXT_PUBLIC_APP_VERSION=${{ needs.start_notify.outputs.project_version || '2.0.0' }}" >> .env
           echo "NODE_ENV=${{ matrix.env }}" >> .env
+          echo "NEXT_PUBLIC_IS_PRODUCTION=${{ matrix.env }}" >> .env
           echo "HUSKY=0" >> .env
 
           # Install dependensi

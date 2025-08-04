@@ -35,6 +35,27 @@ export const createScheduleSchema = z.object({
   dayOfWeek: z.coerce.number().int().min(0).max(7)
 })
 
+export const trackSchema = z.object({
+  id: z.string().optional(),
+  dormitoryId: z.string(),
+  name: z.string().min(1, 'Nama wajib diisi'),
+  targetDays: z.coerce
+    .number({ invalid_type_error: 'Target hari harus berupa angka' })
+    .min(1, 'Target hari minimal 1')
+    .nullable(),
+  level: z.coerce.number({ invalid_type_error: 'Level harus berupa angka' }).min(1, 'Level minimal 1').nullable()
+})
+
+export const createScheduleSlotSchema = z.object({
+  slot: z.number({ invalid_type_error: 'Slot harus berupa angka' }).min(1, 'Slot minimal 1'),
+  startTime: z.string().min(1, 'Waktu mulai wajib diisi'),
+  endTime: z.string().min(1, 'Waktu selesai wajib diisi'),
+  dormitoryId: z.string().min(1, 'ID asrama wajib diisi')
+})
+
+export type CreateScheduleSlotInput = z.infer<typeof createScheduleSlotSchema>
+export type TrackFormSchema = z.infer<typeof trackSchema>
+
 export type CreateScheduleInput = z.infer<typeof createScheduleSchema>
 
 export type AssignStudentToClassInput = z.infer<typeof AssignStudentToClassSchema>

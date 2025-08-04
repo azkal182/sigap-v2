@@ -27,8 +27,9 @@ model User {
 }
 
 model Role {
-    id   String @id @default(uuid())
-    name String @unique
+    id      String   @id @default(uuid())
+    name    String   @unique
+    canEdit Boolean? @default(true)
 
     users           User[]
     rolePermissions RolePermission[]
@@ -180,6 +181,7 @@ model Dormitory {
     teacherDormitory TeacherDormitory[]
 
     dormitoryRoom DormitoryRoom[]
+    scheduleSlots ScheduleSlot[]
 }
 
 model DormitoryRoom {
@@ -216,6 +218,7 @@ model Track {
     createdAt       DateTime         @default(now())
     updatedAt       DateTime         @updatedAt
     dormitoryTracks DormitoryTrack[] // pivot relasi ke dormitory
+    level           Int?             @default(0)
 
     sks Sks[]
 }
@@ -360,7 +363,9 @@ model ScheduleSlot {
     startTime String // ex: "07:00"
     endTime   String
 
-    schedules Schedule[]
+    dormitoryId String
+    dormitory   Dormitory  @relation(fields: [dormitoryId], references: [id])
+    schedules   Schedule[]
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
@@ -391,6 +396,7 @@ model Absence {
     studentId      String
     scheduleId     String
     date           DateTime
+    absentDate     String        @default("")
     status         AbsenceStatus
     autoFromPermit Boolean       @default(false)
     note           String?
@@ -403,20 +409,22 @@ model Absence {
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
+
+    @@unique([studentId, scheduleId, absentDate])
 }
 
 // PERIZINAN SANTRI
 model Permit {
-    id           String   @id @default(uuid())
+    id           String        @id @default(uuid())
     studentId    String
     startDate    DateTime
     endDate      DateTime
     allowedSlots Int[] // Contoh: [1, 3, 5]
     reason       String
-
-    student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+    permitSTatus AbsenceStatus
+    student      Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+    createdAt    DateTime      @default(now())
+    updatedAt    DateTime      @updatedAt
 }
 
 // ABSENSI GURU PER HARI

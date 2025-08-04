@@ -4,7 +4,7 @@ import {
   getDormitories,
   getDormitoryDetailAction,
   createNewTrackForDormitoryAction,
-  updateTrackNameAction,
+  updateTrackAction,
   removeTrackFromDormitoryAction,
   getClassByDormitoryIdAction,
   createClassAction,
@@ -18,9 +18,15 @@ import {
   assignStudentToClassAction,
   createScheduleAction,
   getSubjectOptionByTrackIdAction,
-  getSlotOptionAction
+  getSlotOptionAction,
+  createScheduleSlotAction
 } from './actions/dormitory.action'
-import type { CreateScheduleInput, FilterDormitoryParams } from './schemas/dormitory-schema'
+import type {
+  CreateScheduleInput,
+  CreateScheduleSlotInput,
+  FilterDormitoryParams,
+  TrackFormSchema
+} from './schemas/dormitory-schema'
 import { getScheduleAction } from '@/actions/schedule-action'
 import type { CreateScheduleResult } from './dormitory.service'
 
@@ -86,39 +92,49 @@ export const useTrackDetail = (id: string) => {
   })
 }
 
-// ✅ Tambahan: Buat track baru
 export const useCreateTrackForDormitory = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ trackName, dormitoryId }: { trackName: string; dormitoryId: string }) => {
-      const res = await createNewTrackForDormitoryAction(trackName, dormitoryId)
+    // Menerima objek data Omit<TrackFormSchema, 'id'>
+    mutationFn: async (data: Omit<TrackFormSchema, 'id'>) => {
+      const res = await createNewTrackForDormitoryAction(data)
 
       if (!res.success) throw new Error(res.error)
 
       return res.data
     },
     onSuccess: (_, variables) => {
-      // Refresh detail asrama
+      // Refresh detail asrama dengan dormitoryId yang ada di dalam variabel
       queryClient.invalidateQueries({ queryKey: ['dormitory', variables.dormitoryId] })
     }
   })
 }
 
-// ✅ Tambahan: Edit nama track
-export const useUpdateTrackName = () => {
+/**
+ * Hook untuk mengedit track.
+ * Sekarang menerima objek data parsial untuk pembaruan.
+ */
+export const useUpdateTrack = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ trackId, newName }: { trackId: string; newName: string }) => {
-      const res = await updateTrackNameAction(trackId, newName)
+    // Menerima objek data Partial<TrackFormSchema>
+    mutationFn: async (data: Partial<TrackFormSchema>) => {
+      const res = await updateTrackAction(data)
 
       if (!res.success) throw new Error(res.error)
 
       return res.data
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['dormitory'] }) // kamu bisa tambah ID juga jika perlu
+    onSuccess: (_, variables) => {
+      // Refresh data dormitory setelah update
+      // Gunakan 'dormitoryId' jika ada, atau refresh semua data dormitory jika tidak ada
+      if (variables.dormitoryId) {
+        queryClient.invalidateQueries({ queryKey: ['dormitory', variables.dormitoryId] })
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['dormitory'] })
+      }
     }
   })
 }
@@ -373,11 +389,11 @@ export const useSubjectOption = (trackId: string) => {
   })
 }
 
-export const useSlotOption = () => {
+export const useSlotOption = (dormitoryIds: string[]) => {
   return useQuery({
-    queryKey: ['slot_option'],
+    queryKey: ['slot_option', [dormitoryIds]],
     queryFn: async () => {
-      const res = await getSlotOptionAction()
+      const res = await getSlotOptionAction(dormitoryIds)
 
       if (!res.success) {
         throw new Error(res.error || 'Failed to fetch slot')
@@ -386,6 +402,33 @@ export const useSlotOption = () => {
       return {
         data: res.data
       }
+    }
+  })
+}
+
+export const useCreateScheduleSlot = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    // mutationFn menerima objek data CreateScheduleSlotInput
+    mutationFn: async (data: CreateScheduleSlotInput) => {
+      const res = await createScheduleSlotAction(data)
+
+      if (!res.success) {
+        throw new Error(res.error || 'Failed to create schedule slot.')
+      }
+
+      return res.data
+    },
+    onSuccess: (_, variables) => {
+      // Revalidasi query 'slot_option' untuk asrama yang baru saja diubah
+      queryClient.invalidateQueries({
+        queryKey: ['slot_option', [variables.dormitoryId]]
+      })
+
+      // Jika Anda memiliki query lain yang bergantung pada data slot, Anda bisa revalidasi di sini
+      // Contoh: query untuk detail asrama atau daftar jadwal
+      // queryClient.invalidateQueries({ queryKey: ['dormitory', variables.dormitoryId] })
     }
   })
 }

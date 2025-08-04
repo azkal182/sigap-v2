@@ -214,7 +214,7 @@ const ClassDetailPageView = ({
         isEditMode={scheduleDialog.mode === 'edit'}
         defaultValues={scheduleDialog.data || undefined}
         classId={classId}
-        dormitoryId={[dormitoryId]}
+        dormitoryIds={[dormitoryId]}
         trackId={trackId}
       />
     </Card>

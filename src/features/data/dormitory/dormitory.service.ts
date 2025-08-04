@@ -833,7 +833,7 @@
 'use server'
 import db from '@/lib/prisma'
 import { HistoryStatus, Prisma } from '@/generated/prisma'
-import type { CreateScheduleInput, FilterDormitoryParams } from './schemas/dormitory-schema'
+import type { CreateScheduleInput, FilterDormitoryParams, TrackFormSchema } from './schemas/dormitory-schema'
 
 // --- Tipe Respons Generik
 // -----------------------------------------------------------------------------
@@ -891,6 +891,7 @@ export type DormitoryDetailItem = DormitoryItem & {
     id: string
     name: string
     targetDays: number
+    level: number | null
     classes: {
       id: string
       name: string
@@ -971,6 +972,21 @@ export type SlotOptions = {
 }
 export type SlotOptionResponse = APIResult<SlotOptions[]>
 
+export type CreateScheduleSlotData = {
+  slot: number
+  startTime: string
+  endTime: string
+  dormitoryId: string
+}
+
+// Tipe respons untuk service ini
+export type CreateSlotResponse = APIResult<{
+  id: string
+  slot: number
+  startTime: string
+  endTime: string
+}>
+
 export type SimpleResponse<T> = APIResult<T>
 
 // --- Fungsi yang tidak diubah
@@ -1045,6 +1061,7 @@ export async function getDormitoryDetail(dormitoryId: string): Promise<Dormitory
                 id: true,
                 name: true,
                 targetDays: true,
+                level: true,
                 classes: {
                   where: { dormitoryId },
                   select: {
@@ -1072,12 +1089,15 @@ export async function getDormitoryDetail(dormitoryId: string): Promise<Dormitory
       data: {
         id: dormitory.id,
         name: dormitory.name,
-        tracks: dormitory.dormitoryTracks.map(dt => ({
-          id: dt.track.id,
-          name: dt.track.name,
-          targetDays: dt.track.targetDays,
-          classes: dt.track.classes
-        }))
+        tracks: dormitory.dormitoryTracks
+          .map(dt => ({
+            id: dt.track.id,
+            name: dt.track.name,
+            targetDays: dt.track.targetDays,
+            level: dt.track.level,
+            classes: dt.track.classes
+          }))
+          .sort((a, b) => (a.level ?? 0) - (b.level ?? 0))
       }
     }
   } catch (error: unknown) {
@@ -1121,12 +1141,36 @@ export async function getTrackDetail(trackId: string): Promise<TrackDetailRespon
 }
 
 export async function createNewTrackForDormitory(
-  trackName: string,
-  dormitoryId: string
+  data: Omit<TrackFormSchema, 'id'>
 ): Promise<SimpleResponse<{ id: string; name: string }>> {
   try {
-    const track = await db.track.create({ data: { name: trackName } })
+    const { name, targetDays, level, dormitoryId } = data
 
+    if (level) {
+      await db.track.updateMany({
+        where: {
+          level: {
+            gte: level
+          }
+        },
+        data: {
+          level: {
+            increment: 1
+          }
+        }
+      })
+    }
+
+    // Buat track baru
+    const track = await db.track.create({
+      data: {
+        name: name,
+        targetDays: targetDays!, // Gunakan non-null assertion karena sudah divalidasi
+        level: level!
+      }
+    })
+
+    // Hubungkan track dengan dormitory
     await db.dormitoryTrack.create({
       data: {
         trackId: track.id,
@@ -1139,6 +1183,8 @@ export async function createNewTrackForDormitory(
       data: track
     }
   } catch (error: unknown) {
+    console.error('Error in createNewTrackForDormitory:', error)
+
     return {
       success: false,
       error: 'Failed to create and assign track.'
@@ -1146,24 +1192,112 @@ export async function createNewTrackForDormitory(
   }
 }
 
-export async function updateTrackName(
-  trackId: string,
-  newName: string
+export async function updateTrack(
+  data: Partial<TrackFormSchema>
 ): Promise<SimpleResponse<{ id: string; name: string }>> {
   try {
+    // 1. Validasi input
+    if (!data.id) {
+      return {
+        success: false,
+        error: 'Track ID is required.'
+      }
+    }
+
+    // Asumsikan `data.level` adalah level yang baru. Kita pastikan nilainya bukan null/undefined.
+    if (data.level === undefined || data.level === null) {
+      return {
+        success: false,
+        error: 'New level is required for this operation.'
+      }
+    }
+
+    // 2. Ambil track yang sudah ada dan pastikan level-nya tidak null
+    const existingTrack = await db.track.findUnique({
+      where: { id: data.id },
+      select: { level: true }
+    })
+
+    if (!existingTrack) {
+      return {
+        success: false,
+        error: 'Track not found.'
+      }
+    }
+
+    // Jika level lama tidak ada, kita tidak bisa melakukan pergeseran.
+    if (existingTrack.level === null) {
+      // Di sini Anda bisa memilih untuk mengembalikan error atau
+      // langsung memperbarui level tanpa pergeseran.
+      // Saya merekomendasikan mengembalikan error untuk konsistensi.
+      return {
+        success: false,
+        error: 'Existing track level is null, cannot perform position shift.'
+      }
+    }
+
+    const oldLevel = existingTrack.level as number
+    const newLevel = data.level as number
+
+    // 3. Logika pergeseran posisi (level)
+    if (oldLevel !== newLevel) {
+      if (newLevel < oldLevel) {
+        // Jika level baru lebih kecil, geser semua track antara newLevel dan oldLevel ke bawah (increment)
+        await db.track.updateMany({
+          where: {
+            level: {
+              gte: newLevel,
+              lt: oldLevel
+            }
+          },
+          data: {
+            level: {
+              increment: 1
+            }
+          }
+        })
+      } else {
+        // newLevel > oldLevel
+        // Jika level baru lebih besar, geser semua track antara oldLevel dan newLevel ke atas (decrement)
+        await db.track.updateMany({
+          where: {
+            level: {
+              gt: oldLevel,
+              lte: newLevel
+            }
+          },
+          data: {
+            level: {
+              decrement: 1
+            }
+          }
+        })
+      }
+    }
+
+    // 4. Perbarui track utama
     const updated = await db.track.update({
-      where: { id: trackId },
-      data: { name: newName }
+      where: { id: data.id },
+      data: {
+        name: data.name,
+        targetDays: data.targetDays ?? 0,
+        level: newLevel
+      }
     })
 
     return {
       success: true,
-      data: updated
+      data: {
+        id: updated.id,
+        name: updated.name
+      }
     }
   } catch (error: unknown) {
+    console.error('Error in updateTrack:', error)
+
     return {
       success: false,
-      error: 'Failed to update track name.'
+      error: 'Failed to update track. Please try again.'
     }
   }
 }
@@ -1611,16 +1745,26 @@ export const getSubjectOptionByTrackId = async (trackId: string): Promise<Subjec
   }
 }
 
-export const getSlotOption = async (): Promise<SlotOptionResponse> => {
+export const getSlotOption = async (dormitoryIds: string[]): Promise<SlotOptionResponse> => {
   try {
+    console.log({ dormitoryIds })
+
     const data = await db.scheduleSlot.findMany({
+      where: {
+        dormitoryId: {
+          in: dormitoryIds
+        }
+      },
       select: {
         id: true,
         slot: true,
         startTime: true,
-        endTime: true
+        endTime: true,
+        dormitoryId: true
       }
     })
+
+    console.log(data.map(data => ({ dormitoryId: data.dormitoryId })))
 
     return {
       success: true,
@@ -1633,6 +1777,37 @@ export const getSlotOption = async (): Promise<SlotOptionResponse> => {
     return {
       success: false,
       error: 'Failed to get slot.'
+    }
+  }
+}
+
+export const createScheduleSlot = async (data: CreateScheduleSlotData): Promise<CreateSlotResponse> => {
+  try {
+    const newSlot = await db.scheduleSlot.create({
+      data: {
+        slot: data.slot,
+        startTime: data.startTime,
+        endTime: data.endTime,
+        dormitoryId: data.dormitoryId
+      },
+      select: {
+        id: true,
+        slot: true,
+        startTime: true,
+        endTime: true
+      }
+    })
+
+    return {
+      success: true,
+      data: newSlot
+    }
+  } catch (error: unknown) {
+    console.error('Failed to create schedule slot:', error)
+
+    return {
+      success: false,
+      error: 'Failed to create schedule slot.'
     }
   }
 }

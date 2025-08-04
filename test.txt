@@ -1,0 +1,159 @@
+model ScheduleReplacement {
+  id         String   @id @default(uuid())
+  date       DateTime
+  scheduleId String
+  teacherId  String // pengganti
+
+  schedule   Schedule @relation(fields: [scheduleId], references: [id])
+  teacher    Teacher  @relation(fields: [teacherId], references: [id])
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([scheduleId, date])
+}
+
+
+import { prisma } from './prisma'; // Sesuaikan dengan setupmu
+import { startOfDay } from 'date-fns';
+
+async function getTodayClassStatus(today: Date) {
+  const dayOfWeek = today.getDay() === 0 ? 7 : today.getDay(); // 1-7
+
+  const schedules = await prisma.schedule.findMany({
+    where: { dayOfWeek },
+    include: {
+      teacher: true,
+      subject: true,
+      class: true,
+      scheduleSlot: true,
+    },
+  });
+
+  const absences = await prisma.teacherScheduleAbsence.findMany({
+    where: { date: startOfDay(today) },
+  });
+
+  const replacements = await prisma.scheduleReplacement.findMany({
+    where: { date: startOfDay(today) },
+    include: { teacher: true },
+  });
+
+  const result = schedules.map(schedule => {
+    const absence = absences.find(
+      a => a.scheduleId === schedule.id && a.teacherId === schedule.teacherId,
+    );
+
+    const replacement = replacements.find(
+      r => r.scheduleId === schedule.id,
+    );
+
+    let status = 'BELUM_DIISI';
+    let replacementName = null;
+
+    if (absence?.status === 'PRESENT') {
+      status = 'HADIR';
+    } else if (replacement) {
+      status = 'DIGANTIKAN';
+      replacementName = replacement.teacher.name;
+    } else if (absence) {
+      status = 'KOSONG';
+    }
+
+    return {
+      class: schedule.class.name,
+      slot: schedule.scheduleSlot.slot,
+      time: `${schedule.scheduleSlot.startTime} - ${schedule.scheduleSlot.endTime}`,
+      subject: schedule.subject.name,
+      teacher: schedule.teacher.name,
+      status,
+      replacement: replacementName,
+    };
+  });
+
+  return result;
+}
+
+
+[
+  {
+    "class": "Ubudiyah A",
+    "slot": 1,
+    "time": "07:00 - 08:00",
+    "subject": "Fiqih",
+    "teacher": "Ust. Rahmat",
+    "status": "HADIR",
+    "replacement": null
+  },
+  {
+    "class": "Ubudiyah B",
+    "slot": 2,
+    "time": "08:00 - 09:00",
+    "subject": "Tauhid",
+    "teacher": "Ust. Amin",
+    "status": "DIGANTIKAN",
+    "replacement": "Ust. Budi"
+  },
+  {
+    "class": "Ubudiyah A",
+    "slot": 3,
+    "time": "09:00 - 10:00",
+    "subject": "Nahwu",
+    "teacher": "Ust. Zaki",
+    "status": "KOSONG",
+    "replacement": null
+  },
+  {
+    "class": "Ubudiyah C",
+    "slot": 4,
+    "time": "10:00 - 11:00",
+    "subject": "Balaghah",
+    "teacher": "Ust. Fulan",
+    "status": "BELUM_DIISI",
+    "replacement": null
+  }
+]
+
+
+Input Absensi Guru Asli
+await prisma.teacherScheduleAbsence.upsert({
+  where: {
+    teacherId_scheduleId_absentDate: {
+      teacherId: 'guru-asli-id',
+      scheduleId: 'jadwal-id',
+      absentDate: '2025-08-04', // Format ISO
+    },
+  },
+  update: {
+    status: 'SICK',
+    note: 'Demam tinggi',
+  },
+  create: {
+    teacherId: 'guru-asli-id',
+    scheduleId: 'jadwal-id',
+    date: new Date('2025-08-04'),
+    absentDate: '2025-08-04',
+    status: 'SICK',
+    note: 'Demam tinggi',
+  },
+});
+
+
+2. Input Guru Pengganti (Jika Ada)
+
+await prisma.scheduleReplacement.upsert({
+  where: {
+    scheduleId_date: {
+      scheduleId: 'jadwal-id',
+      date: new Date('2025-08-04'),
+    },
+  },
+  update: {
+    teacherId: 'guru-pengganti-id',
+  },
+  create: {
+    scheduleId: 'jadwal-id',
+    teacherId: 'guru-pengganti-id',
+    date: new Date('2025-08-04'),
+  },
+});

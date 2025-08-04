@@ -106,7 +106,7 @@ export default function DownloadButton() {
     const link = document.createElement('a')
 
     link.href = url
-    link.download = 'sample_locked.xlsx'
+    link.download = 'template_format_import_sigap.xlsx'
     link.click()
     URL.revokeObjectURL(url)
   }

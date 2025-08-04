@@ -215,6 +215,7 @@ export async function main() {
   // 4. Seed Users with Roles
   const users = [
     {
+      id: 'ffcde4aa-4f5e-4578-8be1-6d8261139393',
       name: 'Admin',
       username: 'admin',
       password: hashSync('admin'),
@@ -231,6 +232,7 @@ export async function main() {
       where: { username: user.username },
       update: {},
       create: {
+        id: user.id,
         name: user.name,
         username: user.username,
         password: user.password,
@@ -247,65 +249,65 @@ export async function main() {
     {
       dormitory: { id: '53da2586-4e08-4ef0-bded-b998190c22cc', name: "NA'IM", level: 1 },
       tracks: [
-        { id: '163eefe0-bc53-4a9b-b3d9-df0479aaac79', name: 'UBUDIYAH', targetDays: 90 },
-        { id: 'e233e79d-ada0-485e-9ab4-6aa6634a3c11', name: 'THOHAROH', targetDays: 60 }
+        { id: '163eefe0-bc53-4a9b-b3d9-df0479aaac79', name: 'UBUDIYAH', targetDays: 90, level: 2 },
+        { id: 'e233e79d-ada0-485e-9ab4-6aa6634a3c11', name: 'THOHAROH', targetDays: 60, level: 1 }
       ]
     },
     {
       dormitory: { id: '13921d77-c906-46ab-813b-c06e71aae218', name: "MA'WA", level: 1 },
       tracks: [
-        { id: '163eefe0-bc53-4a9b-b3d9-df0479aaac79', name: 'UBUDIYAH', targetDays: 90 },
-        { id: 'e233e79d-ada0-485e-9ab4-6aa6634a3c11', name: 'THOHAROH', targetDays: 60 }
+        { id: '163eefe0-bc53-4a9b-b3d9-df0479aaac79', name: 'UBUDIYAH', targetDays: 90, level: 2 },
+        { id: 'e233e79d-ada0-485e-9ab4-6aa6634a3c11', name: 'THOHAROH', targetDays: 60, level: 1 }
       ]
     },
     {
       dormitory: { id: 'ee56d3b4-4d64-4c3e-b2b3-6c4a82994e82', name: 'DARUL MUSTHOFA', level: 1 },
       tracks: [
-        { id: '163eefe0-bc53-4a9b-b3d9-df0479aaac79', name: 'UBUDIYAH', targetDays: 90 },
-        { id: '555428b0-b978-4350-9393-74727c028915', name: 'Kajian Kitab', targetDays: 120 }
+        { id: '163eefe0-bc53-4a9b-b3d9-df0479aaac79', name: 'UBUDIYAH', targetDays: 90, level: 1 },
+        { id: '555428b0-b978-4350-9393-74727c028915', name: 'Kajian Kitab', targetDays: 120, level: 2 }
       ]
     },
     {
       dormitory: { id: '6610ebff-0ae9-4946-86e2-c7f0894ccb04', name: 'TASAWWUF', level: 2 },
       tracks: [
-        { id: '163eefe0-bc53-4a9b-b3d9-df0479aaac79', name: 'UBUDIYAH', targetDays: 90 },
-        { id: '555428b0-b978-4350-9393-74727c028915', name: 'Kajian Kitab', targetDays: 120 }
+        { id: '163eefe0-bc53-4a9b-b3d9-df0479aaac79', name: 'UBUDIYAH', targetDays: 90, level: 1 },
+        { id: '555428b0-b978-4350-9393-74727c028915', name: 'Kajian Kitab', targetDays: 120, level: 2 }
       ]
     },
     {
       dormitory: { id: 'a201641f-2748-4770-809d-69324d602ded', name: 'DARUSSALAM', level: 3 },
       tracks: [
-        { id: '163eefe0-bc53-4a9b-b3d9-df0479aaac79', name: 'UBUDIYAH', targetDays: 90 },
-        { id: 'e233e79d-ada0-485e-9ab4-6aa6634a3c11', name: 'THOHAROH', targetDays: 60 },
-        { id: '555428b0-b978-4350-9393-74727c028915', name: 'Kajian Kitab', targetDays: 120 },
-        { id: '765d4702-74fb-46a5-bf3c-7ac9269838b8', name: 'Tahfidz', targetDays: 180 }
+        { id: '163eefe0-bc53-4a9b-b3d9-df0479aaac79', name: 'UBUDIYAH', targetDays: 90, level: 2 },
+        { id: 'e233e79d-ada0-485e-9ab4-6aa6634a3c11', name: 'THOHAROH', targetDays: 60, level: 1 },
+        { id: '555428b0-b978-4350-9393-74727c028915', name: 'Kajian Kitab', targetDays: 120, level: 3 },
+        { id: '765d4702-74fb-46a5-bf3c-7ac9269838b8', name: 'Tahfidz', targetDays: 180, level: 4 }
       ]
     },
     {
       dormitory: { id: 'df8c81e2-63f6-417d-a11e-c8625ece7b1a', name: 'ILLIYYIN', level: 4 },
       tracks: [
-        { id: '163eefe0-bc53-4a9b-b3d9-df0479aaac79', name: 'UBUDIYAH', targetDays: 90 },
-        { id: 'e233e79d-ada0-485e-9ab4-6aa6634a3c11', name: 'THOHAROH', targetDays: 60 },
-        { id: '555428b0-b978-4350-9393-74727c028915', name: 'Kajian Kitab', targetDays: 120 },
-        { id: '765d4702-74fb-46a5-bf3c-7ac9269838b8', name: 'Tahfidz', targetDays: 180 }
+        { id: '163eefe0-bc53-4a9b-b3d9-df0479aaac79', name: 'UBUDIYAH', targetDays: 90, level: 2 },
+        { id: 'e233e79d-ada0-485e-9ab4-6aa6634a3c11', name: 'THOHAROH', targetDays: 60, level: 1 },
+        { id: '555428b0-b978-4350-9393-74727c028915', name: 'Kajian Kitab', targetDays: 120, level: 3 },
+        { id: '765d4702-74fb-46a5-bf3c-7ac9269838b8', name: 'Tahfidz', targetDays: 180, level: 4 }
       ]
     },
     {
       dormitory: { id: '25a6914c-47f2-4a6d-8072-092a56d4e024', name: 'TAKHOSSUS', level: 2 },
       tracks: [
-        { id: '163eefe0-bc53-4a9b-b3d9-df0479aaac79', name: 'UBUDIYAH', targetDays: 90 },
-        { id: 'e233e79d-ada0-485e-9ab4-6aa6634a3c11', name: 'THOHAROH', targetDays: 60 },
-        { id: '555428b0-b978-4350-9393-74727c028915', name: 'Kajian Kitab', targetDays: 120 },
-        { id: '765d4702-74fb-46a5-bf3c-7ac9269838b8', name: 'Tahfidz', targetDays: 180 }
+        { id: '163eefe0-bc53-4a9b-b3d9-df0479aaac79', name: 'UBUDIYAH', targetDays: 90, level: 2 },
+        { id: 'e233e79d-ada0-485e-9ab4-6aa6634a3c11', name: 'THOHAROH', targetDays: 60, level: 1 },
+        { id: '555428b0-b978-4350-9393-74727c028915', name: 'Kajian Kitab', targetDays: 120, level: 3 },
+        { id: '765d4702-74fb-46a5-bf3c-7ac9269838b8', name: 'Tahfidz', targetDays: 180, level: 4 }
       ]
     },
     {
       dormitory: { id: '7c526ed0-0fe8-4632-bc2e-8b01dc998a04', name: 'AKSELERASI', level: 2 },
       tracks: [
-        { id: '163eefe0-bc53-4a9b-b3d9-df0479aaac79', name: 'UBUDIYAH', targetDays: 90 },
-        { id: 'e233e79d-ada0-485e-9ab4-6aa6634a3c11', name: 'THOHAROH', targetDays: 60 },
-        { id: '555428b0-b978-4350-9393-74727c028915', name: 'Kajian Kitab', targetDays: 120 },
-        { id: '765d4702-74fb-46a5-bf3c-7ac9269838b8', name: 'Tahfidz', targetDays: 180 }
+        { id: '163eefe0-bc53-4a9b-b3d9-df0479aaac79', name: 'UBUDIYAH', targetDays: 90, level: 2 },
+        { id: 'e233e79d-ada0-485e-9ab4-6aa6634a3c11', name: 'THOHAROH', targetDays: 60, level: 1 },
+        { id: '555428b0-b978-4350-9393-74727c028915', name: 'Kajian Kitab', targetDays: 120, level: 3 },
+        { id: '765d4702-74fb-46a5-bf3c-7ac9269838b8', name: 'Tahfidz', targetDays: 180, level: 4 }
       ]
     }
   ]

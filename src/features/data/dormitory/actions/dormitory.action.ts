@@ -2,8 +2,10 @@
 import {
   AssignStudentToClassSchema,
   createScheduleSchema,
+  createScheduleSlotSchema,
   CreateSksSchema,
-  CreateSubjectSchema
+  CreateSubjectSchema,
+  trackSchema
 } from './../schemas/dormitory-schema'
 
 import prisma from '@/lib/prisma'
@@ -11,13 +13,16 @@ import type {
   AssignStudentToClassInput,
   CreateSksInput,
   CreateSubjectInput,
-  FilterDormitoryParams
+  FilterDormitoryParams,
+  TrackFormSchema
 } from '../schemas/dormitory-schema'
 import { handleServerError } from '@/lib/handle-error'
 import type {
   ClassDetailResponse,
   ClassListResponse,
   CreateScheduleResult,
+  CreateScheduleSlotData,
+  CreateSlotResponse,
   DormitoryDetailResponse,
   DormitoryResponse,
   SimpleResponse,
@@ -32,6 +37,7 @@ import {
   createClass,
   createNewTrackForDormitory,
   createSchedule,
+  createScheduleSlot,
   createSks,
   createSubject,
   getClassByDormitoryId,
@@ -44,7 +50,7 @@ import {
   getSubjectOptionByTrackId,
   getTrackDetail,
   removeTrackFromDormitory,
-  updateTrackName
+  updateTrack
 } from '../dormitory.service'
 
 export async function getDormitories(params: FilterDormitoryParams): Promise<DormitoryResponse> {
@@ -101,11 +107,16 @@ export async function getTrackDetailAction(id: string): Promise<TrackDetailRespo
 }
 
 export async function createNewTrackForDormitoryAction(
-  trackName: string,
-  dormitoryId: string
+  // Menerima objek langsung, tanpa 'id' karena ini untuk pembuatan baru
+  data: Omit<TrackFormSchema, 'id'>
 ): Promise<SimpleResponse<{ id: string; name: string }>> {
   try {
-    return await createNewTrackForDormitory(trackName, dormitoryId)
+    // Lakukan validasi data menggunakan skema Zod
+    // `.omit()` digunakan untuk menghilangkan `id` karena ini adalah operasi `create`
+    const validatedData = trackSchema.omit({ id: true }).parse(data)
+
+    // Panggil service dengan data yang sudah divalidasi
+    return await createNewTrackForDormitory(validatedData)
   } catch (error) {
     const message = handleServerError('Gagal membuat track asrama', error)
 
@@ -113,14 +124,19 @@ export async function createNewTrackForDormitoryAction(
   }
 }
 
-export async function updateTrackNameAction(
-  trackId: string,
-  newName: string
+export async function updateTrackAction(
+  // Menerima objek langsung, `Partial` karena tidak semua field harus ada
+  data: Partial<TrackFormSchema>
 ): Promise<SimpleResponse<{ id: string; name: string }>> {
   try {
-    return await updateTrackName(trackId, newName)
+    // Lakukan validasi data menggunakan skema Zod
+    // `.partial()` digunakan karena tidak semua field harus diubah
+    const validatedData = trackSchema.partial().parse(data)
+
+    // Panggil service dengan data yang sudah divalidasi
+    return await updateTrack(validatedData)
   } catch (error) {
-    const message = handleServerError('Gagal mengubah nama track', error)
+    const message = handleServerError('Gagal mengubah track', error)
 
     return { success: false, error: message }
   }
@@ -306,11 +322,25 @@ export const getSubjectOptionByTrackIdAction = async (trackId: string): Promise<
   }
 }
 
-export const getSlotOptionAction = async (): Promise<SlotOptionResponse> => {
+export const getSlotOptionAction = async (dormitoryIds: string[]): Promise<SlotOptionResponse> => {
   try {
-    return getSlotOption()
+    return getSlotOption(dormitoryIds)
   } catch (error) {
     const message = handleServerError('Gagal mengambil daftar Sks', error)
+
+    return { success: false, error: message }
+  }
+}
+
+export async function createScheduleSlotAction(data: CreateScheduleSlotData): Promise<CreateSlotResponse> {
+  try {
+    // 1. Validasi data input menggunakan Zod
+    const validatedData = createScheduleSlotSchema.parse(data)
+
+    // 2. Panggil service dengan data yang sudah divalidasi
+    return await createScheduleSlot(validatedData)
+  } catch (error: unknown) {
+    const message = handleServerError('Gagal membuat slot jadwal.', error)
 
     return { success: false, error: message }
   }

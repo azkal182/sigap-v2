@@ -1,23 +1,59 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+
 'use client'
 
 import React, { useState } from 'react'
 
 import Link from 'next/link'
 
-import { Button, Card, IconButton, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material'
+import {
+  Button,
+  Card,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  IconButton,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  Typography
+} from '@mui/material'
+
+import { toast } from 'react-toastify'
 
 import TrackFormDialog from './components/track-dialog'
 import {
   useDormitodyDetail,
   useCreateTrackForDormitory,
-  useUpdateTrackName,
+  useUpdateTrack,
   useRemoveTrackFromDormitory
 } from './dormitory.query'
+import type { CreateScheduleSlotInput, TrackFormSchema } from './schemas/dormitory-schema'
 
+import ScheduleSlotForm from './components/ScheduleSlotForm'
+
+type Slot = {
+  id: number
+  slot: string
+  start: string // 'HH:MM'
+  end: string // 'HH:MM'
+}
+
+const slotData: Slot[] = [
+  { id: 1, slot: 'A1', start: '08:00', end: '10:00' },
+  { id: 2, slot: 'B2', start: '10:30', end: '12:30' },
+  { id: 3, slot: 'C3', start: '13:00', end: '15:00' }
+]
+
+// ✅ Perbarui interface Track agar sesuai dengan data yang baru
 interface Track {
   id: string
   name: string
   targetDays: number
+  level: number | null
 }
 
 interface DormitoryDetailPageViewProps {
@@ -27,23 +63,63 @@ interface DormitoryDetailPageViewProps {
 const DormitoryDetailPageView: React.FC<DormitoryDetailPageViewProps> = ({ id }) => {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [dialogMode, setDialogMode] = useState<'create' | 'edit'>('create')
-  const [editingTrack, setEditingTrack] = useState<Track | null>(null)
+  const [editingTrack, setEditingTrack] = useState<Partial<TrackFormSchema> | null>(null)
+
+  const [editingSchedulSlot, setEditingSchedulSlot] = useState<Partial<CreateScheduleSlotInput> | null>(null)
+  const [dialogSLotopen, setDialogSlotOpen] = useState(false)
+  const [dialogSLotMode, setDialogSlotMode] = useState<'create' | 'edit'>('create')
+  const [slotInput, setSlotInput] = useState('')
+  const [startTime, setStartTime] = useState('08:00')
+  const [endTime, setEndTime] = useState('10:00')
 
   // React Query Hooks
   const { data, isLoading } = useDormitodyDetail(id)
   const { mutate: createTrack } = useCreateTrackForDormitory()
-  const { mutate: updateTrack } = useUpdateTrackName()
+  const { mutate: updateTrack } = useUpdateTrack()
   const { mutate: deleteTrack } = useRemoveTrackFromDormitory()
+
+  //   const { mutate: createScheduleSlot } = useCreateScheduleSlot()
+
+  const handleOpenCreateScheduleSlot = () => {
+    setDialogSlotMode('create')
+    setEditingSchedulSlot({
+      dormitoryId: id
+    })
+    setDialogSlotOpen(true)
+  }
+
+  const handleOpenEditScheduleSlot = (slot: Partial<CreateScheduleSlotInput>) => {
+    setDialogSlotMode('edit')
+
+    setEditingSchedulSlot({
+      dormitoryId: id,
+      slot: slot.slot,
+      endTime: slot.endTime,
+      startTime: slot.startTime
+    })
+    setDialogSlotOpen(true)
+  }
 
   const handleOpenCreateDialog = () => {
     setDialogMode('create')
-    setEditingTrack(null)
+    setEditingTrack({
+      name: '',
+      level: null,
+      dormitoryId: id
+    })
     setDialogOpen(true)
   }
 
   const handleOpenEditDialog = (track: Track) => {
     setDialogMode('edit')
-    setEditingTrack(track)
+
+    setEditingTrack({
+      id: track.id,
+      name: track.name,
+      targetDays: track.targetDays,
+      level: track.level,
+      dormitoryId: id
+    })
     setDialogOpen(true)
   }
 
@@ -52,11 +128,43 @@ const DormitoryDetailPageView: React.FC<DormitoryDetailPageViewProps> = ({ id })
     setEditingTrack(null)
   }
 
-  const handleSubmitTrack = (name: string) => {
+  const handleSubmitTrack = (form: TrackFormSchema) => {
     if (dialogMode === 'create') {
-      createTrack({ trackName: name, dormitoryId: id })
+      // Panggil mutasi 'create' dengan objek data lengkap
+      createTrack(
+        {
+          name: form.name,
+          targetDays: form.targetDays,
+          level: form.level,
+          dormitoryId: id // Asumsikan 'id' adalah id asrama saat ini
+        },
+        {
+          onSuccess: () => {
+            toast.success('Fan berhasil dibuat!')
+          },
+          onError: (error: any) => {
+            toast.error(error.message || 'Gagal membuat Fan.')
+          }
+        }
+      )
     } else if (dialogMode === 'edit' && editingTrack) {
-      updateTrack({ trackId: editingTrack.id, newName: name })
+      // Panggil mutasi 'update' dengan objek data parsial
+      updateTrack(
+        {
+          id: editingTrack.id,
+          name: form.name,
+          targetDays: form.targetDays,
+          level: form.level
+        },
+        {
+          onSuccess: () => {
+            toast.success('Fan berhasil diupdate!')
+          },
+          onError: (error: any) => {
+            toast.error(error.message || 'Gagal update Fan.')
+          }
+        }
+      )
     }
 
     handleCloseDialog()
@@ -71,15 +179,19 @@ const DormitoryDetailPageView: React.FC<DormitoryDetailPageViewProps> = ({ id })
       <Typography variant='h4' className='text-center'>
         Daftar Fan {data?.name}
       </Typography>
-      <Button onClick={handleOpenCreateDialog} variant='contained' color='primary' className='mb-4'>
+      <Button onClick={handleOpenCreateDialog} variant='contained' color='primary' className=''>
         Tambah Fan
       </Button>
 
+      <Button onClick={handleOpenCreateScheduleSlot} variant='contained' color='primary' className='ml-4'>
+        Atur Jam Pelajaran
+      </Button>
       <Table>
         <TableHead>
           <TableRow>
             <TableCell className='w-6'>NO</TableCell>
             <TableCell>NAMA</TableCell>
+            <TableCell>LEVEL</TableCell>
             <TableCell>TARGET</TableCell>
             <TableCell>AKSI</TableCell>
           </TableRow>
@@ -87,7 +199,7 @@ const DormitoryDetailPageView: React.FC<DormitoryDetailPageViewProps> = ({ id })
         <TableBody>
           {isLoading ? (
             <TableRow>
-              <TableCell colSpan={3} align='center'>
+              <TableCell colSpan={5} align='center'>
                 <Typography variant='body2' color='textSecondary'>
                   Memuat data...
                 </Typography>
@@ -95,7 +207,7 @@ const DormitoryDetailPageView: React.FC<DormitoryDetailPageViewProps> = ({ id })
             </TableRow>
           ) : !data?.tracks || data?.tracks?.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={3} align='center'>
+              <TableCell colSpan={5} align='center'>
                 <Typography variant='body2' color='textSecondary'>
                   Tidak ada data fan ditemukan.
                 </Typography>
@@ -106,6 +218,7 @@ const DormitoryDetailPageView: React.FC<DormitoryDetailPageViewProps> = ({ id })
               <TableRow key={track.id}>
                 <TableCell>{index + 1}</TableCell>
                 <TableCell>{track.name}</TableCell>
+                <TableCell>{track.level}</TableCell>
                 <TableCell>{track.targetDays} Hari</TableCell>
                 <TableCell>
                   <div className='flex gap-2'>
@@ -132,9 +245,85 @@ const DormitoryDetailPageView: React.FC<DormitoryDetailPageViewProps> = ({ id })
         open={dialogOpen}
         onClose={handleCloseDialog}
         onSubmit={handleSubmitTrack}
-        initialTrackName={editingTrack?.name || ''}
+        initialData={editingTrack as Partial<TrackFormSchema>}
         isEditMode={dialogMode === 'edit'}
       />
+
+      <Dialog open={dialogSLotopen} onClose={() => setDialogSlotOpen(false)} maxWidth='sm' fullWidth>
+        <DialogTitle>Daftar Slot (akan berlaku semua fan)</DialogTitle>
+        <DialogContent>
+          {/* <Box mb={3}>
+            <Grid container spacing={2} alignItems='flex-end'>
+              <Grid item xs={12} sm={4}>
+                <CustomTextField
+                  label='Slot'
+                  value={slotInput}
+                  onChange={e => setSlotInput(e.target.value)}
+                  fullWidth
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={2}>
+                <AppReactDatepicker
+                  showTimeSelect
+                  showTimeSelectOnly
+                  selected={hhmmToDate(startTime)}
+                  timeIntervals={15}
+                  timeFormat='HH:mm'
+                  dateFormat='HH:mm'
+                  onChange={date => setStartTime(dateToHHMM(date))}
+                  customInput={<CustomTextField label='Start Time' fullWidth />}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={2}>
+                <AppReactDatepicker
+                  showTimeSelect
+                  showTimeSelectOnly
+                  selected={hhmmToDate(endTime)}
+                  timeIntervals={15}
+                  timeFormat='HH:mm'
+                  dateFormat='HH:mm'
+                  onChange={date => setEndTime(dateToHHMM(date))}
+                  customInput={<CustomTextField label='End Time' fullWidth />}
+                />
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <Button variant='contained' fullWidth>
+                  Tambah
+                </Button>
+              </Grid>
+            </Grid>
+          </Box> */}
+
+          <ScheduleSlotForm dormitoryId={id} onSuccess={() => {}} />
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>NO</TableCell>
+                <TableCell>SLOT</TableCell>
+                <TableCell>Jam</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {slotData.map((slot, index) => (
+                <TableRow key={slot.id}>
+                  <TableCell>{index + 1}</TableCell>
+                  <TableCell>{slot.slot}</TableCell>
+                  <TableCell>
+                    {slot.start} - {slot.end}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDialogSlotOpen(false)} color='primary'>
+            Tutup
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Card>
   )
 }

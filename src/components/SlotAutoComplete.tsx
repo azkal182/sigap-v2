@@ -19,7 +19,8 @@ type Props = {
   helperText?: string
   label?: string
   disabled?: boolean
-  allowDisable?: boolean // <-- tambahkan props ini
+  allowDisable?: boolean
+  dormitoryIds: string[]
 }
 
 export default function SlotAutocomplete({
@@ -28,9 +29,10 @@ export default function SlotAutocomplete({
   error,
   helperText,
   label = 'Pilih Jam Ke',
-  disabled
+  disabled,
+  dormitoryIds
 }: Props) {
-  const { data, isLoading } = useSlotOption()
+  const { data, isLoading } = useSlotOption(dormitoryIds)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const options = data?.data || []
 

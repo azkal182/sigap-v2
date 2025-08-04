@@ -22,7 +22,7 @@ interface ScheduleFormDialogProps {
   defaultValues?: Partial<CreateScheduleInput>
   isEditMode?: boolean
   classId: string
-  dormitoryId?: string[]
+  dormitoryIds?: string[]
   trackId: string
 }
 
@@ -42,7 +42,7 @@ const ScheduleFormDialog: React.FC<ScheduleFormDialogProps> = ({
   defaultValues = {},
   isEditMode = false,
   classId,
-  dormitoryId = [],
+  dormitoryIds = [],
   trackId
 }) => {
   const {
@@ -113,7 +113,7 @@ const ScheduleFormDialog: React.FC<ScheduleFormDialogProps> = ({
             error={!!error}
             helperText={error?.message}
             returnType='id'
-            dormitoryIds={dormitoryId}
+            dormitoryIds={dormitoryIds}
           />
         )}
       />
@@ -126,6 +126,7 @@ const ScheduleFormDialog: React.FC<ScheduleFormDialogProps> = ({
             onChange={(_, value) => field.onChange(value)}
             error={!!error}
             helperText={error?.message}
+            dormitoryIds={dormitoryIds}
           />
         )}
       />
