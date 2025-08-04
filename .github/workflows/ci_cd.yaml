@@ -50,13 +50,13 @@ jobs:
             port: 4042
             folder: dev
             db: dev
-            env: staging # Perbaikan sintaksis di sini
+            env: staging
             url: https://dev.amtsilatipusat.com
           - app: sigap
             port: 4043
             folder: sigap
             db: sigap
-            env: production # Perbaikan sintaksis di sini
+            env: production
             url: https://sigap.amtsilatipusat.com
 
     outputs:
@@ -113,14 +113,14 @@ jobs:
       - name: Create .env file
         run: |
           echo "DIRECT_DATABASE_URL=postgresql://${{ secrets.DB_USER }}:${{ secrets.DB_PASS }}@${{ secrets.DB_HOST }}:5432/${{ matrix.db }}" > .env
-          echo "DATABASE_URL=postgresql://${{ secrets.DB_USER }}:${{ secrets.DB_PASS }}@${{ secrets.DB_HOST }}:6432/pool_${{ matrix.db }}?pgbouncer=true" >> .env
+          echo "DATABASE_URL=postgresql://${{ secrets.DB_USER }}:${{ secrets.DB_PASS }}@${{ secrets.DB_HOST }}:6432/pool_${{ matrix.db }}?pgbouncer=true" > .env
           echo "NEXTAUTH_URL=${{ matrix.url }}" >> .env
           echo "AUTH_TRUST_HOST=${{ matrix.url }}" >> .env
           echo "AUTH_SECRET=${{ secrets.AUTH_SECRET }}" >> .env
           echo "TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}" >> .env
           echo "TELEGRAM_CHAT_ID=${{ secrets.TELEGRAM_CHAT_ID }}" >> .env
           echo "HUSKY=0" >> .env
-          echo "NODE_ENV=${{ matrix.env }}" >> .env # Menambahkan NODE_ENV dari matrix
+          echo "NODE_ENV=${{ matrix.env }}" >> .env
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -150,7 +150,8 @@ jobs:
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: absensi-build-tarball
+          # Perbaikan: Membuat nama artefak unik per aplikasi
+          name: absensi-build-tarball-${{ matrix.app }}
           path: build-files.tar.gz
           retention-days: 1
       # --- Akhir Mengelola Artefak ---
@@ -169,20 +170,21 @@ jobs:
             port: 4042
             folder: dev
             db: dev
-            env: staging # Perbaikan sintaksis di sini
+            env: staging
             url: https://dev.amtsilatipusat.com
           - app: sigap
             port: 4043
             folder: sigap
             db: sigap
-            env: production # Perbaikan sintaksis di sini
+            env: production
             url: https://sigap.amtsilatipusat.com
 
     steps:
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
-          name: absensi-build-tarball
+          # Perbaikan: Mengunduh artefak dengan nama unik yang sesuai
+          name: absensi-build-tarball-${{ matrix.app }}
           path: ./
 
       - name: Add SSH key
@@ -235,7 +237,7 @@ jobs:
           echo "TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}" >> .env
           echo "TELEGRAM_CHAT_ID=${{ secrets.TELEGRAM_CHAT_ID }}" >> .env
           echo "NEXT_PUBLIC_APP_VERSION=${{ needs.start_notify.outputs.project_version || '2.0.0' }}" >> .env
-          echo "NODE_ENV=${{ matrix.env }}" >> .env # Menggunakan NODE_ENV dari matrix
+          echo "NODE_ENV=${{ matrix.env }}" >> .env
           echo "HUSKY=0" >> .env
 
           # Install dependensi
