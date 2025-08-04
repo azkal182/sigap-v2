@@ -97,6 +97,7 @@ jobs:
       # --- Akhir Implementasi Cache ---
       - name: Create .env file
         run: |
+          echo "DIRECT_DATABASE_URL=postgresql://${{ secrets.DB_USER }}:${{ secrets.DB_PASS }}@${{ secrets.DB_HOST }}:5432/${{ matrix.db }}" > .env
           echo "DATABASE_URL=postgresql://${{ secrets.DB_USER }}:${{ secrets.DB_PASS }}@${{ secrets.DB_HOST }}:6432/pool_${{ matrix.db }}?pgbouncer=true" > .env
           echo "NEXTAUTH_URL=${{ matrix.url }}" >> .env
           echo "AUTH_TRUST_HOST=${{ matrix.url }}" >> .env
@@ -110,6 +111,7 @@ jobs:
 
       - name: Run Prisma Migrations
         env:
+          DIRECT_DATABASE_URL: postgresql://${{ secrets.DB_USER }}:${{ secrets.DB_PASS }}@${{ secrets.DB_HOST }}:5432/${{ matrix.db }}?pgbouncer=true
           DATABASE_URL: postgresql://${{ secrets.DB_USER }}:${{ secrets.DB_PASS }}@${{ secrets.DB_HOST }}:6432/pool_${{ matrix.db }}?pgbouncer=true
 
         run: |
@@ -203,6 +205,7 @@ jobs:
 
           # Buat .env
           rm .env
+          echo "DIRECT_DATABASE_URL=postgresql://azkal:azkal@localhost:5432/${{ matrix.db }}?pgbouncer=true" >> .env
           echo "DATABASE_URL=postgresql://azkal:azkal@localhost:6432/pool_${{ matrix.db }}?pgbouncer=true" >> .env
           echo "NEXTAUTH_URL=${{ matrix.url }}" >> .env
           echo "AUTH_TRUST_HOST=${{ matrix.url }}" >> .env
