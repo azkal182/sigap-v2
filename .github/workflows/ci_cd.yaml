@@ -94,6 +94,14 @@ jobs:
           key: ${{ runner.os }}-node-modules-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-node-modules-
+
+      - name: Cache Next.js build cache
+        uses: actions/cache@v3
+        with:
+          path: ./.next/cache
+          key: ${{ runner.os }}-nextjs-build-${{ hashFiles('**/pnpm-lock.yaml', '**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-build-
       # --- Akhir Implementasi Cache ---
       - name: Create .env file
         run: |
@@ -129,7 +137,6 @@ jobs:
       # --- Mengelola Artefak ---
       - name: Package artifacts
         run: |
-          # Perbaikan di sini: Hapus baris 'rm -rf .next/' yang menyebabkan error
           tar -czf build-files.tar.gz .next/ public/ package.json pnpm-lock.yaml
 
       - name: Upload build artifacts
