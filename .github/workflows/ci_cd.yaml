@@ -44,13 +44,20 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        app: [dev]
+        app: [dev, sigap]
         include:
           - app: dev
             port: 4042
             folder: dev
             db: dev
+            env:staging
             url: https://dev.amtsilatipusat.com
+          - app: sigap
+            port: 4043
+            folder: sigap
+            db: sigap
+            env:production
+            url: https://sigap.amtsilatipusat.com
 
     outputs:
       build_status: ${{ job.status }}
@@ -155,13 +162,20 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        app: [dev]
+        app: [dev, sigap]
         include:
           - app: dev
             port: 4042
             folder: dev
             db: dev
+            env:staging
             url: https://dev.amtsilatipusat.com
+          - app: sigap
+            port: 4043
+            folder: sigap
+            db: sigap
+            env:production
+            url: https://sigap.amtsilatipusat.com
 
     steps:
       - name: Download build artifacts
@@ -220,7 +234,7 @@ jobs:
           echo "TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}" >> .env
           echo "TELEGRAM_CHAT_ID=${{ secrets.TELEGRAM_CHAT_ID }}" >> .env
           echo "NEXT_PUBLIC_APP_VERSION=${{ needs.start_notify.outputs.project_version || '2.0.0' }}" >> .env
-          echo "NODE_ENV=staging" >> .env
+          echo "NODE_ENV=${{ matrix.env }}" >> .env
           echo "HUSKY=0" >> .env
 
           # Install dependensi
