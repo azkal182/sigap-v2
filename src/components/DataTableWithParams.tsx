@@ -589,7 +589,7 @@ export function DataTableWithParams<TData, TValue, TParams extends z.ZodSchema>(
           )}
         </div>
 
-        <div className='flex gap-2'>
+        {/* <div className='flex gap-2'>
           {onRefresh && (
             <button
               onClick={onRefresh}
@@ -625,6 +625,80 @@ export function DataTableWithParams<TData, TValue, TParams extends z.ZodSchema>(
                 transformOrigin={{
                   vertical: 'top', // menu akan mengarah ke atas (top) dari posisi anchor
                   horizontal: 'right' // menu akan muncul dari kanan
+                }}
+              >
+                {table
+                  .getAllColumns()
+                  .filter(column => column.getCanHide())
+                  .map(column => (
+                    <MenuItem key={column.id} style={{ padding: '4px 8px' }}>
+                      <FormControlLabel
+                        label={
+                          <span className='text-sm capitalize '>
+                            {typeof column.columnDef.header === 'string' ? column.columnDef.header : column.id}
+                            {column.getIsVisible() ? (
+                              <i className='tabler-eye h-4 w-4 text-green-500 absolute right-0 top-1/2 transform -translate-y-1/2' />
+                            ) : (
+                              <i className='tabler-eye-off h-4 w-4 text-gray-400 absolute right-0 top-1/2 transform -translate-y-1/2' />
+                            )}
+                          </span>
+                        }
+                        control={
+                          <Checkbox
+                            size='small'
+                            checked={column.getIsVisible()}
+                            onChange={e => column.toggleVisibility(e.target.checked)}
+                            name='controlled'
+                          />
+                        }
+                      />
+                    </MenuItem>
+                  ))}
+              </Menu>
+            </div>
+          )}
+        </div> */}
+        <div className='flex flex-col sm:flex-row sm:items-center gap-2'>
+          {/* tombol refresh */}
+          {onRefresh && (
+            <button
+              onClick={onRefresh}
+              disabled={isLoading}
+              className='px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50'
+            >
+              Refresh
+            </button>
+          )}
+
+          {/* tombol add */}
+          {addButton}
+
+          {/* toggle kolom */}
+          {showColumnToggle && (
+            <div className='relative'>
+              <Button
+                startIcon={<i className='tabler-settings h-4 w-4 ' />}
+                endIcon={<i className='tabler-chevron-down h-4 w-4 ' />}
+                variant='contained'
+                onClick={handleClick}
+                className='flex items-center gap-2 '
+              >
+                Kolom
+              </Button>
+
+              <Menu
+                keepMounted
+                id='basic-menu'
+                anchorEl={showColumnPanel}
+                onClose={() => setShowColumnPanel(null)}
+                open={Boolean(showColumnPanel)}
+                anchorOrigin={{
+                  vertical: 'bottom',
+                  horizontal: 'right'
+                }}
+                transformOrigin={{
+                  vertical: 'top',
+                  horizontal: 'right'
                 }}
               >
                 {table

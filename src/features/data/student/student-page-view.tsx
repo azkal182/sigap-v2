@@ -58,7 +58,7 @@ const StudentPageView = () => {
       },
       { accessorKey: 'activeDormitory', header: 'Asrama' },
       { accessorKey: 'targetDays', header: 'Target Fan', enableSorting: false },
-      { accessorKey: 'daysStudied', header: 'Lama di Fan' },
+      { accessorKey: 'daysStudied', header: 'Lama di Fan', enableSorting: false },
       { accessorKey: 'daysLeft', header: 'Sisa Target di Fan' },
       {
         id: 'actions',

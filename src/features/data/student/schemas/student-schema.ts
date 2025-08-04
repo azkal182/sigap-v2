@@ -18,7 +18,7 @@ export const filterStudentSchema = basePaginationSchema.extend({
   classId: z.string().optional().default(''),
   trackId: z.string().optional().default(''),
   dormitoryId: z.string().optional().default(''),
-  sortBy: z.enum(['name', 'nis', 'id', 'dormitory']).default('name'),
+  sortBy: z.enum(['name', 'nis', 'id', 'activeDormitory']).default('name'),
   dormitoryIds: z
     .union([
       z.string().array(), // Bisa array string

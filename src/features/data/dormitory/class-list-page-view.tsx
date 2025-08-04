@@ -332,7 +332,23 @@ import React, { useState } from 'react'
 
 import Link from 'next/link'
 
-import { Button, Card, IconButton, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material'
+import {
+  Box,
+  Button,
+  Card,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Grid,
+  IconButton,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  Typography
+} from '@mui/material'
 import Tab from '@mui/material/Tab'
 import TabList from '@mui/lab/TabList'
 import TabPanel from '@mui/lab/TabPanel'
@@ -353,6 +369,22 @@ import ClassFormDialog, { type ClassFormValues } from './components/class-dialog
 import SubjectFormDialog from './components/subject-dialog'
 import type { CreateSksInput, CreateSubjectInput } from './schemas/dormitory-schema'
 import SksFormDialog from './components/sks-dialog'
+import CustomTextField from '@/@core/components/mui/TextField'
+import { dateToHHMM, hhmmToDate } from '@/utils/time'
+import AppReactDatepicker from '@/lib/styles/AppReactDatepicker'
+
+type Slot = {
+  id: number
+  slot: string
+  start: string // 'HH:MM'
+  end: string // 'HH:MM'
+}
+
+const slotData: Slot[] = [
+  { id: 1, slot: 'A1', start: '08:00', end: '10:00' },
+  { id: 2, slot: 'B2', start: '10:30', end: '12:30' },
+  { id: 3, slot: 'C3', start: '13:00', end: '15:00' }
+]
 
 const ClassListPageView = ({ trackId, dormitoryId }: { trackId: string; dormitoryId: string }) => {
   const { data, isLoading } = useClass(dormitoryId, trackId)
@@ -365,6 +397,10 @@ const ClassListPageView = ({ trackId, dormitoryId }: { trackId: string; dormitor
   const { mutate: createSubject } = useCreateSubject()
   const { mutate: createSks } = useCreateSks()
 
+  const [dialogSLotopen, setDialogSlotOpen] = useState(false)
+  const [slotInput, setSlotInput] = useState('')
+  const [startTime, setStartTime] = useState('08:00')
+  const [endTime, setEndTime] = useState('10:00')
   const [activeTab, setActiveTab] = useState('1')
 
   const [classDialog, setClassDialog] = useState<{
@@ -548,9 +584,15 @@ const ClassListPageView = ({ trackId, dormitoryId }: { trackId: string; dormitor
 
         {/* Tab 2: Daftar Pelajaran */}
         <TabPanel value='2'>
-          <Button onClick={() => openSubjectDialog('create')} variant='contained' className='mb-4'>
-            Tambah Pelajaran
-          </Button>
+          <div className='space-x-2'>
+            <Button onClick={() => openSubjectDialog('create')} variant='contained' className='mb-4'>
+              Tambah Pelajaran
+            </Button>
+
+            <Button onClick={() => setDialogSlotOpen(true)} variant='contained' className='mb-4'>
+              Atur Jam Pelajaran
+            </Button>
+          </div>
           <Table>
             <TableHead>
               <TableRow>
@@ -641,6 +683,80 @@ const ClassListPageView = ({ trackId, dormitoryId }: { trackId: string; dormitor
         defaultValues={sksDialog.data || undefined}
         trackId={trackId}
       />
+
+      <Dialog open={dialogSLotopen} onClose={() => setDialogSlotOpen(false)} maxWidth='sm' fullWidth>
+        <DialogTitle>Daftar Slot (akan berlaku semua fan)</DialogTitle>
+        <DialogContent>
+          <Box mb={3}>
+            <Grid container spacing={2} alignItems='flex-end'>
+              <Grid item xs={12} sm={4}>
+                <CustomTextField
+                  label='Slot'
+                  value={slotInput}
+                  onChange={e => setSlotInput(e.target.value)}
+                  fullWidth
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={2}>
+                <AppReactDatepicker
+                  showTimeSelect
+                  showTimeSelectOnly
+                  selected={hhmmToDate(startTime)}
+                  timeIntervals={15}
+                  timeFormat='HH:mm'
+                  dateFormat='HH:mm'
+                  onChange={date => setStartTime(dateToHHMM(date))}
+                  customInput={<CustomTextField label='Start Time' fullWidth />}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={2}>
+                <AppReactDatepicker
+                  showTimeSelect
+                  showTimeSelectOnly
+                  selected={hhmmToDate(endTime)}
+                  timeIntervals={15}
+                  timeFormat='HH:mm'
+                  dateFormat='HH:mm'
+                  onChange={date => setEndTime(dateToHHMM(date))}
+                  customInput={<CustomTextField label='End Time' fullWidth />}
+                />
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <Button variant='contained' fullWidth>
+                  Tambah
+                </Button>
+              </Grid>
+            </Grid>
+          </Box>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>NO</TableCell>
+                <TableCell>SLOT</TableCell>
+                <TableCell>Jam</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {slotData.map((slot, index) => (
+                <TableRow key={slot.id}>
+                  <TableCell>{index + 1}</TableCell>
+                  <TableCell>{slot.slot}</TableCell>
+                  <TableCell>
+                    {slot.start} - {slot.end}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDialogSlotOpen(false)} color='primary'>
+            Tutup
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Card>
   )
 }

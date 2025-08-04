@@ -25,6 +25,10 @@ export type StudentItem = {
   sks?: sksItem[]
   totalSks: number
   passedCount: number
+  dormitoryRoom: string | null
+  dormitoryRoomId: string | null
+  formalClass: string | null
+  formalClassId: string | null
 }
 
 export type sksItem = {
@@ -88,7 +92,7 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
   } = options
 
   const skip = (page - 1) * limit
-  const allowedSortFields = ['name', 'nis', 'id', 'dormitory'] as const
+  const allowedSortFields = ['name', 'nis', 'id', 'activeDormitory'] as const
   const safeSortBy = allowedSortFields.includes(sortBy) ? sortBy : 'name'
 
   const whereCondition: Prisma.StudentWhereInput = {
@@ -168,117 +172,11 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
   const total = await db.student.count({ where: whereCondition })
 
   const orderBy =
-    allowedSortFields.includes(safeSortBy) && safeSortBy !== 'dormitory'
-      ? { [safeSortBy]: sortOrder }
-      : { name: sortOrder }
-
-  console.log(orderBy, safeSortBy)
-
-  //   const students = await db.student.findMany({
-  //     skip,
-  //     take: limit,
-  //     where: whereCondition,
-  //     orderBy,
-  //     select: {
-  //       id: true,
-  //       name: true,
-  //       nis: true,
-  //       fatherName: true,
-  //       motherName: true,
-  //       parrentPhone: true,
-  //       placeOfBirth: true,
-  //       dateOfBirth: true,
-  //       dormitory: {
-  //         select: { name: true }
-  //       },
-  //       histories: {
-  //         where: { status: 'STUDYING' },
-  //         select: {
-  //           startDate: true,
-  //           class: {
-  //             select: {
-  //               name: true,
-  //               track: {
-  //                 select: {
-  //                   name: true,
-  //                   targetDays: true
-  //                 }
-  //               }
-  //             }
-  //           }
-  //         }
-
-  //         // orderBy: { startDate: 'desc' },
-  //         // take: 1,
-  //         // select: {
-  //         //   //   startDate: true,
-  //         //   class: { select: { name: true } }, // Updated to 'class'
-  //         //   dormNameAtThatTime: true
-  //         // }
-  //       }
-  //     }
-  //   })
-
-  //   const formattedStudents: StudentItem[] = students
-  //     .map(s => {
-  //       const history = s.histories?.[0]
-  //       const lastHistory = s.histories?.[s.histories.length - 1]
-
-  //       let targetDays = null
-  //       let daysStudied = null
-  //       let daysLeft = null
-
-  //       // Lakukan perhitungan hanya jika ada data history
-  //       if (s.histories.length > 0) {
-  //         // Asumsikan targetDays diambil dari track di history terakhir
-  //         targetDays = lastHistory?.class?.track?.targetDays || 0
-
-  //         // Dapatkan tanggal pertama dan terakhir dari history
-  //         const firstDate = DateTime.fromISO(s.histories[0].startDate.toISOString())
-
-  //         // const lastDate = DateTime.fromISO(s.histories[s.histories.length - 1].date.toISOString())
-  //         const now = DateTime.now()
-
-  //         // Hitung jumlah hari belajar
-  //         daysStudied = now.diff(firstDate, 'days').days
-  //         daysStudied = Math.floor(daysStudied)
-  //         daysLeft = targetDays - daysStudied
-  //       }
-
-  //       return {
-  //         id: s.id,
-  //         name: s.name,
-  //         nis: s.nis,
-  //         fatherName: s.fatherName || null,
-  //         motherName: s.motherName || null,
-  //         parrentPhone: s.parrentPhone || null,
-  //         activeDormitory: s.dormitory.name || null,
-  //         activeTrack: history?.class?.track.name || null,
-  //         activeClass: history?.class?.name || null,
-  //         ttl:
-  //           s.placeOfBirth && s.dateOfBirth
-  //             ? `${s.placeOfBirth}, ${new Date(s.dateOfBirth).toLocaleDateString('id-ID', {
-  //                 year: 'numeric',
-  //                 month: 'long',
-  //                 day: 'numeric'
-  //               })}`
-  //             : null,
-  //         targetDays,
-  //         daysStudied,
-  //         daysLeft,
-  //         isAheadOfSchedule: daysLeft ? daysLeft < 0 : null
-  //       }
-  //     })
-  //     .sort((a, b) => {
-  //       if (safeSortBy === 'dormitory') {
-  //         const aDorm = a.activeDormitory || ''
-  //         const bDorm = b.activeDormitory || ''
-
-  //         return sortOrder === 'asc' ? aDorm.localeCompare(bDorm) : bDorm.localeCompare(aDorm)
-  //       }
-
-  //       return 0
-  //     })
+    safeSortBy === 'activeDormitory'
+      ? { dormitory: { name: sortOrder } }
+      : allowedSortFields.includes(safeSortBy)
+        ? { [safeSortBy]: sortOrder }
+        : { name: sortOrder }
 
   const students = await db.student.findMany({
     skip,
@@ -294,6 +192,18 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
       parrentPhone: true,
       placeOfBirth: true,
       dateOfBirth: true,
+      formalClass: {
+        select: {
+          id: true,
+          name: true
+        }
+      },
+      dormitoryRoom: {
+        select: {
+          id: true,
+          name: true
+        }
+      },
       dormitory: {
         select: { name: true }
       },
@@ -380,6 +290,10 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
         fatherName: s.fatherName || null,
         motherName: s.motherName || null,
         parrentPhone: s.parrentPhone || null,
+        dormitoryRoom: s.dormitoryRoom ? s.dormitoryRoom.name : null,
+        dormitoryRoomId: s.dormitoryRoom ? s.dormitoryRoom.id : null,
+        formalClass: s.formalClass ? s.formalClass.name : null,
+        formalClassId: s.formalClass ? s.formalClass.id : null,
         regency: s.village?.district.regency.label,
         regencyId: s.village?.district.regency.id,
         ttl:
@@ -446,7 +360,7 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
       }
     })
     .sort((a, b) => {
-      if (safeSortBy === 'dormitory') {
+      if (safeSortBy === 'activeDormitory') {
         const aDorm = a.activeDormitory || ''
         const bDorm = b.activeDormitory || ''
 
@@ -692,6 +606,18 @@ export async function getStudentDetail(id: string): Promise<StudentItem | null> 
       parrentPhone: true,
       placeOfBirth: true,
       dateOfBirth: true,
+      dormitoryRoom: {
+        select: {
+          id: true,
+          name: true
+        }
+      },
+      formalClass: {
+        select: {
+          id: true,
+          name: true
+        }
+      },
       dormitory: {
         select: {
           name: true
@@ -762,6 +688,10 @@ export async function getStudentDetail(id: string): Promise<StudentItem | null> 
       motherName: student.motherName || null,
       parrentPhone: student.parrentPhone || null,
       activeDormitory: student.dormitory?.name || null,
+      dormitoryRoom: student.dormitoryRoom ? student.dormitoryRoom.name : null,
+      dormitoryRoomId: student.dormitoryRoom ? student.dormitoryRoom.id : null,
+      formalClass: student.formalClass ? student.formalClass.name : null,
+      formalClassId: student.formalClass ? student.formalClass.id : null,
       activeClass: null,
       activeTrack: null,
       ttl:
@@ -846,6 +776,10 @@ export async function getStudentDetail(id: string): Promise<StudentItem | null> 
     activeDormitory: student.dormitory?.name || null,
     activeClass: currentHistory?.class?.name || null,
     activeTrack: track?.name || null,
+    dormitoryRoom: student.dormitoryRoom ? student.dormitoryRoom.name : null,
+    dormitoryRoomId: student.dormitoryRoom ? student.dormitoryRoom.id : null,
+    formalClass: student.formalClass ? student.formalClass.name : null,
+    formalClassId: student.formalClass ? student.formalClass.id : null,
     ttl,
     targetDays,
     daysStudied,

@@ -40,6 +40,8 @@ interface StudentForm {
   motherName: string
   parrentPhone: string
   dormitory: string
+  dormitoryRoom: string
+  formalClass: string
   track?: string
   class?: string
 }
@@ -102,7 +104,9 @@ export default function StudentPageDetailView({ id }: { id: string }) {
         parrentPhone: studentDetail.parrentPhone ?? '',
         dormitory: studentDetail.activeDormitory ?? '',
         track: studentDetail.activeTrack ?? '',
-        class: studentDetail.activeClass ?? ''
+        class: studentDetail.activeClass ?? '',
+        dormitoryRoom: studentDetail.dormitoryRoom ?? '',
+        formalClass: studentDetail.formalClass ?? ''
       })
     }
   }, [studentDetail])
@@ -127,7 +131,9 @@ export default function StudentPageDetailView({ id }: { id: string }) {
         parrentPhone: studentDetail.parrentPhone ?? '',
         dormitory: studentDetail.activeDormitory ?? '',
         track: studentDetail.activeTrack ?? '',
-        class: studentDetail.activeClass ?? ''
+        class: studentDetail.activeClass ?? '',
+        dormitoryRoom: studentDetail.dormitoryRoom ?? '',
+        formalClass: studentDetail.formalClass ?? ''
       })
     }
 
@@ -273,6 +279,26 @@ export default function StudentPageDetailView({ id }: { id: string }) {
                   label='Kelas'
                   name='class'
                   value={formData.class}
+                  onChange={handleChange}
+                  disabled={!isEditing}
+                />
+              </Grid>
+
+              <Grid item xs={12}>
+                <FormItem
+                  label='Kelas Formal'
+                  name='formalClass'
+                  value={formData.formalClass}
+                  onChange={handleChange}
+                  disabled={!isEditing}
+                />
+              </Grid>
+
+              <Grid item xs={12}>
+                <FormItem
+                  label='Kamar'
+                  name='dormitoryRoom'
+                  value={formData.dormitoryRoom}
                   onChange={handleChange}
                   disabled={!isEditing}
                 />

@@ -137,6 +137,16 @@ model Student {
     createdAt        DateTime           @default(now())
     updatedAt        DateTime           @updatedAt
     testRegistration TestRegistration[]
+    formalClass      FormalClass?       @relation(fields: [formalClassId], references: [id])
+    formalClassId    String?
+    dormitoryRoom    DormitoryRoom?     @relation(fields: [dormitoryRoomId], references: [id])
+    dormitoryRoomId  String?
+}
+
+model FormalClass {
+    id      String    @id @default(uuid())
+    name    String    @unique
+    Student Student[]
 }
 
 model Teacher {
@@ -167,6 +177,16 @@ model Dormitory {
     dormitoryHistory DormitoryHistory[]
     dormitoryTracks  DormitoryTrack[] // pivot relasi ke track
     teacherDormitory TeacherDormitory[]
+
+    dormitoryRoom DormitoryRoom[]
+}
+
+model DormitoryRoom {
+    id          String    @id @default(cuid())
+    name        String
+    dormitory   Dormitory @relation(fields: [dormitoryId], references: [id])
+    dormitoryId String
+    students    Student[]
 }
 
 model DormitoryHistory {

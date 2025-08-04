@@ -21,7 +21,6 @@
     "**/*.{js,ts,jsx,tsx}": "prettier . --write"
   },
   "dependencies": {
-    "husky": "^9.1.7",
     "@emotion/cache": "11.14.0",
     "@emotion/react": "11.14.0",
     "@emotion/styled": "11.14.0",
@@ -42,11 +41,13 @@
     "date-fns": "^4.1.0",
     "exceljs": "^4.4.0",
     "file-saver": "^2.0.5",
+    "husky": "^9.1.7",
     "luxon": "^3.7.1",
     "next": "15.1.2",
     "next-auth": "5.0.0-beta.29",
     "react": "18.3.1",
     "react-colorful": "5.6.1",
+    "react-datepicker": "^8.4.0",
     "react-dom": "18.3.1",
     "react-hook-form": "^7.58.1",
     "react-perfect-scrollbar": "1.5.8",

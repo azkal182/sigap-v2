@@ -126,6 +126,49 @@ export const createStudentFromImportDataV2 = async (data: StudentImportPayloadV2
     const parrentPhone = data['NO TELP ORTU']?.trim()
 
     const statusKeaktifan = data['STATUS KEAKTIFAN']?.trim()
+    const formalClassName = data['KELAS FORMAL']?.trim() ?? undefined
+    let formalClassId: string | undefined = undefined
+
+    const dormitoryRoomName = data['KAMAR']?.trim() ?? undefined
+    let dormitoryRoomId: string | undefined = undefined
+
+    if (formalClassName) {
+      let formalClass = await db.formalClass.findUnique({
+        where: { name: formalClassName },
+        select: { id: true }
+      })
+
+      if (!formalClass) {
+        formalClass = await db.formalClass.create({
+          data: { name: formalClassName },
+          select: { id: true }
+        })
+      }
+
+      formalClassId = formalClass.id
+    }
+
+    if (dormitoryRoomName) {
+      let room = await db.dormitoryRoom.findFirst({
+        where: {
+          name: dormitoryRoomName,
+          dormitoryId: dormitoryId
+        },
+        select: { id: true }
+      })
+
+      if (!room) {
+        room = await db.dormitoryRoom.create({
+          data: {
+            name: dormitoryRoomName,
+            dormitoryId: dormitoryId
+          },
+          select: { id: true }
+        })
+      }
+
+      dormitoryRoomId = room.id
+    }
 
     // --- Akhir penambahan kolom tambahan ---
 
@@ -176,7 +219,8 @@ export const createStudentFromImportDataV2 = async (data: StudentImportPayloadV2
         // --- Tambahkan kolom-kolom tambahan ke data student ---
         status: statusKeaktifan ? (statusKeaktifan.toLocaleLowerCase() === 'active' ? 'ACTIVE' : undefined) : undefined, // Sesuaikan dengan nama field di model Prisma Anda
         // --- Akhir penambahan kolom tambahan ---
-
+        formalClassId,
+        dormitoryRoomId,
         dormitoryHistories: {
           create: [
             {
