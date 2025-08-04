@@ -60,6 +60,7 @@ export function UserFormDialog({ open, editing, onClose, onSubmit, roles, dorms,
 
   const selectedRole = useMemo(() => {
     return roles.find(r => r.id === watch('roleId'))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roles, watch('roleId')])
 
   const selectedRolePermissions = useMemo(() => {

@@ -25,6 +25,7 @@ export default function DormitorySelect() {
 
   useEffect(() => {
     getDormitoryList().then(data => setDormitories(data.filter(student => allowedDormitoryIds.includes(student.id))))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {

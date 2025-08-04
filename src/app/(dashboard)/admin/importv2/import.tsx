@@ -399,17 +399,17 @@ export default function ImportComponent() {
   }
 
   const handleImport = async () => {
-    if (process.env.NODE_ENV !== 'development') {
-      const allRowsValidatedAndValid = previewData.length > 0 && previewData.every(row => row.__isValid === true)
+    // if (process.env.NODE_ENV !== 'development') {
+    //   const allRowsValidatedAndValid = previewData.length > 0 && previewData.every(row => row.__isValid === true)
 
-      if (!allRowsValidatedAndValid) {
-        setErrorMessage(
-          'Tidak bisa mengimport data: Mohon jalankan validasi data terlebih dahulu dan pastikan semua baris valid.'
-        )
+    //   if (!allRowsValidatedAndValid) {
+    //     setErrorMessage(
+    //       'Tidak bisa mengimport data: Mohon jalankan validasi data terlebih dahulu dan pastikan semua baris valid.'
+    //     )
 
-        return
-      }
-    }
+    //     return
+    //   }
+    // }
 
     setIsImporting(true)
     setImportProgress({ current: 0, total: previewData.length })
@@ -615,10 +615,9 @@ export default function ImportComponent() {
               color='primary'
               onClick={handleImport}
               disabled={
-                isImporting ||
-                isValidationRunning ||
-                validData.length === 0 ||
-                (process.env.NODE_ENV !== 'development' && invalidData.length > 0)
+                isImporting || isValidationRunning || validData.length === 0
+
+                // || (process.env.NODE_ENV !== 'development' && invalidData.length > 0)
               }
             >
               {isImporting ? 'Importing Data...' : `Import ${validData.length} Data`}
