@@ -30,7 +30,7 @@
 import { createLogger, format, transports } from 'winston'
 import TelegramLogger from 'winston-telegram'
 
-const isProduction = process.env.NODE_ENV === 'production'
+const isProduction = process.env.NODE_ENV !== 'development'
 
 const logger = createLogger({
   level: 'info',

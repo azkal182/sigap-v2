@@ -399,7 +399,7 @@ export default function ImportComponent() {
   }
 
   const handleImport = async () => {
-    if (process.env.NODE_ENV === 'production') {
+    if (process.env.NODE_ENV !== 'development') {
       const allRowsValidatedAndValid = previewData.length > 0 && previewData.every(row => row.__isValid === true)
 
       if (!allRowsValidatedAndValid) {
@@ -618,7 +618,7 @@ export default function ImportComponent() {
                 isImporting ||
                 isValidationRunning ||
                 validData.length === 0 ||
-                (process.env.NODE_ENV === 'production' && invalidData.length > 0)
+                (process.env.NODE_ENV !== 'development' && invalidData.length > 0)
               }
             >
               {isImporting ? 'Importing Data...' : `Import ${validData.length} Data`}
