@@ -187,7 +187,7 @@ export default function RoleManagerPage() {
             dormitoryCount={role.roleDormitories?.length || 0}
             onDelete={id => handleDelete(id)}
             onEdit={() => handleEdit(role)}
-            canEdit={canEdit}
+            canEdit={role?.canEdit && canEdit}
           />
         ))}
       </Grid>

@@ -44,8 +44,13 @@ interface StudentForm {
   formalClass: string
   track?: string
   class?: string
+  leadership: Leadership | null
 }
 
+type Leadership = {
+  name: string
+  status: string
+}
 interface FormItemProps {
   label: string
   name: keyof StudentForm
@@ -106,7 +111,13 @@ export default function StudentPageDetailView({ id }: { id: string }) {
         track: studentDetail.activeTrack ?? '',
         class: studentDetail.activeClass ?? '',
         dormitoryRoom: studentDetail.dormitoryRoom ?? '',
-        formalClass: studentDetail.formalClass ?? ''
+        formalClass: studentDetail.formalClass ?? '',
+        leadership: studentDetail.leadership
+          ? {
+              name: studentDetail.leadership.name,
+              status: studentDetail.leadership.status
+            }
+          : null
       })
     }
   }, [studentDetail])
@@ -133,7 +144,13 @@ export default function StudentPageDetailView({ id }: { id: string }) {
         track: studentDetail.activeTrack ?? '',
         class: studentDetail.activeClass ?? '',
         dormitoryRoom: studentDetail.dormitoryRoom ?? '',
-        formalClass: studentDetail.formalClass ?? ''
+        formalClass: studentDetail.formalClass ?? '',
+        leadership: studentDetail.leadership
+          ? {
+              name: studentDetail.leadership.name,
+              status: studentDetail.leadership.status
+            }
+          : null
       })
     }
 
@@ -303,6 +320,20 @@ export default function StudentPageDetailView({ id }: { id: string }) {
                   disabled={!isEditing}
                 />
               </Grid>
+
+              {formData.leadership && (
+                <>
+                  <Grid item xs={12}>
+                    <FormItem
+                      label='Pengurus'
+                      name='dormitoryRoom'
+                      value={formData.leadership.name}
+                      onChange={handleChange}
+                      disabled
+                    />
+                  </Grid>
+                </>
+              )}
             </Grid>
           </form>
         </CardContent>

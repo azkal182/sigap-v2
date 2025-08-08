@@ -31,13 +31,13 @@ const DormitoryTeacherPageView = () => {
         </TableRow>
       </TableHead>
       <TableBody>
-        {data?.data?.map((item, index) => (
+        {data?.data?.map((item: any, index: number) => (
           <TableRow key={item.id}>
             <TableCell>{index + 1}</TableCell>
             <TableCell>{item.name}</TableCell>
             <TableCell>
               <Stack direction='row' spacing={1}>
-                {item.dormitories.map((d, i) => (
+                {item.dormitories.map((d: any, i: number) => (
                   <Chip size='small' key={i} label={d.name} color='primary' />
                 ))}
               </Stack>

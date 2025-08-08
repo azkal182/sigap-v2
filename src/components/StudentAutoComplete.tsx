@@ -21,6 +21,7 @@ type Props = {
   label?: string
   disabled?: boolean
   allowDisable?: boolean // <-- tambahkan props ini
+  dormitoryIds?: string[]
 }
 
 export default function StudentAutocomplete({
@@ -30,9 +31,10 @@ export default function StudentAutocomplete({
   helperText,
   label = 'Pilih Santri',
   disabled,
-  allowDisable = false // default true: tetap blokir disabled
+  allowDisable = false, // default true: tetap blokir disabled,
+  dormitoryIds = []
 }: Props) {
-  const { data, isLoading } = useStudentOption()
+  const { data, isLoading } = useStudentOption(dormitoryIds)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const options = data?.data || []
 

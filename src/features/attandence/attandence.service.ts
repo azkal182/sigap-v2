@@ -1,7 +1,7 @@
 // src/features/data/dormitory/services/absence-service.ts
 import db from '@/lib/prisma'
 import type { CreateAbsencesInput, UpdateAbsencesInput } from './schemas/attendent-schema'
-import type { APIResult } from '../data/dormitory/dormitory.service'
+import type { APIResult } from '@/types/api-types'
 
 // Asumsikan tipe ini ada
 

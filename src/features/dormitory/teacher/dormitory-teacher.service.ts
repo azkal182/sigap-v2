@@ -1,5 +1,5 @@
-import type { APIResult } from '@/features/data/dormitory/dormitory.service'
 import prisma from '@/lib/prisma'
+import type { APIResult } from '@/types/api-types'
 
 export type StudentOption = {
   id: string

@@ -1,0 +1,132 @@
+import { PrismaClient } from '@/generated/prisma'
+import { startOfMonth, endOfMonth } from 'date-fns'
+
+const prisma = new PrismaClient()
+
+export async function getMonthlyDormAttendanceReport(month: Date) {
+  const start = startOfMonth(month)
+  const end = endOfMonth(month)
+
+  // Ambil seluruh absensi bulan ini + info dormitory dan student
+  const absences = await prisma.absence.findMany({
+    where: {
+      date: {
+        gte: start,
+        lte: end,
+      },
+    },
+    select: {
+      status: true,
+      student: {
+        select: {
+          id: true,
+          dormitoryId: true,
+          dormitory: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      },
+    },
+  })
+
+  // Ambil total santri aktif per dormitory
+  const students = await prisma.student.groupBy({
+    by: ['dormitoryId'],
+    where: {
+      status: 'ACTIVE',
+    },
+    _count: {
+      _all: true,
+    },
+  })
+
+  // Mapping ke bentuk per dormitory
+  const dormReports: Record<string, {
+    dormitoryId: string
+    dormitoryName: string
+    totalStudents: number
+    totalPresent: number
+    totalAbsences: number
+    attendancePercentage: number
+  }> = {}
+
+  // Inisialisasi report dengan student count
+  for (const s of students) {
+    dormReports[s.dormitoryId] = {
+      dormitoryId: s.dormitoryId,
+      dormitoryName: '', // akan diisi nanti
+      totalStudents: s._count._all,
+      totalPresent: 0,
+      totalAbsences: 0,
+      attendancePercentage: 0,
+    }
+  }
+
+  // Hitung jumlah absensi & presentase
+  for (const a of absences) {
+    const dormId = a.student.dormitoryId
+    if (!dormReports[dormId]) {
+      dormReports[dormId] = {
+        dormitoryId: dormId,
+        dormitoryName: a.student.dormitory.name,
+        totalStudents: 0,
+        totalPresent: 0,
+        totalAbsences: 0,
+        attendancePercentage: 0,
+      }
+    }
+
+    dormReports[dormId].dormitoryName = a.student.dormitory.name
+    dormReports[dormId].totalAbsences += 1
+    if (a.status === 'PRESENT') dormReports[dormId].totalPresent += 1
+  }
+
+  // Hitung presentase
+  for (const dormId in dormReports) {
+    const report = dormReports[dormId]
+    report.attendancePercentage =
+      report.totalAbsences === 0
+        ? 0
+        : Math.round((report.totalPresent / report.totalAbsences) * 100)
+  }
+
+  // Kembalikan sebagai array
+  return Object.values(dormReports)
+}
+
+
+
+const result = await getMonthlyDormAttendanceReport(new Date('2025-08-01'))
+console.log(result)
+
+
+
+[
+  {
+    "dormitoryId": "1a2b3c",
+    "dormitoryName": "Asrama Al-Falah",
+    "totalStudents": 35,
+    "totalPresent": 1050,
+    "totalAbsences": 1120,
+    "attendancePercentage": 94
+  },
+  {
+    "dormitoryId": "4d5e6f",
+    "dormitoryName": "Asrama An-Nur",
+    "totalStudents": 28,
+    "totalPresent": 980,
+    "totalAbsences": 1120,
+    "attendancePercentage": 87
+  },
+  {
+    "dormitoryId": "7g8h9i",
+    "dormitoryName": "Asrama Al-Hikmah",
+    "totalStudents": 40,
+    "totalPresent": 1020,
+    "totalAbsences": 1200,
+    "attendancePercentage": 85
+  }
+]

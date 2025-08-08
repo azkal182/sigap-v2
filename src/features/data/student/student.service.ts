@@ -29,6 +29,12 @@ export type StudentItem = {
   dormitoryRoomId: string | null
   formalClass: string | null
   formalClassId: string | null
+  leadership: Leadership | null
+}
+
+type Leadership = {
+  name: string
+  status: string
 }
 
 export type sksItem = {
@@ -192,6 +198,22 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
       parrentPhone: true,
       placeOfBirth: true,
       dateOfBirth: true,
+      positionHistoryLeadership: {
+        where: {
+          termLeadership: {
+            startDate: { lte: new Date() }, // Kurang dari atau sama dengan tanggal sekarang
+            endDate: { gte: new Date() }
+          }
+        },
+        select: {
+          role: true,
+          leadership: {
+            select: {
+              name: true
+            }
+          }
+        }
+      },
       formalClass: {
         select: {
           id: true,
@@ -267,6 +289,7 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
   const formattedStudents: StudentItem[] = students
     .map(s => {
       const history = s.histories?.[0]
+      const leadership = s.positionHistoryLeadership.length > 0 ? s.positionHistoryLeadership[0] : null
 
       let targetDays: number | null = null
       let daysStudied: number | null = null
@@ -296,6 +319,12 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
         formalClassId: s.formalClass ? s.formalClass.id : null,
         regency: s.village?.district.regency.label,
         regencyId: s.village?.district.regency.id,
+        leadership: leadership
+          ? {
+              name: leadership.leadership.name,
+              status: leadership.role
+            }
+          : null,
         ttl:
           s.placeOfBirth && s.dateOfBirth
             ? `${s.placeOfBirth}, ${new Date(s.dateOfBirth).toLocaleDateString('id-ID', {
@@ -386,13 +415,11 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
   }
 }
 
-export async function getStudentOption(): Promise<StudentOptionRespose> {
+export async function getStudentOption(dormitoryIds?: string[]): Promise<StudentOptionRespose> {
+  const whereClause = dormitoryIds && dormitoryIds.length > 0 ? { dormitoryId: { in: dormitoryIds } } : {}
+
   const students = await db.student.findMany({
-    // select: {
-    //   id: true,
-    //   name: true
-    // },
-    // take: 5,
+    where: whereClause,
     include: {
       histories: {
         where: {
@@ -606,6 +633,22 @@ export async function getStudentDetail(id: string): Promise<StudentItem | null> 
       parrentPhone: true,
       placeOfBirth: true,
       dateOfBirth: true,
+      positionHistoryLeadership: {
+        where: {
+          termLeadership: {
+            startDate: { lte: new Date() }, // Kurang dari atau sama dengan tanggal sekarang
+            endDate: { gte: new Date() }
+          }
+        },
+        select: {
+          role: true,
+          leadership: {
+            select: {
+              name: true
+            }
+          }
+        }
+      },
       dormitoryRoom: {
         select: {
           id: true,
@@ -678,6 +721,8 @@ export async function getStudentDetail(id: string): Promise<StudentItem | null> 
     return null
   }
 
+  const leadership = student.positionHistoryLeadership.length > 0 ? student.positionHistoryLeadership[0] : null
+
   // Cek apakah ada histori
   if (!student.histories || student.histories.length === 0) {
     return {
@@ -694,6 +739,12 @@ export async function getStudentDetail(id: string): Promise<StudentItem | null> 
       formalClassId: student.formalClass ? student.formalClass.id : null,
       activeClass: null,
       activeTrack: null,
+      leadership: leadership
+        ? {
+            name: leadership.leadership.name,
+            status: leadership.role
+          }
+        : null,
       ttl:
         student.placeOfBirth && student.dateOfBirth
           ? `${student.placeOfBirth}, ${new Date(student.dateOfBirth).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}`
@@ -715,7 +766,6 @@ export async function getStudentDetail(id: string): Promise<StudentItem | null> 
 
   // Persiapan untuk SKS
   const sksList = track.sks.map(sksItem => {
-    console.log(JSON.stringify(sksItem, null, 2))
     const registration = sksItem.testRegistration[0] // Ambil pendaftaran pertama yang ditemukan
     const score = registration?.test?.score ?? null
     const passed = registration?.test?.passed ?? false
@@ -780,6 +830,12 @@ export async function getStudentDetail(id: string): Promise<StudentItem | null> 
     dormitoryRoomId: student.dormitoryRoom ? student.dormitoryRoom.id : null,
     formalClass: student.formalClass ? student.formalClass.name : null,
     formalClassId: student.formalClass ? student.formalClass.id : null,
+    leadership: leadership
+      ? {
+          name: leadership.leadership.name,
+          status: leadership.role
+        }
+      : null,
     ttl,
     targetDays,
     daysStudied,

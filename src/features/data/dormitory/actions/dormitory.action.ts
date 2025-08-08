@@ -5,6 +5,7 @@ import {
   createScheduleSlotSchema,
   CreateSksSchema,
   CreateSubjectSchema,
+  filterDormitorySchema,
   trackSchema
 } from './../schemas/dormitory-schema'
 
@@ -24,7 +25,6 @@ import type {
   CreateScheduleSlotData,
   CreateSlotResponse,
   DormitoryDetailResponse,
-  DormitoryResponse,
   SimpleResponse,
   SksResponse,
   SlotOptionResponse,
@@ -52,18 +52,10 @@ import {
   removeTrackFromDormitory,
   updateTrack
 } from '../dormitory.service'
+import { validateAndRun } from '@/utils/validate-and-run'
 
-export async function getDormitories(params: FilterDormitoryParams): Promise<DormitoryResponse> {
-  try {
-    return getDormitoriesFilter(params)
-  } catch (error) {
-    const message = handleServerError('Gagal mengambil data Asrama', error)
-
-    return {
-      success: false,
-      error: message
-    }
-  }
+export async function getDormitories(params: FilterDormitoryParams) {
+  return validateAndRun(filterDormitorySchema, params, getDormitoriesFilter)
 }
 
 export async function getDormitoryList() {

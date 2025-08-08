@@ -1,8 +1,8 @@
 'use server'
 
-import type { APIResult } from '@/features/data/dormitory/dormitory.service'
 import { handleServerError } from '@/lib/handle-error'
 import prisma from '@/lib/prisma'
+import type { APIResult } from '@/types/api-types'
 
 export type TrackList = {
   id: string

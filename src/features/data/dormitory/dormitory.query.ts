@@ -29,6 +29,7 @@ import type {
 } from './schemas/dormitory-schema'
 import { getScheduleAction } from '@/actions/schedule-action'
 import type { CreateScheduleResult } from './dormitory.service'
+import { ActionError } from '@/utils/action-error'
 
 export const useDormitory = (params: FilterDormitoryParams, isValid: boolean) => {
   return useQuery({
@@ -37,7 +38,7 @@ export const useDormitory = (params: FilterDormitoryParams, isValid: boolean) =>
       const res = await getDormitories(params)
 
       if (!res.success) {
-        throw new Error(res.error || 'Failed to fetch students')
+        throw new ActionError(res.error, res.issues)
       }
 
       return {
@@ -65,7 +66,7 @@ export const useDormitodyDetail = (id: string) => {
       if (res === null) return null
 
       if (!res.success) {
-        throw new Error(res.error || 'Failed to fetch dormitory detail')
+        throw new ActionError(res.error, res.issues)
       }
 
       return res.data
@@ -83,7 +84,7 @@ export const useTrackDetail = (id: string) => {
       if (res === null) return null
 
       if (!res.success) {
-        throw new Error(res.error || 'Failed to fetch track detail')
+        throw new ActionError(res.error, res.issues)
       }
 
       return res.data
@@ -100,7 +101,7 @@ export const useCreateTrackForDormitory = () => {
     mutationFn: async (data: Omit<TrackFormSchema, 'id'>) => {
       const res = await createNewTrackForDormitoryAction(data)
 
-      if (!res.success) throw new Error(res.error)
+      if (!res.success) throw new ActionError(res.error, res.issues)
 
       return res.data
     },
@@ -123,7 +124,7 @@ export const useUpdateTrack = () => {
     mutationFn: async (data: Partial<TrackFormSchema>) => {
       const res = await updateTrackAction(data)
 
-      if (!res.success) throw new Error(res.error)
+      if (!res.success) throw new ActionError(res.error, res.issues)
 
       return res.data
     },
@@ -147,7 +148,7 @@ export const useRemoveTrackFromDormitory = () => {
     mutationFn: async ({ trackId, dormitoryId }: { trackId: string; dormitoryId: string }) => {
       const res = await removeTrackFromDormitoryAction(trackId, dormitoryId)
 
-      if (!res.success) throw new Error(res.error)
+      if (!res.success) throw new ActionError(res.error, res.issues)
 
       return res.data
     },
@@ -166,7 +167,7 @@ export const useClass = (dormitoryId: string, trackId: string) => {
       if (res === null) return null
 
       if (!res.success) {
-        throw new Error(res.error || 'Failed to fetch class ')
+        throw new ActionError(res.error, res.issues)
       }
 
       return res.data
@@ -192,7 +193,7 @@ export const useCreateClass = () => {
     }) => {
       const res = await createClassAction(name, teacher, trackId, dormitoryId)
 
-      if (!res.success) throw new Error(res.error)
+      if (!res.success) throw new ActionError(res.error, res.issues)
 
       return res.data
     },
@@ -213,7 +214,7 @@ export const useSubject = (trackId: string) => {
       if (res === null) return null
 
       if (!res.success) {
-        throw new Error(res.error || 'Failed to fetch subject ')
+        throw new ActionError(res.error, res.issues)
       }
 
       return res.data
@@ -229,7 +230,7 @@ export const useCreateSubject = () => {
     mutationFn: async ({ name, trackId }: { name: string; trackId: string }) => {
       const res = await createSubjectAction({ name, trackId })
 
-      if (!res.success) throw new Error(res.error)
+      if (!res.success) throw new ActionError(res.error, res.issues)
 
       return res.data
     },
@@ -249,7 +250,7 @@ export const useClassDetail = (classId: string) => {
       const res = await getClassDetailByIdAction(classId)
 
       if (!res.success) {
-        throw new Error(res.error || 'Failed to fetch students')
+        throw new ActionError(res.error, res.issues)
       }
 
       return {
@@ -266,7 +267,7 @@ export const useCreateSks = () => {
     mutationFn: async ({ name, trackId }: { name: string; trackId: string }) => {
       const res = await createSksAction({ name, trackId })
 
-      if (!res.success) throw new Error(res.error)
+      if (!res.success) throw new ActionError(res.error, res.issues)
 
       return res.data
     },
@@ -285,7 +286,7 @@ export const useSks = (trackId: string) => {
       const res = await getSksByTrackIdAction(trackId)
 
       if (!res.success) {
-        throw new Error(res.error || 'Failed to fetch students')
+        throw new ActionError(res.error, res.issues)
       }
 
       return {
@@ -302,7 +303,7 @@ export const useAssignStudentToClass = () => {
     mutationFn: async ({ studentId, classId }: { studentId: string; classId: string }) => {
       const res = await assignStudentToClassAction({ studentId, classId })
 
-      if (!res.success) throw new Error(res.error)
+      if (!res.success) throw new ActionError(res.error, res.issues)
 
       return res.data
     },
@@ -340,7 +341,7 @@ export const useSchedule = (params: { classId?: string; teacherId?: string; user
       const res = await getScheduleAction(params)
 
       if (!res.success) {
-        throw new Error(res.error || 'Gagal mengambil jadwal')
+        throw new ActionError(res.error, res.issues)
       }
 
       return { data: res.data }
@@ -379,7 +380,7 @@ export const useSubjectOption = (trackId: string) => {
       const res = await getSubjectOptionByTrackIdAction(trackId)
 
       if (!res.success) {
-        throw new Error(res.error || 'Failed to fetch pelajaran')
+        throw new ActionError(res.error, res.issues)
       }
 
       return {
@@ -396,7 +397,7 @@ export const useSlotOption = (dormitoryIds: string[]) => {
       const res = await getSlotOptionAction(dormitoryIds)
 
       if (!res.success) {
-        throw new Error(res.error || 'Failed to fetch slot')
+        throw new ActionError(res.error, res.issues)
       }
 
       return {
@@ -415,7 +416,7 @@ export const useCreateScheduleSlot = () => {
       const res = await createScheduleSlotAction(data)
 
       if (!res.success) {
-        throw new Error(res.error || 'Failed to create schedule slot.')
+        throw new ActionError(res.error, res.issues)
       }
 
       return res.data

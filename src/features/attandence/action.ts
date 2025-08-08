@@ -9,8 +9,8 @@ import {
   type UpdateAbsencesInput,
   createAbsenceItemSchema
 } from './schemas/attendent-schema'
-import type { APIResult } from '../data/dormitory/dormitory.service'
 import { handleServerError } from '@/lib/handle-error'
+import type { APIResult } from '@/types/api-types'
 
 // ✅ Skema Zod untuk input Server Action
 const createAbsencesActionSchema = z.object({

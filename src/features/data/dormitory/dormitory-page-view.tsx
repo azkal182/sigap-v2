@@ -170,7 +170,7 @@ const DormitoryPageView = () => {
         columns={columns}
         data={data?.data ?? []}
         searchParams={searchParams}
-        totalItems={data?.pagination.total}
+        totalItems={data!.pagination!.total}
         isLoading={queryLoading || !searchParams.isReady} // Gabungkan isLoading dari query dan searchParams
         searchPlaceholder='Cari asrama...'
         addButton={

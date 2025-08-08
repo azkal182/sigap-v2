@@ -500,6 +500,8 @@
 
 import React, { useEffect, useState } from 'react'
 
+import { useSearchParams } from 'next/navigation'
+
 import {
   Table,
   TableBody,
@@ -525,6 +527,9 @@ import { AbsenceStatus } from '@/generated/prisma'
 import { useCreateAbsences, useUpdateAbsences } from '@/features/attandence/query'
 import type { CreateAbsencesInput, UpdateAbsencesInput } from '@/features/attandence/schemas/attendent-schema'
 import CustomTextField from '@/@core/components/mui/TextField'
+import { useTimezone } from '@/hooks/use-timezone'
+import type { Dormitory } from './dashboard-page'
+import DashboardPage from './dashboard-page'
 
 type StudentWithAbsence = {
   id: string
@@ -555,6 +560,7 @@ export default function Page() {
   const [dormitoryName, setDormitoryName] = useState('')
   const [scheduleId, setScheduleId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [fetchingReport, setFetchingReport] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const now = DateTime.fromJSDate(new Date())
   const [teacherId, setTeacherId] = useState('')
@@ -562,6 +568,12 @@ export default function Page() {
   const [customDayOfWeek, setCustomDayOfWeek] = useState<number>(now.weekday)
   const [customHour, setCustomHour] = useState<number>(now.hour)
   const [customMinute, setCustomMinute] = useState<number>(now.minute)
+  const searchParams = useSearchParams()
+  const dateParam = searchParams.get('month')
+
+  const [dormitories, setDormitories] = useState<Dormitory[]>([])
+
+  const timezone = useTimezone()
 
   const isProduction = process.env.NEXT_PUBLIC_IS_PRODUCTION === 'production'
 
@@ -728,6 +740,8 @@ export default function Page() {
   //   }, [user.user?.id, user.user?.role])
   useEffect(() => {
     if (user.user?.role === 'PENGAJAR' && user.user?.id) {
+      setFetchingReport(false)
+
       if (isProduction) {
         fetchStudents(user.user.id)
       } else {
@@ -736,19 +750,40 @@ export default function Page() {
     } else {
       setLoading(false)
     }
-  }, [user.user?.id, user.user?.role])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user.user?.id, user.user?.role, fetchStudents])
+
+  useEffect(() => {
+    if (!timezone) return
+
+    if (!dateParam) return
+
+    // Contoh: fetch data
+    fetch(`/api/report/monthly?date=${dateParam}&tz=${timezone}`)
+      .then(res => res.json())
+      .then(data => {
+        setDormitories(data)
+        console.log(data)
+        setFetchingReport(false)
+      })
+    console.log(timezone)
+  }, [dateParam, timezone])
 
   if (!user.user?.role || user.user?.role !== 'PENGAJAR') {
     return (
-      <Box display='flex' justifyContent='center' alignItems='center' minHeight='50vh'>
-        <Typography variant='h5' color='error'>
-          Akses Ditolak.
-        </Typography>
-      </Box>
+      <div>
+        <DashboardPage dormitories={dormitories} />
+      </div>
+
+      //   <Box display='flex' justifyContent='center' alignItems='center' minHeight='50vh'>
+      //     <Typography variant='h5' color='error'>
+      //       Akses Ditolak.
+      //     </Typography>
+      //   </Box>
     )
   }
 
-  if (loading) {
+  if (loading || fetchingReport) {
     return (
       <Box display='flex' flexDirection='column' gap={2} justifyContent='center' alignItems='center' minHeight='50vh'>
         <CircularProgress />

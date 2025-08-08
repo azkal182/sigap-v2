@@ -1,6 +1,8 @@
 import React from 'react'
 
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button } from '@mui/material'
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography } from '@mui/material'
+
+import DialogCloseButton from './dialogs/DialogCloseButton'
 
 /**
  * Interface untuk properti komponen CreateFormDialog.
@@ -30,10 +32,17 @@ const FormDialog = ({
   width = 'sm' // 🔥 Default width
 }: FormDialogProps) => {
   return (
-    <Dialog open={open} onClose={onClose} maxWidth={width} fullWidth>
-      <DialogTitle>{title}</DialogTitle>
-      <DialogContent className=''>{children}</DialogContent>
-      <DialogActions className='p-4 border-t border-gray-200 flex justify-end space-x-2'>
+    <Dialog open={open} onClose={onClose} maxWidth={width} fullWidth PaperProps={{ sx: { overflow: 'visible' } }}>
+      <DialogTitle>
+        <Typography variant='h5' component='span'>
+          {title}
+        </Typography>
+        <DialogCloseButton onClick={onClose} disableRipple>
+          <i className='tabler-x' />
+        </DialogCloseButton>
+      </DialogTitle>
+      <DialogContent>{children}</DialogContent>
+      <DialogActions className='flex justify-end space-x-2'>
         <Button onClick={onClose} variant='outlined'>
           Batal
         </Button>

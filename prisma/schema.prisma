@@ -24,6 +24,8 @@ model User {
     mustChangeCredentials Boolean          @default(false)
     userPermissions       UserPermission[]
     userDormitories       UserDormitory[]
+
+    @@index([roleId])
 }
 
 model Role {
@@ -136,13 +138,59 @@ model Student {
 
     status StudentStatus? @default(ACTIVE)
 
-    createdAt        DateTime           @default(now())
-    updatedAt        DateTime           @updatedAt
-    testRegistration TestRegistration[]
-    formalClass      FormalClass?       @relation(fields: [formalClassId], references: [id])
-    formalClassId    String?
-    dormitoryRoom    DormitoryRoom?     @relation(fields: [dormitoryRoomId], references: [id])
-    dormitoryRoomId  String?
+    createdAt                 DateTime                    @default(now())
+    updatedAt                 DateTime                    @updatedAt
+    testRegistration          TestRegistration[]
+    formalClass               FormalClass?                @relation(fields: [formalClassId], references: [id])
+    formalClassId             String?
+    dormitoryRoom             DormitoryRoom?              @relation(fields: [dormitoryRoomId], references: [id])
+    dormitoryRoomId           String?
+    positionHistoryLeadership PositionHistoryLeadership[]
+
+    @@index([name]) // <-- TAMBAHKAN: Untuk pencarian berdasarkan nama
+    @@index([dormitoryId]) // <-- TAMBAHKAN: Untuk filter santri per asrama
+    @@index([status]) // <-- TAMBAHKAN: Untuk filter santri berdasarkan status (misal: semua yg aktif)
+    @@index([formalClassId]) // <-- TAMBAHKAN: Untuk filter santri per kelas formal
+    @@index([dormitoryRoomId]) // <-- TAMBAHKAN: Untuk filter santri per kamar
+}
+
+enum PositionRole {
+    CHAIRMAN
+    MEMBER
+}
+
+model Leadership {
+    id          String  @id @default(uuid())
+    name        String  @unique
+    description String?
+
+    positionHistories PositionHistoryLeadership[]
+}
+
+model TermLeadership {
+    id        String   @id @default(uuid())
+    name      String   @unique // e.g., "2024-2025"
+    startDate DateTime
+    endDate   DateTime
+
+    positionHistories PositionHistoryLeadership[]
+}
+
+model PositionHistoryLeadership {
+    id    String       @id @default(uuid())
+    role  PositionRole @default(MEMBER)
+    notes String?
+
+    studentId String
+    student   Student @relation(fields: [studentId], references: [id])
+
+    leadershipId String
+    leadership   Leadership @relation(fields: [leadershipId], references: [id])
+
+    termLeadershipId String
+    termLeadership   TermLeadership @relation(fields: [termLeadershipId], references: [id])
+
+    createdAt DateTime @default(now())
 }
 
 model FormalClass {
@@ -164,6 +212,8 @@ model Teacher {
 
     userId String @unique
     user   User   @relation(fields: [userId], references: [id])
+
+    @@index([name])
 }
 
 model Dormitory {
@@ -206,6 +256,9 @@ model DormitoryHistory {
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
+
+    @@index([studentId]) // <-- TAMBAHKAN INI
+    @@index([dormitoryId]) // <-- TAMBAHKAN INI
 }
 
 // AKADEMIK
@@ -245,6 +298,11 @@ model TestRegistration {
     test      Test?
     Subject   Subject? @relation(fields: [subjectId], references: [id])
     subjectId String?
+
+    @@index([studentId]) // <-- TAMBAHKAN
+    @@index([sksId]) // <-- TAMBAHKAN
+    @@index([status]) // <-- TAMBAHKAN
+    @@index([subjectId]) // <-- TAMBAHKAN
 }
 
 model Test {
@@ -275,6 +333,9 @@ model Subject {
     createdAt        DateTime              @default(now())
     updatedAt        DateTime              @updatedAt
     TestRegistration TestRegistration[]
+
+    @@index([name]) // <-- TAMBAHKAN
+    @@index([trackId]) // <-- TAMBAHKAN
 }
 
 model TeacherDormitory {
@@ -315,6 +376,10 @@ model Class {
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
+
+    @@index([trackId]) // <-- TAMBAHKAN
+    @@index([dormitoryId]) // <-- TAMBAHKAN
+    @@index([active]) // <-- TAMBAHKAN
 }
 
 model TeacherSubjectClass {
@@ -354,6 +419,7 @@ model History {
     updatedAt DateTime @updatedAt
 
     @@index([classId, status, studentId])
+    @@index([studentId]) // <-- TAMBAHKAN INI
 }
 
 // JADWAL
@@ -388,6 +454,9 @@ model Schedule {
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
+
+    @@index([classId, dayOfWeek]) // <-- TAMBAHKAN
+    @@index([teacherId, dayOfWeek]) // <-- TAMBAHKAN
 }
 
 // ABSENSI SANTRI
@@ -411,6 +480,8 @@ model Absence {
     updatedAt DateTime @updatedAt
 
     @@unique([studentId, scheduleId, absentDate])
+    @@index([absentDate]) // <-- TAMBAHKAN
+    @@index([scheduleId]) // <-- TAMBAHKAN
 }
 
 // PERIZINAN SANTRI
@@ -425,6 +496,9 @@ model Permit {
     student      Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
     createdAt    DateTime      @default(now())
     updatedAt    DateTime      @updatedAt
+
+    @@index([studentId]) // <-- TAMBAHKAN
+    @@index([startDate, endDate]) // <-- TAMBAHKAN
 }
 
 // ABSENSI GURU PER HARI
@@ -438,6 +512,8 @@ model TeacherAbsence {
     teacher   Teacher  @relation(fields: [teacherId], references: [id])
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
+
+    @@index([teacherId, date]) // <-- TAMBAHKAN (Composite index lebih baik)
 }
 
 model Province {

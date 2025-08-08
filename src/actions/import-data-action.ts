@@ -173,7 +173,7 @@ export const createStudentFromImportDataV2 = async (data: StudentImportPayloadV2
     // --- Akhir penambahan kolom tambahan ---
 
     // 🔍 Validasi awal di backend (redundant tapi baik untuk keamanan)
-    if (!name || !nis || !dormitoryId || !dormitoryName || !placeOfBirth || !dateOfBirth || !villageId) {
+    if (!name || !nis || !dormitoryId || !dormitoryName || !placeOfBirth || !dateOfBirth) {
       console.error('❌ Data tidak lengkap untuk import student:', {
         name,
         nis,

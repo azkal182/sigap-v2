@@ -125,7 +125,12 @@ const ClassDetailPageView = ({
         <TabPanel value='1'>
           <div className='flex items-end space-x-4'>
             <div className='w-64'>
-              <StudentAutocomplete allowDisable={true} value={studentId} onChange={(_, val) => setStudentId(val)} />
+              <StudentAutocomplete
+                dormitoryIds={[dormitoryId]}
+                allowDisable={true}
+                value={studentId}
+                onChange={(_, val) => setStudentId(val)}
+              />
             </div>
             <Button
               variant='contained'

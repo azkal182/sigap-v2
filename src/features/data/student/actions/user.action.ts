@@ -25,8 +25,8 @@ export async function getFilteredStudents(params: FilterStudentParams): Promise<
   }
 }
 
-export async function getStudentOptionAction(): Promise<StudentOptionRespose> {
-  return getStudentOption()
+export async function getStudentOptionAction(dormitoryIds?: string[]): Promise<StudentOptionRespose> {
+  return getStudentOption(dormitoryIds)
 }
 
 export async function getStudentDetailAction(id: string): Promise<StudentItem | null> {

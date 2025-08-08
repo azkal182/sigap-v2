@@ -8,7 +8,7 @@ import PerfectScrollbar from 'react-perfect-scrollbar'
 import type { VerticalMenuContextProps } from '@menu/components/vertical-menu/Menu'
 
 // Component Imports
-import { Menu, MenuItem, MenuSection } from '@menu/vertical-menu'
+import { Menu, MenuItem, MenuSection, SubMenu } from '@menu/vertical-menu'
 
 // Hook Imports
 import useVerticalNav from '@menu/hooks/useVerticalNav'
@@ -38,9 +38,10 @@ const RenderExpandIcon = ({ open, transitionDuration }: RenderExpandIconProps) =
 
 export type MenuConfigItem = {
   title: string
-  href: string
+  href?: string
   icon?: string
   permissions?: string[]
+  subMenuItems?: MenuConfigItem[]
 }
 
 export type MenuConfigSection = {
@@ -65,18 +66,22 @@ export const menuItems: MenuConfigSection[] = [
         icon: 'tabler-presentation-analytics',
         permissions: ['attendance:view']
       },
-
       {
-        title: 'Daftar Absensi Santri',
-        href: '/attendance/list-attendance-student',
+        title: 'Daftar Absensi',
         icon: 'tabler-report',
-        permissions: ['report-attend:view']
-      },
-      {
-        title: 'Daftar Absensi Pengajar',
-        href: '/attendance/list-attendance-teacher',
-        icon: 'tabler-report',
-        permissions: ['report-attend:view']
+        permissions: ['report-attend:view'],
+        subMenuItems: [
+          {
+            title: 'Santri',
+            href: '/attendance/list-attendance-student',
+            permissions: ['report-attend:view']
+          },
+          {
+            title: 'Pengajar',
+            href: '/attendance/list-attendance-teacher',
+            permissions: ['report-attend:view']
+          }
+        ]
       }
     ]
   },
@@ -152,6 +157,28 @@ export const menuItems: MenuConfigSection[] = [
         href: '/data/class',
         icon: 'tabler-brand-tether',
         permissions: ['student:view']
+      },
+      {
+        title: 'Kepengurusan',
+        icon: 'tabler-report',
+        permissions: ['student:view'],
+        subMenuItems: [
+          {
+            title: 'Periode Kepengurusan',
+            href: '/data/leadership/term-leadership',
+            permissions: ['student:view']
+          },
+          {
+            title: 'List Kepengurusan',
+            href: '/data/leadership/list-leadership',
+            permissions: ['student:view']
+          },
+          {
+            title: 'Data Kepengurusan',
+            href: '/data/leadership/leadership-data',
+            permissions: ['report-attend:view']
+          }
+        ]
       }
     ]
   },
@@ -164,6 +191,35 @@ export const menuItems: MenuConfigSection[] = [
     ]
   }
 ]
+
+const renderMenuItems = (items: MenuConfigItem[]) => {
+  return items.map(item => {
+    // Cek jika item memiliki subMenu dan tidak kosong
+    if (item.subMenuItems && item.subMenuItems.length > 0) {
+      return (
+        <SubMenu
+          key={item.title} // Gunakan title sebagai key unik untuk SubMenu
+          label={item.title}
+          icon={item.icon ? <i className={item.icon} /> : undefined}
+        >
+          {/* Panggil fungsi ini lagi untuk anak-anaknya (rekursif) */}
+          {renderMenuItems(item.subMenuItems)}
+        </SubMenu>
+      )
+    }
+
+    // Jika tidak punya subMenu, render sebagai MenuItem biasa
+    return (
+      <MenuItem
+        key={item.href} // Gunakan href sebagai key unik untuk MenuItem
+        href={item.href}
+        icon={item.icon ? <i className={item.icon} /> : undefined}
+      >
+        {item.title}
+      </MenuItem>
+    )
+  })
+}
 
 const VerticalMenu = ({ scrollMenu }: Props) => {
   // Hooks
@@ -204,27 +260,9 @@ const VerticalMenu = ({ scrollMenu }: Props) => {
         </MenuItem>
         {accessibleMenu.map(section => (
           <MenuSection key={section.label} label={section.label}>
-            {section.items.map(item => (
-              <MenuItem key={item.href} href={item.href} icon={<i className={item.icon} />}>
-                {item.title}
-              </MenuItem>
-            ))}
+            {renderMenuItems(section.items)}
           </MenuSection>
         ))}
-        {/* <MenuItem href='/home' icon={<i className='tabler-smart-home' />}>
-          Home
-        </MenuItem>
-        <MenuSection label='Absensi'>
-          <MenuItem href='/about' icon={<i className='tabler-info-circle' />}>
-            About
-          </MenuItem>
-        </MenuSection>
-
-        <MenuSection label='Admin'>
-          <MenuItem href='/admin/role' icon={<i className='tabler-info-circle' />}>
-            Role
-          </MenuItem>
-        </MenuSection> */}
       </Menu>
       {/* <Menu
         popoutMenuOffset={{ mainAxis: 23 }}
