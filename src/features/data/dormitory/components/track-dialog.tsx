@@ -77,7 +77,7 @@ const TrackFormDialog: React.FC<TrackFormDialogProps> = ({
                 <CustomTextField
                   {...field}
                   autoFocus
-                  label='Nama Trek'
+                  label='Nama Fan'
                   type='text'
                   fullWidth
                   variant='outlined'

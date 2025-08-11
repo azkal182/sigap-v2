@@ -29,7 +29,9 @@ import {
   useDormitodyDetail,
   useCreateTrackForDormitory,
   useUpdateTrack,
-  useRemoveTrackFromDormitory
+  useRemoveTrackFromDormitory,
+  useSlotOption,
+  useSlotData
 } from './dormitory.query'
 import type { CreateScheduleSlotInput, TrackFormSchema } from './schemas/dormitory-schema'
 
@@ -74,6 +76,7 @@ const DormitoryDetailPageView: React.FC<DormitoryDetailPageViewProps> = ({ id })
 
   // React Query Hooks
   const { data, isLoading } = useDormitodyDetail(id)
+  const { data: dataSlots, refetch } = useSlotData(id)
   const { mutate: createTrack } = useCreateTrackForDormitory()
   const { mutate: updateTrack } = useUpdateTrack()
   const { mutate: deleteTrack } = useRemoveTrackFromDormitory()
@@ -85,6 +88,7 @@ const DormitoryDetailPageView: React.FC<DormitoryDetailPageViewProps> = ({ id })
     setEditingSchedulSlot({
       dormitoryId: id
     })
+
     setDialogSlotOpen(true)
   }
 
@@ -301,18 +305,14 @@ const DormitoryDetailPageView: React.FC<DormitoryDetailPageViewProps> = ({ id })
             <TableHead>
               <TableRow>
                 <TableCell>NO</TableCell>
-                <TableCell>SLOT</TableCell>
-                <TableCell>Jam</TableCell>
+                <TableCell>Keterangan</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {slotData.map((slot, index) => (
+              {dataSlots?.data?.map((slot, index) => (
                 <TableRow key={slot.id}>
                   <TableCell>{index + 1}</TableCell>
-                  <TableCell>{slot.slot}</TableCell>
-                  <TableCell>
-                    {slot.start} - {slot.end}
-                  </TableCell>
+                  <TableCell>{slot.name}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

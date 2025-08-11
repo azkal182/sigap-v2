@@ -452,8 +452,9 @@ model Schedule {
 
     absences Absence[]
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+    createdAt      DateTime         @default(now())
+    updatedAt      DateTime         @updatedAt
+    teacherAbsence TeacherAbsence[]
 
     @@index([classId, dayOfWeek]) // <-- TAMBAHKAN
     @@index([teacherId, dayOfWeek]) // <-- TAMBAHKAN
@@ -503,17 +504,22 @@ model Permit {
 
 // ABSENSI GURU PER HARI
 model TeacherAbsence {
-    id        String        @id @default(uuid())
-    teacherId String
-    date      DateTime
-    status    AbsenceStatus
-    note      String?
+    id         String        @id @default(uuid())
+    teacherId  String
+    scheduleId String
+    date       DateTime
+    status     AbsenceStatus
+    note       String?
 
     teacher   Teacher  @relation(fields: [teacherId], references: [id])
+    schedule  Schedule @relation(fields: [scheduleId], references: [id])
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    @@index([teacherId, date]) // <-- TAMBAHKAN (Composite index lebih baik)
+    @@unique([teacherId, scheduleId, date])
+    @@index([teacherId, date])
+    @@index(teacherId)
+    @@index([scheduleId])
 }
 
 model Province {

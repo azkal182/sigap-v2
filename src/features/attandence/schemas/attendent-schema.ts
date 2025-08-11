@@ -21,6 +21,17 @@ export const updateAbsenceItemSchema = z.object({
   note: z.string().optional()
 })
 
+export const getClassAbsencesParamsSchema = z.object({
+  classId: z.string().uuid({ message: 'classId harus UUID yang valid' }),
+  slotId: z.string().uuid({ message: 'slotId harus UUID yang valid' }),
+  absentDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
+    message: 'absentDate harus format YYYY-MM-DD'
+  })
+})
+
+// Tipe TypeScript dari schema ini:
+export type GetClassAbsencesParams = z.infer<typeof getClassAbsencesParamsSchema>
+
 // Skema untuk pembaruan absensi massal (array dari item)
 export const updateAbsencesSchema = z.array(updateAbsenceItemSchema).nonempty('Daftar absensi tidak boleh kosong.')
 

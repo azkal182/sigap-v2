@@ -64,9 +64,9 @@ const ClassDetailPageView = ({
         },
         onError: (error: any) => {
           if (error?.conflict === 'teacher') {
-            toast.error('Guru bentrok dengan jadwal lain.')
+            toast.error(error.message || 'Guru sudah memiliki jadwal di waktu tersebut.')
           } else if (error?.conflict === 'class') {
-            toast.error('Kelas sudah memiliki pelajaran di waktu tersebut.')
+            toast.error(error.message || 'Kelas sudah memiliki pelajaran di waktu tersebut.')
           } else {
             toast.error(error.message || 'Gagal membuat Jadwal.')
           }
@@ -126,10 +126,10 @@ const ClassDetailPageView = ({
           <div className='flex items-end space-x-4'>
             <div className='w-64'>
               <StudentAutocomplete
-                dormitoryIds={[dormitoryId]}
                 allowDisable={true}
                 value={studentId}
                 onChange={(_, val) => setStudentId(val)}
+                dormitoryIds={[dormitoryId]}
               />
             </div>
             <Button

@@ -49,6 +49,9 @@ export default function ScheduleSlotForm({ dormitoryId, onSuccess }: ScheduleSlo
       onSuccess: () => {
         onSuccess()
         toast.success('slot berhasil ditambahkan')
+      },
+      onError: (error: any) => {
+        toast.error(error.message || 'Gagal menambahkan slot')
       }
     })
   }

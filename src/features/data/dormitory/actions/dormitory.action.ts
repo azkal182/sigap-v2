@@ -1,5 +1,27 @@
 'use server'
 import {
+  getSlotData,
+  assignStudentToClass,
+  createClass,
+  createNewTrackForDormitory,
+  createSchedule,
+  createScheduleSlot,
+  createSks,
+  createSubject,
+  getClassByDormitoryId,
+  getClassDetailById,
+  getDormitoriesFilter,
+  getDormitoryDetail,
+  getSksByTrackId,
+  getSlotOption,
+  getSubjectByTrackId,
+  getSubjectOptionByTrackId,
+  getTrackDetail,
+  removeTrackFromDormitory,
+  updateTrack
+} from './../dormitory.service'
+
+import {
   AssignStudentToClassSchema,
   createScheduleSchema,
   createScheduleSlotSchema,
@@ -31,26 +53,6 @@ import type {
   SubjectListResponse,
   SubjectOptionResponse,
   TrackDetailResponse
-} from '../dormitory.service'
-import {
-  assignStudentToClass,
-  createClass,
-  createNewTrackForDormitory,
-  createSchedule,
-  createScheduleSlot,
-  createSks,
-  createSubject,
-  getClassByDormitoryId,
-  getClassDetailById,
-  getDormitoriesFilter,
-  getDormitoryDetail,
-  getSksByTrackId,
-  getSlotOption,
-  getSubjectByTrackId,
-  getSubjectOptionByTrackId,
-  getTrackDetail,
-  removeTrackFromDormitory,
-  updateTrack
 } from '../dormitory.service'
 import { validateAndRun } from '@/utils/validate-and-run'
 
@@ -319,6 +321,16 @@ export const getSlotOptionAction = async (dormitoryIds: string[]): Promise<SlotO
     return getSlotOption(dormitoryIds)
   } catch (error) {
     const message = handleServerError('Gagal mengambil daftar Sks', error)
+
+    return { success: false, error: message }
+  }
+}
+
+export async function getSlotDataAction(dormitoyId: string): Promise<SlotOptionResponse> {
+  try {
+    return getSlotData(dormitoyId)
+  } catch (error) {
+    const message = handleServerError('Gagal mengambil daftar slot', error)
 
     return { success: false, error: message }
   }

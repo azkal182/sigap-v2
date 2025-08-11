@@ -429,88 +429,172 @@ export async function main() {
     console.log(`  [2/2] Permissions untuk Role "PENGAJAR" (${pengajarPermissions.length} items) selesai ditetapkan.`)
     console.log('--- Seeding Role PENGAJAR dan Permissions Selesai ---')
 
-    // --- Seeding Dynamic OPERATOR_DORM Roles and Users ---
-    console.log('\n--- Memulai Seeding Dynamic OPERATOR_DORM Roles dan Users ---')
+    // --- Seeding Single OPERATOR_DORM Role and Users ---
+    console.log('\n--- Memulai Seeding Single OPERATOR_DORM Role dan Users ---')
 
+    // 1. Buat / Upsert role tunggal OPERATOR_DORM
+    console.log('  - Upserting Single Role: "OPERATOR_DORM"')
+
+    const operatorRole = await prisma.role.upsert({
+      where: { name: 'OPERATOR_DORM' },
+      update: {},
+      create: { name: 'OPERATOR_DORM', canEdit: false }
+    })
+
+    console.log(`    Role "OPERATOR_DORM" (ID: ${operatorRole.id}) created/updated.`)
+
+    // 2. Ambil semua dormitory
     const allDormitories = await prisma.dormitory.findMany()
+
+    // 3. Ambil permission khusus dormitory
     const dormitoryPermissions = permissions.filter(p => p.resource.startsWith('dormitory.'))
 
-    for (const dorm of allDormitories) {
-      const roleName = `OPERATOR_DORM_${dorm.name.replace(/\s+/g, '_').toUpperCase()}`
-      const username = `operator_${dorm.name.toLowerCase().replace(/\s+/g, '_')}`
+    // 4. Assign semua permission dormitory ke role tunggal
+    console.log(`  - Assigning dormitory-specific permissions to Role "OPERATOR_DORM"...`)
 
-      console.log(`  - Processing Dormitory: "${dorm.name}" (ID: ${dorm.id})`)
-
-      // Create/Upsert dynamic OPERATOR_DORM role
-      console.log(`    - Upserting Role: "${roleName}"`)
-
-      const operatorRole = await prisma.role.upsert({
-        where: { name: roleName },
-        update: {},
-        create: { name: roleName, canEdit: false }
-      })
-
-      console.log(`      Role "${roleName}" (ID: ${operatorRole.id}) created/updated.`)
-
-      // Ensure Role to Dormitory connection (via RoleDormitory)
-      console.log(`    - Connecting Role "${roleName}" to Dormitory "${dorm.name}"...`)
-      await prisma.roleDormitory.upsert({
+    for (const perm of dormitoryPermissions) {
+      await prisma.rolePermission.upsert({
         where: {
-          roleId_dormitoryId: {
+          roleId_permissionId: {
             roleId: operatorRole.id,
-            dormitoryId: dorm.id
+            permissionId: perm.id
           }
         },
         update: {},
         create: {
           roleId: operatorRole.id,
-          dormitoryId: dorm.id
+          permissionId: perm.id
         }
       })
-      console.log(`      Role "${roleName}" connected to Dormitory "${dorm.name}".`)
+    }
 
-      // Assign dormitory-specific permissions to this role
-      console.log(`    - Assigning dormitory-specific permissions to Role "${roleName}"...`)
+    console.log(`    Permissions (${dormitoryPermissions.length} items) assigned to "OPERATOR_DORM".`)
 
-      for (const perm of dormitoryPermissions) {
-        console.log(`      - Assigning "${perm.name}" to "${roleName}" role.`)
-        await prisma.rolePermission.upsert({
-          where: {
-            roleId_permissionId: {
-              roleId: operatorRole.id,
-              permissionId: perm.id
-            }
-          },
-          update: {},
-          create: {
-            roleId: operatorRole.id,
-            permissionId: perm.id
-          }
-        })
-      }
+    // 5. Buat user per dormitory dan hubungkan ke dormitory lewat UserDormitory
+    for (const dorm of allDormitories) {
+      const username = `operator_${dorm.name.toLowerCase().replace(/\s+/g, '_')}`
 
-      console.log(`      Permissions for Role "${roleName}" (${dormitoryPermissions.length} items) assigned.`)
+      console.log(`  - Processing Dormitory: "${dorm.name}"`)
 
-      // (Optional) Add dummy user for each dormitory operator
-      console.log(`    - Upserting dummy user for Operator Dormitory: "${dorm.name}" (Username: "${username}")`)
-      await prisma.user.upsert({
+      // Buat / Update user operator untuk dormitory ini
+      const user = await prisma.user.upsert({
         where: { username: username },
         update: {
           name: `Operator ${dorm.name}`,
-          password: hashSync('operator', 10), // Added salt rounds
+          password: hashSync('operator', 10),
           roleId: operatorRole.id
         },
         create: {
           name: `Operator ${dorm.name}`,
           username: username,
-          password: hashSync('operator', 10), // Added salt rounds
+          password: hashSync('operator', 10),
           role: { connect: { id: operatorRole.id } }
         }
       })
-      console.log(`      Dummy user "${username}" created/updated.`)
+
+      console.log(`    Dummy user "${username}" created/updated.`)
+
+      // Hubungkan user ke dormitory lewat UserDormitory
+      await prisma.userDormitory.upsert({
+        where: {
+          userId_dormitoryId: {
+            userId: user.id,
+            dormitoryId: dorm.id
+          }
+        },
+        update: {},
+        create: {
+          userId: user.id,
+          dormitoryId: dorm.id
+        }
+      })
+      console.log(`    User "${username}" linked to Dormitory "${dorm.name}".`)
     }
 
-    console.log('--- Seeding Dynamic OPERATOR_DORM Roles dan Users Selesai ---')
+    console.log('--- Seeding Single OPERATOR_DORM Role dan Users Selesai ---')
+
+    // // --- Seeding Dynamic OPERATOR_DORM Roles and Users ---
+    // console.log('\n--- Memulai Seeding Dynamic OPERATOR_DORM Roles dan Users ---')
+
+    // const allDormitories = await prisma.dormitory.findMany()
+    // const dormitoryPermissions = permissions.filter(p => p.resource.startsWith('dormitory.'))
+
+    // for (const dorm of allDormitories) {
+    //   const roleName = `OPERATOR_DORM_${dorm.name.replace(/\s+/g, '_').toUpperCase()}`
+    //   const username = `operator_${dorm.name.toLowerCase().replace(/\s+/g, '_')}`
+
+    //   console.log(`  - Processing Dormitory: "${dorm.name}" (ID: ${dorm.id})`)
+
+    //   // Create/Upsert dynamic OPERATOR_DORM role
+    //   console.log(`    - Upserting Role: "${roleName}"`)
+
+    //   const operatorRole = await prisma.role.upsert({
+    //     where: { name: roleName },
+    //     update: {},
+    //     create: { name: roleName, canEdit: false }
+    //   })
+
+    //   console.log(`      Role "${roleName}" (ID: ${operatorRole.id}) created/updated.`)
+
+    //   // Ensure Role to Dormitory connection (via RoleDormitory)
+    //   console.log(`    - Connecting Role "${roleName}" to Dormitory "${dorm.name}"...`)
+    //   await prisma.roleDormitory.upsert({
+    //     where: {
+    //       roleId_dormitoryId: {
+    //         roleId: operatorRole.id,
+    //         dormitoryId: dorm.id
+    //       }
+    //     },
+    //     update: {},
+    //     create: {
+    //       roleId: operatorRole.id,
+    //       dormitoryId: dorm.id
+    //     }
+    //   })
+    //   console.log(`      Role "${roleName}" connected to Dormitory "${dorm.name}".`)
+
+    //   // Assign dormitory-specific permissions to this role
+    //   console.log(`    - Assigning dormitory-specific permissions to Role "${roleName}"...`)
+
+    //   for (const perm of dormitoryPermissions) {
+    //     console.log(`      - Assigning "${perm.name}" to "${roleName}" role.`)
+    //     await prisma.rolePermission.upsert({
+    //       where: {
+    //         roleId_permissionId: {
+    //           roleId: operatorRole.id,
+    //           permissionId: perm.id
+    //         }
+    //       },
+    //       update: {},
+    //       create: {
+    //         roleId: operatorRole.id,
+    //         permissionId: perm.id
+    //       }
+    //     })
+    //   }
+
+    //   console.log(`      Permissions for Role "${roleName}" (${dormitoryPermissions.length} items) assigned.`)
+
+    //   // (Optional) Add dummy user for each dormitory operator
+    //   console.log(`    - Upserting dummy user for Operator Dormitory: "${dorm.name}" (Username: "${username}")`)
+    //   await prisma.user.upsert({
+    //     where: { username: username },
+    //     update: {
+    //       name: `Operator ${dorm.name}`,
+    //       password: hashSync('operator', 10), // Added salt rounds
+    //       roleId: operatorRole.id
+    //     },
+    //     create: {
+    //       name: `Operator ${dorm.name}`,
+    //       username: username,
+    //       password: hashSync('operator', 10), // Added salt rounds
+    //       role: { connect: { id: operatorRole.id } }
+    //     }
+    //   })
+    //   console.log(`      Dummy user "${username}" created/updated.`)
+    // }
+
+    // console.log('--- Seeding Dynamic OPERATOR_DORM Roles dan Users Selesai ---')
 
     console.log('\n--- Semua Proses Seeding Database Selesai dengan Sukses! ---')
   } catch (error) {

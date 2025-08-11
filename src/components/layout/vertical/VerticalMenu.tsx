@@ -187,7 +187,8 @@ export const menuItems: MenuConfigSection[] = [
     items: [
       { title: 'Users', href: '/admin/user', icon: 'tabler-users', permissions: ['user:view'] },
       { title: 'Role', href: '/admin/role', icon: 'tabler-key', permissions: ['role:view'] },
-      { title: 'Import', href: '/admin/import', icon: 'tabler-upload', permissions: ['role:view'] }
+      { title: 'Import', href: '/admin/import', icon: 'tabler-upload', permissions: ['role:view'] },
+      { title: 'Import Pengajar', href: '/admin/import-teacher', icon: 'tabler-upload', permissions: ['role:view'] }
     ]
   }
 ]

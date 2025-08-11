@@ -1,10 +1,11 @@
 // src/features/data/dormitory/hooks/absence-hooks.ts
 'use client'
 
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { createAbsencesAction, updateAbsencesAction } from './action'
-import type { CreateAbsencesInput, UpdateAbsencesInput } from './schemas/attendent-schema'
+import { createAbsencesAction, getClassAbsencesAction, updateAbsencesAction } from './action'
+import type { CreateAbsencesInput, GetClassAbsencesParams, UpdateAbsencesInput } from './schemas/attendent-schema'
+import { ActionError } from '@/utils/action-error'
 
 export const useCreateAbsences = () => {
   const queryClient = useQueryClient()
@@ -60,5 +61,21 @@ export const useUpdateAbsences = () => {
       // Atau, jika Anda ingin merevalidasi semua absensi yang terkait:
       // queryClient.invalidateQueries({ queryKey: ['absences'] })
     }
+  })
+}
+
+export const useGetClassAbsences = (params: GetClassAbsencesParams) => {
+  return useQuery({
+    queryKey: ['absences', params.classId, params.slotId, params.absentDate],
+    queryFn: async () => {
+      const res = await getClassAbsencesAction(params)
+
+      if (!res.success) {
+        throw new ActionError(res.error, res.issues)
+      }
+
+      return res.data
+    },
+    enabled: !!params.classId && !!params.slotId && !!params.absentDate
   })
 }

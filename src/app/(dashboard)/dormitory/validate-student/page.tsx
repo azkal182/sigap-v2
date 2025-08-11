@@ -1,7 +1,9 @@
 import React from 'react'
 
+import ValidateStudentPageView from '@/features/dormitory/validate-student/validate-student-page-view'
+
 const page = () => {
-  return <div>validate-student</div>
+  return <ValidateStudentPageView />
 }
 
 export default page

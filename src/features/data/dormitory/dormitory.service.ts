@@ -789,18 +789,58 @@ export async function assignStudentToClass({
   }
 }
 
+async function getTeacherConflictInfo(teacherId: string, dayOfWeek: number, scheduleSlotId: string) {
+  // 1. Ambil data slot target
+  const targetSlot = await db.scheduleSlot.findUnique({
+    where: { id: scheduleSlotId },
+    select: { startTime: true, endTime: true }
+  })
+
+  if (!targetSlot) throw new Error('Schedule slot tidak ditemukan')
+
+  // 2. Cari jadwal guru yang bentrok di hari yang sama
+  const conflict = await db.schedule.findFirst({
+    where: {
+      teacherId,
+      dayOfWeek,
+      scheduleSlot: {
+        startTime: { lt: targetSlot.endTime },
+        endTime: { gt: targetSlot.startTime }
+      }
+    },
+    include: {
+      teacher: true,
+      scheduleSlot: {
+        include: {
+          dormitory: true
+        }
+      },
+      subject: true,
+      class: true
+    }
+  })
+
+  if (!conflict) return null
+
+  // 3. Buat pesan yang informatif
+  const message = `Pengajar ${conflict.teacher.name} sudah mengajar di ${conflict.scheduleSlot.dormitory.name} pada Jam ke-${conflict.scheduleSlot.slot} (${conflict.scheduleSlot.startTime}–${conflict.scheduleSlot.endTime}) untuk pelajaran ${conflict.subject.name} di kelas ${conflict.class.name}.`
+
+  return { conflict, message }
+}
+
 export const createSchedule = async (input: CreateScheduleInput): Promise<CreateScheduleResult> => {
   const { classId, subjectId, teacherId, scheduleSlotId, dayOfWeek } = input
 
   // 1. Cek konflik guru di hari & slot yang sama
-  const teacherConflict = await db.schedule.findFirst({
-    where: { teacherId, dayOfWeek, scheduleSlotId }
-  })
+  //   const teacherConflict = await db.schedule.findFirst({
+  //     where: { teacherId, dayOfWeek, scheduleSlotId }
+  //   })
+  const teacherConflict = await getTeacherConflictInfo(teacherId, dayOfWeek, scheduleSlotId)
 
   if (teacherConflict) {
     return {
       success: false,
-      error: 'Guru sudah memiliki jadwal di waktu tersebut.',
+      error: teacherConflict.message,
       conflict: 'teacher'
     }
   }
@@ -907,8 +947,79 @@ export const getSlotOption = async (dormitoryIds: string[]): Promise<SlotOptionR
   }
 }
 
+export const getSlotData = async (dormitoryId: string): Promise<SlotOptionResponse> => {
+  try {
+    const data = await db.scheduleSlot.findMany({
+      where: {
+        dormitoryId
+      },
+      select: {
+        id: true,
+        slot: true,
+        startTime: true,
+        endTime: true
+      }
+    })
+
+    return {
+      success: true,
+      data: data.map(d => ({
+        id: d.id,
+        name: `Jam Ke ${d.slot} | ${d.startTime} - ${d.endTime}`
+      }))
+    }
+  } catch (error: unknown) {
+    return {
+      success: false,
+      error: 'Failed to get slot.'
+    }
+  }
+}
+
 export const createScheduleSlot = async (data: CreateScheduleSlotData): Promise<CreateSlotResponse> => {
   try {
+    if (data.startTime >= data.endTime) {
+      return {
+        success: false,
+        error: 'Waktu mulai harus lebih awal daripada waktu selesai.'
+      }
+    }
+
+    // 2. Cek slot number tidak duplikat di dormitory yang sama
+    const existingSlotNumber = await db.scheduleSlot.findFirst({
+      where: {
+        dormitoryId: data.dormitoryId,
+        slot: data.slot
+      }
+    })
+
+    if (existingSlotNumber) {
+      return {
+        success: false,
+        error: `Nomor slot ${data.slot} sudah ada di asrama ini.`
+      }
+    }
+
+    // 3. Cek tidak ada overlap waktu di dormitory yang sama
+    const overlappingSlot = await db.scheduleSlot.findFirst({
+      where: {
+        dormitoryId: data.dormitoryId,
+        OR: [
+          {
+            startTime: { lt: data.endTime },
+            endTime: { gt: data.startTime }
+          }
+        ]
+      }
+    })
+
+    if (overlappingSlot) {
+      return {
+        success: false,
+        error: `Rentang waktu bertabrakan dengan slot #${overlappingSlot.slot} (${overlappingSlot.startTime} - ${overlappingSlot.endTime}).`
+      }
+    }
+
     const newSlot = await db.scheduleSlot.create({
       data: {
         slot: data.slot,

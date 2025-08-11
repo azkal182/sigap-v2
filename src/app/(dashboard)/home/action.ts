@@ -161,6 +161,183 @@ type StudentWithAbsence = {
   }
 }
 
+// export async function getStudentsFromTeacherSchedule(
+//   userId: string,
+//   dayOfWeek: number,
+//   searchHour: number,
+//   searchMinute: number
+// ): Promise<{
+//   className: string
+//   scheduleId: string
+//   teacherId: string
+//   dormitoryName: string
+
+//   // ✅ Gunakan tipe baru untuk array students
+//   students: StudentWithAbsence[]
+// } | null> {
+//   try {
+//     const searchTime = `${String(searchHour).padStart(2, '0')}:${String(searchMinute).padStart(2, '0')}`
+//     const today = DateTime.now().toISODate()
+
+//     const teacher = await prisma.teacher.findUnique({
+//       where: { userId },
+//       select: {
+//         id: true,
+//         teacherDormitories: {
+//           select: {
+//             dormitoryId: true
+//           }
+//         }
+//       }
+//     })
+
+//     if (!teacher || teacher.teacherDormitories.length === 0) {
+//       return null
+//     }
+
+//     const dormitoryIds = teacher.teacherDormitories.map(td => td.dormitoryId)
+
+//     const slot = await prisma.scheduleSlot.findFirst({
+//       where: {
+//         dormitoryId: { in: dormitoryIds },
+//         startTime: { lte: searchTime },
+//         endTime: { gte: searchTime }
+//       },
+//       orderBy: { startTime: 'asc' }
+//     })
+
+//     if (!slot) {
+//       return null
+//     }
+
+//     const schedule = await prisma.schedule.findFirst({
+//       where: {
+//         teacherId: teacher.id,
+//         dayOfWeek,
+//         scheduleSlotId: slot.id,
+//         class: {
+//           dormitoryId: { in: dormitoryIds }
+//         }
+//       },
+//       select: {
+//         id: true,
+//         classId: true,
+//         class: {
+//           select: {
+//             name: true
+//           }
+//         },
+//         scheduleSlot: {
+//           select: {
+//             dormitory: {
+//               select: {
+//                 name: true
+//               }
+//             }
+//           }
+//         }
+//       }
+//     })
+
+//     if (!schedule) {
+//       return null
+//     }
+
+//     const students = await prisma.student.findMany({
+//       where: {
+//         histories: {
+//           some: {
+//             classId: schedule.classId,
+//             status: 'STUDYING'
+//           }
+//         }
+//       },
+//       include: {
+//         absences: {
+//           where: {
+//             scheduleId: schedule.id,
+//             absentDate: today
+//           },
+//           select: {
+//             id: true,
+//             status: true,
+//             note: true
+//           }
+//         },
+//         permits: {
+//           where: {
+//             startDate: { lte: new Date() },
+//             endDate: { gte: new Date() },
+//             OR: [
+//               {
+//                 allowedSlots: {
+//                   has: slot.slot // ✅ cocokkan slot spesifik
+//                 }
+//               },
+//               {
+//                 allowedSlots: {
+//                   equals: [] // ✅ kalau array kosong, artinya semua slot diperbolehkan
+//                 }
+//               }
+//             ]
+//           },
+//           select: {
+//             reason: true,
+//             permitSTatus: true
+//           }
+//         }
+//       },
+//       orderBy: { name: 'asc' }
+//     })
+
+//     // console.log(JSON.stringify(students, null, 2))
+
+//     const studentsWithAbsence = students.map(student => {
+//       const existingAbsence = student.absences[0]
+//       const activePermit = student.permits[0]
+
+//       let defaultStatus: AbsenceStatus = AbsenceStatus.PRESENT
+//       let defaultNote: string | null = null
+
+//       if (activePermit) {
+//         if (activePermit.permitSTatus === 'SICK') {
+//           defaultStatus = AbsenceStatus.SICK
+//         } else if (activePermit.permitSTatus === 'PERMIT') {
+//           defaultStatus = AbsenceStatus.PERMIT
+//         }
+
+//         defaultNote = activePermit.reason
+//       }
+
+//       // ✅ Kembalikan objek dengan struktur sesuai tipe baru
+//       return {
+//         id: student.id,
+//         name: student.name,
+//         nis: student.nis,
+//         dormitoryId: student.dormitoryId,
+//         absence: existingAbsence || {
+//           id: null,
+//           status: defaultStatus,
+//           note: defaultNote
+//         }
+//       }
+//     })
+
+//     console.log(new Date())
+
+//     return {
+//       className: schedule.class.name,
+//       dormitoryName: schedule.scheduleSlot.dormitory.name,
+//       students: studentsWithAbsence,
+//       scheduleId: schedule.id,
+//       teacherId: teacher.id
+//     }
+//   } catch (error) {
+//     console.error('[ERROR] Terjadi kesalahan saat mencari siswa dari jadwal guru.', error)
+//     throw new Error('Gagal mengambil data siswa.')
+//   }
+// }
+
 export async function getStudentsFromTeacherSchedule(
   userId: string,
   dayOfWeek: number,
@@ -171,13 +348,18 @@ export async function getStudentsFromTeacherSchedule(
   scheduleId: string
   teacherId: string
   dormitoryName: string
-
-  // ✅ Gunakan tipe baru untuk array students
+  subjectName: string
   students: StudentWithAbsence[]
 } | null> {
   try {
+    console.log('[DEBUG] Start getStudentsFromTeacherSchedule')
+    console.log('[DEBUG] Params:', { userId, dayOfWeek, searchHour, searchMinute })
+
     const searchTime = `${String(searchHour).padStart(2, '0')}:${String(searchMinute).padStart(2, '0')}`
     const today = DateTime.now().toISODate()
+
+    console.log('[DEBUG] searchTime:', searchTime)
+    console.log('[DEBUG] today:', today)
 
     const teacher = await prisma.teacher.findUnique({
       where: { userId },
@@ -191,11 +373,17 @@ export async function getStudentsFromTeacherSchedule(
       }
     })
 
+    console.log('[DEBUG] teacher:', teacher)
+
     if (!teacher || teacher.teacherDormitories.length === 0) {
+      console.log('[DEBUG] Teacher tidak ditemukan atau tidak punya dormitory')
+
       return null
     }
 
     const dormitoryIds = teacher.teacherDormitories.map(td => td.dormitoryId)
+
+    console.log('[DEBUG] dormitoryIds:', dormitoryIds)
 
     const slot = await prisma.scheduleSlot.findFirst({
       where: {
@@ -206,7 +394,11 @@ export async function getStudentsFromTeacherSchedule(
       orderBy: { startTime: 'asc' }
     })
 
+    console.log('[DEBUG] slot:', slot)
+
     if (!slot) {
+      console.log('[DEBUG] Slot tidak ditemukan untuk waktu tersebut')
+
       return null
     }
 
@@ -222,6 +414,12 @@ export async function getStudentsFromTeacherSchedule(
       select: {
         id: true,
         classId: true,
+        dayOfWeek: true,
+        subject: {
+          select: {
+            name: true
+          }
+        },
         class: {
           select: {
             name: true
@@ -239,7 +437,11 @@ export async function getStudentsFromTeacherSchedule(
       }
     })
 
+    console.log('[DEBUG] schedule:', schedule)
+
     if (!schedule) {
+      console.log('[DEBUG] Jadwal tidak ditemukan')
+
       return null
     }
 
@@ -271,12 +473,12 @@ export async function getStudentsFromTeacherSchedule(
             OR: [
               {
                 allowedSlots: {
-                  has: slot.slot // ✅ cocokkan slot spesifik
+                  has: slot.slot
                 }
               },
               {
                 allowedSlots: {
-                  equals: [] // ✅ kalau array kosong, artinya semua slot diperbolehkan
+                  equals: []
                 }
               }
             ]
@@ -290,7 +492,7 @@ export async function getStudentsFromTeacherSchedule(
       orderBy: { name: 'asc' }
     })
 
-    // console.log(JSON.stringify(students, null, 2))
+    console.log('[DEBUG] students raw:', JSON.stringify(students, null, 2))
 
     const studentsWithAbsence = students.map(student => {
       const existingAbsence = student.absences[0]
@@ -309,7 +511,6 @@ export async function getStudentsFromTeacherSchedule(
         defaultNote = activePermit.reason
       }
 
-      // ✅ Kembalikan objek dengan struktur sesuai tipe baru
       return {
         id: student.id,
         name: student.name,
@@ -323,15 +524,22 @@ export async function getStudentsFromTeacherSchedule(
       }
     })
 
-    console.log(new Date())
+    console.log('[DEBUG] studentsWithAbsence:', studentsWithAbsence)
+    console.log('[DEBUG] Timestamp:', new Date())
 
-    return {
+    const result = {
       className: schedule.class.name,
       dormitoryName: schedule.scheduleSlot.dormitory.name,
       students: studentsWithAbsence,
       scheduleId: schedule.id,
-      teacherId: teacher.id
+      teacherId: teacher.id,
+      subjectName: schedule.subject.name
     }
+
+    console.log('[DEBUG] Final result:', result)
+    console.log('[DEBUG] End getStudentsFromTeacherSchedule')
+
+    return result
   } catch (error) {
     console.error('[ERROR] Terjadi kesalahan saat mencari siswa dari jadwal guru.', error)
     throw new Error('Gagal mengambil data siswa.')

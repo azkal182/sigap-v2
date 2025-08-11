@@ -19,7 +19,8 @@ import {
   createScheduleAction,
   getSubjectOptionByTrackIdAction,
   getSlotOptionAction,
-  createScheduleSlotAction
+  createScheduleSlotAction,
+  getSlotDataAction
 } from './actions/dormitory.action'
 import type {
   CreateScheduleInput,
@@ -407,6 +408,24 @@ export const useSlotOption = (dormitoryIds: string[]) => {
   })
 }
 
+export const useSlotData = (dormitoryId: string) => {
+  return useQuery({
+    queryKey: ['slot_data', dormitoryId],
+    queryFn: async () => {
+      const res = await getSlotDataAction(dormitoryId)
+
+      if (!res.success) {
+        throw new ActionError(res.error, res.issues)
+      }
+
+      return {
+        data: res.data
+      }
+    },
+    enabled: !!dormitoryId
+  })
+}
+
 export const useCreateScheduleSlot = () => {
   const queryClient = useQueryClient()
 
@@ -425,6 +444,9 @@ export const useCreateScheduleSlot = () => {
       // Revalidasi query 'slot_option' untuk asrama yang baru saja diubah
       queryClient.invalidateQueries({
         queryKey: ['slot_option', [variables.dormitoryId]]
+      })
+      queryClient.invalidateQueries({
+        queryKey: ['slot_data']
       })
 
       // Jika Anda memiliki query lain yang bergantung pada data slot, Anda bisa revalidasi di sini

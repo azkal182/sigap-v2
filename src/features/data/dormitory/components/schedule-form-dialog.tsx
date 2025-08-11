@@ -7,11 +7,14 @@ import { zodResolver } from '@hookform/resolvers/zod'
 
 import type { z } from 'zod'
 
+import { MenuItem } from '@mui/material'
+
 import FormDialog from '@/components/form-dialog'
 import { createScheduleSchema } from '../schemas/dormitory-schema'
 import TeacherAutocomplete from '@/components/TeacherAutocomplete'
 import SlotAutocomplete from '@/components/SlotAutoComplete'
 import SubjectAutocomplete from '@/components/SubjectAutoComplete'
+import CustomTextField from '@/@core/components/mui/TextField'
 
 export type CreateScheduleInput = z.infer<typeof createScheduleSchema>
 
@@ -26,7 +29,7 @@ interface ScheduleFormDialogProps {
   trackId: string
 }
 
-const dayLabels = ['Sabtu', 'Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat']
+const dayLabels = ['Sabtu', 'Ahad', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat']
 
 const fullCalendarDayValues = [6, 0, 1, 2, 3, 4, 5] // Sabtu sampai Jumat
 
@@ -135,20 +138,35 @@ const ScheduleFormDialog: React.FC<ScheduleFormDialogProps> = ({
         name='dayOfWeek'
         control={control}
         render={({ field }) => (
-          <div className='mb-4'>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>Hari</label>
-            <select
-              {...field}
-              className='w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500'
-            >
-              {daysInIndonesian.map(day => (
-                <option key={day.value} value={day.value}>
-                  {day.label}
-                </option>
-              ))}
-            </select>
-            {errors.dayOfWeek && <p className='text-sm text-red-500 mt-1'>{errors.dayOfWeek.message}</p>}
-          </div>
+          <CustomTextField
+            select
+            label='Hari'
+            fullWidth
+            {...field}
+            error={!!errors.dayOfWeek}
+            helperText={errors.dayOfWeek?.message}
+          >
+            {daysInIndonesian.map(day => (
+              <MenuItem key={day.value} value={day.value}>
+                {day.label}
+              </MenuItem>
+            ))}
+          </CustomTextField>
+
+          //   <div className='mb-4'>
+          //     <label className='block text-sm font-medium text-gray-700 mb-1'>Hari</label>
+          //     <select
+          //       {...field}
+          //       className='w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500'
+          //     >
+          //       {daysInIndonesian.map(day => (
+          //         <option key={day.value} value={day.value}>
+          //           {day.label}
+          //         </option>
+          //       ))}
+          //     </select>
+          //     {errors.dayOfWeek && <p className='text-sm text-red-500 mt-1'>{errors.dayOfWeek.message}</p>}
+          //   </div>
         )}
       />
     </FormDialog>

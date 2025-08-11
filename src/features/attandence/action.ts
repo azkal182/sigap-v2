@@ -2,15 +2,17 @@
 
 import { z } from 'zod'
 
-import { createAbsences, updateAbsences } from './attandence.service'
+import { createAbsences, getClassAbsences, updateAbsences } from './attandence.service'
 import {
   createAbsencesSchema,
   updateAbsencesSchema,
   type UpdateAbsencesInput,
-  createAbsenceItemSchema
+  createAbsenceItemSchema,
+  getClassAbsencesParamsSchema
 } from './schemas/attendent-schema'
 import { handleServerError } from '@/lib/handle-error'
 import type { APIResult } from '@/types/api-types'
+import { validateAndRun } from '@/utils/validate-and-run'
 
 // ✅ Skema Zod untuk input Server Action
 const createAbsencesActionSchema = z.object({
@@ -43,10 +45,16 @@ export async function createAbsencesAction(
       absentDate: new Date(absentDate).toISOString().split('T')[0] // Format YYYY-MM-DD
     }))
 
+    const scheduleId = absencesData[0]?.scheduleId
+
+    if (!scheduleId) {
+      return { success: false, error: 'Schedule ID is required' }
+    }
+
     // ✅ Lakukan validasi akhir dengan skema service
     const validatedServiceData = createAbsencesSchema.parse(absencesData)
 
-    return await createAbsences(validatedServiceData, filledByTeacherId)
+    return await createAbsences(validatedServiceData, filledByTeacherId, scheduleId)
   } catch (error) {
     const message = handleServerError('Gagal membuat absensi massal.', error)
 
@@ -64,4 +72,8 @@ export async function updateAbsencesAction(data: UpdateAbsencesInput): Promise<A
 
     return { success: false, error: message }
   }
+}
+
+export async function getClassAbsencesAction(input: unknown) {
+  return validateAndRun(getClassAbsencesParamsSchema, input, getClassAbsences)
 }

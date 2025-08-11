@@ -1,501 +1,3 @@
-// 'use client'
-
-// import { useEffect, useState } from 'react'
-
-// import {
-//   Table,
-//   TableBody,
-//   TableCell,
-//   TableContainer,
-//   TableHead,
-//   TableRow,
-//   Paper,
-//   Radio,
-//   TextField,
-//   Button,
-//   Typography,
-//   Box // Import Box untuk styling yang lebih fleksibel
-// } from '@mui/material'
-
-// import { DateTime } from 'luxon'
-
-// import { usePermissionStore } from '@/store/permission'
-// import { getStudentsFromTeacherSchedule } from './action'
-// import { AbsenceStatus } from '@/generated/prisma'
-
-// type Student = {
-//   id: string
-//   name: string
-//   nis: string
-// }
-
-// type AttendanceStatus = AbsenceStatus
-
-// type Attendance = {
-//   studentId: string
-//   status: AttendanceStatus
-//   note: string
-// }
-
-// export default function Page() {
-//   const user = usePermissionStore()
-//   const [students, setStudents] = useState<Student[]>([])
-//   const [attendances, setAttendances] = useState<Attendance[]>([])
-//   const [className, setClassName] = useState('')
-//   const [loading, setLoading] = useState(true) // State untuk menunjukkan proses loading
-//   const [errorMessage, setErrorMessage] = useState<string | null>(null) // State untuk pesan error
-//   const now = DateTime.fromJSDate(new Date())
-
-//   // Ambil nama hari dalam bahasa Indonesia
-//   const hari = now.toFormat('cccc') // contoh: "Selasa"
-
-//   // Format waktu jam:menit
-//   const jam = now.toFormat('HH:mm') // contoh: "14:30"
-
-//   const fetchStudents = async (userId: string) => {
-//     setLoading(true) // Set loading ke true saat mulai fetching
-//     setErrorMessage(null) // Reset pesan error
-
-//     try {
-//       const data = await getStudentsFromTeacherSchedule(userId, 1, 7, 30)
-
-//       console.log({ data })
-
-//       // Memeriksa jika data null atau tidak memiliki students atau students kosong
-//       if (!data || !data.students || data.students.length === 0) {
-//         setStudents([]) // Pastikan students kosong
-//         setClassName('') // Pastikan className kosong
-//         setErrorMessage(`Mohon maaf, jadwal untuk hari ${hari} jam ${jam} ini tidak ditemukan.`)
-//       } else {
-//         setClassName(data.className)
-//         setStudents(data.students)
-
-//         const initialAttendances = data.students.map((s: Student) => ({
-//           studentId: s.id,
-//           status: AbsenceStatus.PRESENT,
-//           note: ''
-//         }))
-
-//         setAttendances(initialAttendances)
-//       }
-//     } catch (error) {
-//       console.error('Failed to fetch students:', error)
-
-//       // Anda bisa lebih spesifik di sini jika `getStudentsFromTeacherSchedule` melempar error tertentu
-//       setErrorMessage('Terjadi kesalahan saat mengambil data jadwal. Silakan coba lagi.')
-//       setStudents([]) // Kosongkan siswa jika ada error
-//       setClassName('') // Kosongkan nama kelas
-//     } finally {
-//       setLoading(false) // Set loading ke false setelah fetching selesai (baik sukses atau gagal)
-//     }
-//   }
-
-//   const handleStatusChange = (studentId: string, value: AttendanceStatus) => {
-//     setAttendances(prev => prev.map(att => (att.studentId === studentId ? { ...att, status: value } : att)))
-//   }
-
-//   const handleNoteChange = (studentId: string, note: string) => {
-//     setAttendances(prev => prev.map(att => (att.studentId === studentId ? { ...att, note } : att)))
-//   }
-
-//   const handleSubmit = () => {
-//     console.log('Attendance:', attendances)
-
-//     // submit to backend here if needed
-//   }
-
-//   useEffect(() => {
-//     if (user.user?.role === 'PENGAJAR' && user.user?.id) {
-//       fetchStudents(user.user.id)
-//     } else {
-//       setLoading(false)
-//     }
-//     // eslint-disable-next-line react-hooks/exhaustive-deps
-//   }, [user.user?.id, user.user?.role])
-
-//   if (!user.user?.role || user.user?.role !== 'PENGAJAR') {
-//     return (
-//       <Box>
-//         <div>
-//           <pre>{JSON.stringify(user, null, 2)}</pre>/
-//         </div>
-//       </Box>
-//     )
-//   }
-
-//   // Tampilkan pesan loading
-//   if (loading) {
-//     return (
-//       <Box display='flex' justifyContent='center' alignItems='center' minHeight='50vh'>
-//         <Typography variant='h5'>Memuat data jadwal...</Typography>
-//       </Box>
-//     )
-//   }
-
-//   // Tampilkan pesan error jika ada
-//   if (errorMessage) {
-//     return (
-//       <Box display='flex' justifyContent='center' alignItems='center' minHeight='50vh'>
-//         <Typography variant='h5' color='error'>
-//           {errorMessage}
-//         </Typography>
-//       </Box>
-//     )
-//   }
-
-//   // Tampilkan tabel absensi jika ada siswa ditemukan
-//   return (
-//     <>
-//       <div>
-//         <Typography variant='h3' className='text-center'>
-//           Kelas {className.toUpperCase()}
-//         </Typography>
-//       </div>
-//       <TableContainer component={Paper} sx={{ maxHeight: 'calc(100vh - 250px)', overflow: 'auto' }}>
-//         <Table stickyHeader>
-//           <TableHead>
-//             <TableRow>
-//               <TableCell>Nama</TableCell>
-//               <TableCell>Hadir</TableCell>
-//               <TableCell>Alpa</TableCell>
-//               <TableCell>Sakit</TableCell>
-//               <TableCell>Izin</TableCell>
-//               <TableCell>Keterangan</TableCell>
-//             </TableRow>
-//           </TableHead>
-//           <TableBody>
-//             {students.map(student => {
-//               const attendance = attendances.find(a => a.studentId === student.id)
-
-//               return (
-//                 <TableRow key={student.id}>
-//                   <TableCell className='text-nowrap'>{student.name}</TableCell>
-//                   <TableCell>
-//                     <Radio
-//                       size='small'
-//                       checked={attendance?.status === AbsenceStatus.PRESENT}
-//                       onChange={() => handleStatusChange(student.id, AbsenceStatus.PRESENT)}
-//                     />
-//                   </TableCell>
-//                   <TableCell>
-//                     <Radio
-//                       size='small'
-//                       checked={attendance?.status === AbsenceStatus.ABSENT}
-//                       onChange={() => handleStatusChange(student.id, AbsenceStatus.ABSENT)}
-//                     />
-//                   </TableCell>
-//                   <TableCell>
-//                     <Radio
-//                       size='small'
-//                       checked={attendance?.status === AbsenceStatus.SICK}
-//                       onChange={() => handleStatusChange(student.id, AbsenceStatus.SICK)}
-//                     />
-//                   </TableCell>
-//                   <TableCell>
-//                     <Radio
-//                       size='small'
-//                       checked={attendance?.status === AbsenceStatus.PERMIT}
-//                       onChange={() => handleStatusChange(student.id, AbsenceStatus.PERMIT)}
-//                     />
-//                   </TableCell>
-//                   <TableCell>
-//                     <TextField
-//                       variant='standard'
-//                       fullWidth
-//                       value={attendance?.note || ''}
-//                       onChange={e => handleNoteChange(student.id, e.target.value)}
-//                     />
-//                   </TableCell>
-//                 </TableRow>
-//               )
-//             })}
-//           </TableBody>
-//         </Table>
-//       </TableContainer>
-
-//       {/* Submit Button di luar Table/Card */}
-//       <div style={{ marginTop: 16, textAlign: 'right' }}>
-//         <Button variant='contained' color='primary' onClick={handleSubmit}>
-//           Submit Absensi
-//         </Button>
-//       </div>
-//     </>
-//   )
-// }
-
-// 'use client'
-
-// import React, { useEffect, useState } from 'react'
-
-// import {
-//   Table,
-//   TableBody,
-//   TableCell,
-//   TableContainer,
-//   TableHead,
-//   TableRow,
-//   Paper,
-//   Radio,
-//   TextField,
-//   Button,
-//   Typography,
-//   Box,
-//   CircularProgress
-// } from '@mui/material'
-
-// import { DateTime } from 'luxon'
-// import { toast } from 'react-toastify'
-
-// import { usePermissionStore } from '@/store/permission'
-// import { getStudentsFromTeacherSchedule } from './action'
-// import { AbsenceStatus } from '@/generated/prisma'
-// import { useCreateAbsences } from '@/features/attandence/query'
-// import type { CreateAbsencesInput } from '@/features/attandence/schemas/attendent-schema'
-
-// type Student = {
-//   id: string
-//   name: string
-//   nis: string
-// }
-
-// type AttendanceStatus = AbsenceStatus
-
-// type Attendance = {
-//   studentId: string
-//   status: AttendanceStatus
-//   note: string
-//   scheduleId: string
-// }
-
-// export default function Page() {
-//   const user = usePermissionStore()
-//   const [students, setStudents] = useState<Student[]>([])
-//   const [attendances, setAttendances] = useState<Attendance[]>([])
-//   const [className, setClassName] = useState('')
-//   const [scheduleId, setScheduleId] = useState<string | null>(null)
-//   const [loading, setLoading] = useState(true)
-//   const [errorMessage, setErrorMessage] = useState<string | null>(null)
-//   const now = DateTime.fromJSDate(new Date())
-//   const [teacherId, setTeacherId] = useState('')
-
-//   const {
-//     mutate: createAbsences,
-//     isPending: isSubmitting,
-//     isError: isSubmitError,
-//     error: submitError
-//   } = useCreateAbsences()
-
-//   const hari = now.toFormat('cccc')
-//   const jam = now.toFormat('HH:mm')
-
-//   const fetchStudents = async (userId: string) => {
-//     setLoading(true)
-//     setErrorMessage(null)
-
-//     try {
-//       // ✅ Ambil dayOfWeek, searchHour, dan searchMinute dari waktu sekarang
-
-//       // const dayOfWeek = now.weekday // 1 = Senin, ..., 7 = Minggu
-
-//       // const searchHour = now.hour
-
-//       // const searchMinute = now.minute
-
-//       // const data = await getStudentsFromTeacherSchedule(userId, dayOfWeek, searchHour, searchMinute)
-//       const data = await getStudentsFromTeacherSchedule(userId, 1, 7, 30)
-
-//       if (!data || !data.students || data.students.length === 0) {
-//         setStudents([])
-//         setClassName('')
-//         setScheduleId(null)
-//         setErrorMessage(`Mohon maaf, jadwal untuk hari ${hari} jam ${jam} ini tidak ditemukan.`)
-//       } else {
-//         setClassName(data.className)
-//         setScheduleId(data.scheduleId)
-//         setStudents(data.students)
-//         setTeacherId(data.teacherId)
-
-//         const initialAttendances = data.students.map((s: Student) => ({
-//           studentId: s.id,
-//           status: AbsenceStatus.PRESENT,
-//           note: '',
-//           scheduleId: data.scheduleId
-//         }))
-
-//         setAttendances(initialAttendances)
-//       }
-//     } catch (error) {
-//       console.error('Failed to fetch students:', error)
-//       setErrorMessage('Terjadi kesalahan saat mengambil data jadwal. Silakan coba lagi.')
-//       setStudents([])
-//       setClassName('')
-//     } finally {
-//       setLoading(false)
-//     }
-//   }
-
-//   const handleStatusChange = (studentId: string, value: AttendanceStatus) => {
-//     setAttendances(prev => prev.map(att => (att.studentId === studentId ? { ...att, status: value } : att)))
-//   }
-
-//   const handleNoteChange = (studentId: string, note: string) => {
-//     setAttendances(prev => prev.map(att => (att.studentId === studentId ? { ...att, note } : att)))
-//   }
-
-//   const handleSubmit = () => {
-//     if (!scheduleId || !teacherId) {
-//       setErrorMessage('Data jadwal atau pengajar tidak lengkap. Absensi tidak dapat disimpan.')
-
-//       return
-//     }
-
-//     if (attendances.length === 0) {
-//       setErrorMessage('Tidak ada data absensi untuk disimpan.')
-
-//       return
-//     }
-
-//     // ✅ Map attendances ke format yang diharapkan oleh Server Action
-//     const absencesToSubmit: CreateAbsencesInput = attendances.map(att => ({
-//       ...att,
-//       scheduleId
-//     })) as CreateAbsencesInput
-
-//     // ✅ Dapatkan tanggal UTC saat ini
-//     const absentDate = new Date().toISOString()
-
-//     // ✅ Panggil mutasi dengan data yang sudah lengkap
-//     createAbsences(
-//       { data: absencesToSubmit, filledByTeacherId: teacherId, absentDate },
-//       {
-//         onSuccess: () => {
-//           toast.success('Absensi berhasil diisi!')
-//         },
-//         onError: (error: any) => {
-//           toast.error(error.message || 'Absensi gagal diisi!')
-//         }
-//       }
-//     )
-//   }
-
-//   useEffect(() => {
-//     if (user.user?.role === 'PENGAJAR' && user.user?.id) {
-//       fetchStudents(user.user.id)
-//     } else {
-//       setLoading(false)
-//     }
-//   }, [user.user?.id, user.user?.role])
-
-//   if (!user.user?.role || user.user?.role !== 'PENGAJAR') {
-//     return (
-//       <Box display='flex' justifyContent='center' alignItems='center' minHeight='50vh'>
-//         <Typography variant='h5' color='error'>
-//           Akses Ditolak.
-//         </Typography>
-//       </Box>
-//     )
-//   }
-
-//   if (loading) {
-//     return (
-//       <Box display='flex' flexDirection='column' gap={2} justifyContent='center' alignItems='center' minHeight='50vh'>
-//         <CircularProgress />
-//         <Typography variant='h5'>Memuat data jadwal...</Typography>
-//       </Box>
-//     )
-//   }
-
-//   if (errorMessage) {
-//     return (
-//       <Box display='flex' justifyContent='center' alignItems='center' minHeight='50vh'>
-//         <Typography variant='h5' color='error'>
-//           {errorMessage}
-//         </Typography>
-//       </Box>
-//     )
-//   }
-
-//   return (
-//     <>
-//       <Typography variant='h3' className='text-center'>
-//         Kelas {className.toUpperCase()}
-//       </Typography>
-//       {isSubmitError && (
-//         <Box mt={2}>
-//           <Typography color='error'>Terjadi kesalahan saat menyimpan: {submitError.message}</Typography>
-//         </Box>
-//       )}
-//       <TableContainer component={Paper} sx={{ maxHeight: 'calc(100vh - 250px)', overflow: 'auto', mt: 2 }}>
-//         <Table stickyHeader>
-//           <TableHead>
-//             <TableRow>
-//               <TableCell>Nama</TableCell>
-//               <TableCell>Hadir</TableCell>
-//               <TableCell>Alpa</TableCell>
-//               <TableCell>Sakit</TableCell>
-//               <TableCell>Izin</TableCell>
-//               <TableCell>Keterangan</TableCell>
-//             </TableRow>
-//           </TableHead>
-//           <TableBody>
-//             {students.map(student => {
-//               const attendance = attendances.find(a => a.studentId === student.id)
-
-//               return (
-//                 <TableRow key={student.id}>
-//                   <TableCell className='text-nowrap'>{student.name}</TableCell>
-//                   <TableCell>
-//                     <Radio
-//                       size='small'
-//                       checked={attendance?.status === AbsenceStatus.PRESENT}
-//                       onChange={() => handleStatusChange(student.id, AbsenceStatus.PRESENT)}
-//                     />
-//                   </TableCell>
-//                   <TableCell>
-//                     <Radio
-//                       size='small'
-//                       checked={attendance?.status === AbsenceStatus.ABSENT}
-//                       onChange={() => handleStatusChange(student.id, AbsenceStatus.ABSENT)}
-//                     />
-//                   </TableCell>
-//                   <TableCell>
-//                     <Radio
-//                       size='small'
-//                       checked={attendance?.status === AbsenceStatus.SICK}
-//                       onChange={() => handleStatusChange(student.id, AbsenceStatus.SICK)}
-//                     />
-//                   </TableCell>
-//                   <TableCell>
-//                     <Radio
-//                       size='small'
-//                       checked={attendance?.status === AbsenceStatus.PERMIT}
-//                       onChange={() => handleStatusChange(student.id, AbsenceStatus.PERMIT)}
-//                     />
-//                   </TableCell>
-//                   <TableCell>
-//                     <TextField
-//                       variant='standard'
-//                       fullWidth
-//                       value={attendance?.note || ''}
-//                       onChange={e => handleNoteChange(student.id, e.target.value)}
-//                     />
-//                   </TableCell>
-//                 </TableRow>
-//               )
-//             })}
-//           </TableBody>
-//         </Table>
-//       </TableContainer>
-
-//       <div style={{ marginTop: 16, textAlign: 'right' }}>
-//         <Button variant='contained' color='primary' onClick={handleSubmit} disabled={isSubmitting}>
-//           {isSubmitting ? <CircularProgress size={24} /> : 'Submit Absensi'}
-//         </Button>
-//       </div>
-//     </>
-//   )
-// }
-
 'use client'
 
 import React, { useEffect, useState } from 'react'
@@ -568,6 +70,7 @@ export default function Page() {
   const [customDayOfWeek, setCustomDayOfWeek] = useState<number>(now.weekday)
   const [customHour, setCustomHour] = useState<number>(now.hour)
   const [customMinute, setCustomMinute] = useState<number>(now.minute)
+  const [subjectName, setSubjectName] = useState('')
   const searchParams = useSearchParams()
   const dateParam = searchParams.get('month')
 
@@ -604,13 +107,17 @@ export default function Page() {
     setErrorMessage(null)
 
     try {
-      const dayOfWeek = isProduction ? now.weekday : customDayOfWeek
+      const dayOfWeek = isProduction ? now.weekday % 7 : customDayOfWeek
       const searchHour = isProduction ? now.hour : customHour
       const searchMinute = isProduction ? now.minute : customMinute
 
+      console.log(
+        `Fetching students for userId: ${userId}, dayOfWeek: ${now.weekday % 7}, hour: ${now.hour}, minute: ${now.minute}`
+      )
+
       if (
-        dayOfWeek < 1 ||
-        dayOfWeek > 7 ||
+        dayOfWeek < 0 ||
+        dayOfWeek > 6 ||
         searchHour < 0 ||
         searchHour > 23 ||
         searchMinute < 0 ||
@@ -638,6 +145,7 @@ export default function Page() {
         setStudents(data.students) // ✅ Set students dengan data yang sudah digabungkan
         setTeacherId(data.teacherId)
         setDormitoryName(data.dormitoryName)
+        setSubjectName(data.subjectName)
         console.log(data.teacherId)
 
         // ✅ Inisialisasi attendances dari data students yang sudah ada
@@ -807,11 +315,11 @@ export default function Page() {
       {!isProduction && (
         <Box display='flex' gap={2} alignItems='center' mt={2}>
           <CustomTextField
-            label='Hari (1=Senin ... 7=Minggu)'
+            label='Hari (0=Ahad ... 6=Sabtu)'
             type='number'
             value={customDayOfWeek}
             onChange={e => setCustomDayOfWeek(Number(e.target.value))}
-            inputProps={{ min: 1, max: 7 }}
+            inputProps={{ min: 0, max: 6 }}
           />
 
           <CustomTextField
@@ -841,6 +349,9 @@ export default function Page() {
       <Typography variant='h5' className='text-center'>
         Asrama {dormitoryName.toUpperCase()}
       </Typography>
+      <Typography variant='h5' className='text-center'>
+        Pelajaran {subjectName.toUpperCase()}
+      </Typography>
       {isSubmitError && (
         <Box mt={2}>
           <Typography color='error'>Terjadi kesalahan saat menyimpan: {submitError?.message}</Typography>
@@ -867,6 +378,7 @@ export default function Page() {
                   <TableCell className='text-nowrap'>{student.name}</TableCell>
                   <TableCell>
                     <Radio
+                      color='success'
                       size='small'
                       checked={attendance?.status === AbsenceStatus.PRESENT}
                       onChange={() => handleStatusChange(student.id, AbsenceStatus.PRESENT)}
@@ -874,6 +386,7 @@ export default function Page() {
                   </TableCell>
                   <TableCell>
                     <Radio
+                      color='error'
                       size='small'
                       checked={attendance?.status === AbsenceStatus.ABSENT}
                       onChange={() => handleStatusChange(student.id, AbsenceStatus.ABSENT)}
@@ -881,6 +394,7 @@ export default function Page() {
                   </TableCell>
                   <TableCell>
                     <Radio
+                      color='warning'
                       size='small'
                       checked={attendance?.status === AbsenceStatus.SICK}
                       onChange={() => handleStatusChange(student.id, AbsenceStatus.SICK)}
@@ -888,6 +402,7 @@ export default function Page() {
                   </TableCell>
                   <TableCell>
                     <Radio
+                      color='info'
                       size='small'
                       checked={attendance?.status === AbsenceStatus.PERMIT}
                       onChange={() => handleStatusChange(student.id, AbsenceStatus.PERMIT)}
