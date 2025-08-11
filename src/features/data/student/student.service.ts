@@ -11,6 +11,7 @@ export type StudentItem = {
   fatherName: string | null
   motherName: string | null
   parrentPhone: string | null
+  gender: string | null
   regency?: string | null
   regencyId?: number
   activeDormitory: string | null
@@ -193,6 +194,7 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
       id: true,
       name: true,
       nis: true,
+      gender: true,
       fatherName: true,
       motherName: true,
       parrentPhone: true,
@@ -308,6 +310,7 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
       const baseData = {
         id: s.id,
         name: s.name,
+        gender: s.gender,
         nis: s.nis,
         activeDormitory: s.dormitory?.name || null,
         fatherName: s.fatherName || null,
@@ -628,6 +631,7 @@ export async function getStudentDetail(id: string): Promise<StudentItem | null> 
       id: true,
       name: true,
       nis: true,
+      gender: true,
       fatherName: true,
       motherName: true,
       parrentPhone: true,
@@ -729,6 +733,7 @@ export async function getStudentDetail(id: string): Promise<StudentItem | null> 
       id: student.id,
       name: student.name,
       nis: student.nis,
+      gender: student.gender,
       fatherName: student.fatherName || null,
       motherName: student.motherName || null,
       parrentPhone: student.parrentPhone || null,
@@ -820,6 +825,7 @@ export async function getStudentDetail(id: string): Promise<StudentItem | null> 
     id: student.id,
     name: student.name,
     nis: student.nis,
+    gender: student.gender,
     fatherName: student.fatherName || null,
     motherName: student.motherName || null,
     parrentPhone: student.parrentPhone || null,

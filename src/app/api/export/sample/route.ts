@@ -8,14 +8,15 @@ export async function GET() {
   const dormitories = await prisma.dormitory.findMany({
     select: {
       id: true,
-      name: true
+      name: true,
+      gender: true
     }
   })
 
   const workbook = new ExcelJS.Workbook()
 
   for (const dorm of dormitories) {
-    const sheet = workbook.addWorksheet(dorm.name)
+    const sheet = workbook.addWorksheet(`${dorm.name}-${dorm.gender}`)
 
     // Set lebar kolom agar lebih mudah dibaca
     sheet.columns = [

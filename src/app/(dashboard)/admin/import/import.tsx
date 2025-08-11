@@ -39,6 +39,7 @@ interface ExcelRowData {
 
   dormitoryId: string | null
   dormitoryName: string | null // <--- PASTIKAN ADA DI INTERFACE INI
+  gender: 'PUTRA' | 'PUTRI' | null
 
   // Properti tambahan untuk validasi (opsional di awal)
   __isValid?: boolean
@@ -78,7 +79,12 @@ export const importSchema = z.array(
 
     dormitoryId: z.string().min(1, 'ID Asrama (dari A1) wajib diisi!'),
     dormitoryName: z.string().min(1, 'Nama Asrama (dari nama sheet) wajib diisi!'), // <--- PASTIKAN ADA DI SINI
-
+    gender: z.enum(['PUTRA', 'PUTRI'], {
+      // <--- TAMBAHKAN BLOK INI
+      errorMap: () => ({
+        message: 'Gender harus PUTRA atau PUTRI dan didapat dari nama sheet (contoh: "Kelas A-PUTRA").'
+      })
+    }),
     __isValid: z.boolean().optional(),
     __validationMessage: z.string().nullable().optional(),
     __wilayahData: z.any().nullable().optional(),
@@ -129,6 +135,13 @@ export default function ImportComponent() {
 
         for (const sheetName of workbook.SheetNames) {
           const sheet = workbook.Sheets[sheetName]
+
+          const nameParts = sheetName.split('-')
+          const extractedGender = nameParts.length > 1 ? nameParts[nameParts.length - 1].trim().toUpperCase() : null
+
+          // Validasi sederhana untuk memastikan format gender sesuai
+          const gender: 'PUTRA' | 'PUTRI' | null =
+            extractedGender === 'PUTRA' || extractedGender === 'PUTRI' ? extractedGender : null
 
           processedSheetNames.push(sheetName)
 
@@ -221,7 +234,8 @@ export default function ImportComponent() {
               const obj: Partial<ExcelRowData> = {
                 id: globalRowIdCounter++,
                 dormitoryId: extractedDormitoryId,
-                dormitoryName: sheetName // <--- BARU: Nama asrama dari nama sheet
+                dormitoryName: sheetName, // <--- BARU: Nama asrama dari nama sheet
+                gender: gender
               }
 
               fileHeaders.forEach((key: any, index: number) => {

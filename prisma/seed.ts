@@ -5,7 +5,9 @@ import Provinces from './json/provinsi.json'
 import Regencies from './json/kabupaten.json'
 import Districts from './json/kecamatan.json'
 import Villages from './json/kelurahan.json'
-import { PrismaClient } from '@/generated/prisma'
+import { $Enums, PrismaClient } from '@/generated/prisma'
+
+import GenderType = $Enums.GenderType
 
 const prisma = new PrismaClient()
 
@@ -257,67 +259,154 @@ export async function main() {
 
     const dormitoryWithTracks = [
       {
-        dormitory: { id: '53da2586-4e08-4ef0-bded-b998190c22cc', name: "NA'IM", level: 1 },
+        dormitory: { id: 'a1b2c3d4-e5f6-7890-1234-567890abcdef', name: "NA'IM", level: 1, gender: GenderType.PUTRA },
         tracks: [
-          { id: '163eefe0-bc53-4a9b-b3d9-df0479aaac79', name: 'UBUDIYAH', targetDays: 90, level: 2 },
-          { id: 'e233e79d-ada0-485e-9ab4-6aa6634a3c11', name: 'THOHAROH', targetDays: 60, level: 1 }
+          { id: 'b2c3d4e5-f6a7-8901-2345-67890abcdef1', name: 'UBUDIYAH', targetDays: 90, level: 2 },
+          { id: 'c3d4e5f6-a7b8-9012-3456-7890abcdef12', name: 'THOHAROH', targetDays: 60, level: 1 }
         ]
       },
       {
-        dormitory: { id: '13921d77-c906-46ab-813b-c06e71aae218', name: "MA'WA", level: 1 },
+        dormitory: { id: 'd4e5f6a7-b8c9-0123-4567-890abcdef123', name: "NA'IM", level: 1, gender: GenderType.PUTRI },
         tracks: [
-          { id: '163eefe0-bc53-4a9b-b3d9-df0479aaac79', name: 'UBUDIYAH', targetDays: 90, level: 2 },
-          { id: 'e233e79d-ada0-485e-9ab4-6aa6634a3c11', name: 'THOHAROH', targetDays: 60, level: 1 }
+          { id: 'e5f6a7b8-c9d0-1234-5678-90abcdef1234', name: 'UBUDIYAH', targetDays: 90, level: 2 },
+          { id: 'f6a7b8c9-d0e1-2345-6789-0abcdef12345', name: 'THOHAROH', targetDays: 60, level: 1 }
         ]
       },
       {
-        dormitory: { id: 'ee56d3b4-4d64-4c3e-b2b3-6c4a82994e82', name: 'DARUL MUSTHOFA', level: 1 },
+        dormitory: { id: 'a7b8c9d0-e1f2-3456-7890-abcdef123456', name: "MA'WA", level: 1, gender: GenderType.PUTRA },
         tracks: [
-          { id: '163eefe0-bc53-4a9b-b3d9-df0479aaac79', name: 'UBUDIYAH', targetDays: 90, level: 1 },
-          { id: '555428b0-b978-4350-9393-74727c028915', name: 'Kajian Kitab', targetDays: 120, level: 2 }
+          { id: 'b8c9d0e1-f2a3-4567-8901-bcdef1234567', name: 'UBUDIYAH', targetDays: 90, level: 2 },
+          { id: 'c9d0e1f2-a3b4-5678-9012-cdef12345678', name: 'THOHAROH', targetDays: 60, level: 1 }
         ]
       },
       {
-        dormitory: { id: '6610ebff-0ae9-4946-86e2-c7f0894ccb04', name: 'TASAWWUF', level: 2 },
+        dormitory: { id: 'd0e1f2a3-b4c5-6789-0123-def123456789', name: "MA'WA", level: 1, gender: GenderType.PUTRI },
         tracks: [
-          { id: '163eefe0-bc53-4a9b-b3d9-df0479aaac79', name: 'UBUDIYAH', targetDays: 90, level: 1 },
-          { id: '555428b0-b978-4350-9393-74727c028915', name: 'Kajian Kitab', targetDays: 120, level: 2 }
+          { id: 'e1f2a3b4-c5d6-7890-1234-ef1234567890', name: 'UBUDIYAH', targetDays: 90, level: 2 },
+          { id: 'f2a3b4c5-d6e7-8901-2345-f12345678901', name: 'THOHAROH', targetDays: 60, level: 1 }
         ]
       },
       {
-        dormitory: { id: 'a201641f-2748-4770-809d-69324d602ded', name: 'DARUSSALAM', level: 3 },
+        dormitory: {
+          id: 'a3b4c5d6-e7f8-9012-3456-123456789012',
+          name: 'DARUL MUSTHOFA',
+          level: 1,
+          gender: GenderType.PUTRA
+        },
         tracks: [
-          { id: '163eefe0-bc53-4a9b-b3d9-df0479aaac79', name: 'UBUDIYAH', targetDays: 90, level: 2 },
-          { id: 'e233e79d-ada0-485e-9ab4-6aa6634a3c11', name: 'THOHAROH', targetDays: 60, level: 1 },
-          { id: '555428b0-b978-4350-9393-74727c028915', name: 'Kajian Kitab', targetDays: 120, level: 3 },
-          { id: '765d4702-74fb-46a5-bf3c-7ac9269838b8', name: 'Tahfidz', targetDays: 180, level: 4 }
+          { id: 'b4c5d6e7-f8a9-0123-4567-234567890123', name: 'UBUDIYAH', targetDays: 90, level: 1 },
+          { id: 'c5d6e7f8-a9b0-1234-5678-345678901234', name: 'Kajian Kitab', targetDays: 120, level: 2 }
         ]
       },
       {
-        dormitory: { id: 'df8c81e2-63f6-417d-a11e-c8625ece7b1a', name: 'ILLIYYIN', level: 4 },
+        dormitory: { id: 'd6e7f8a9-b0c1-2345-6789-456789012345', name: 'TASAWWUF', level: 2, gender: GenderType.PUTRA },
         tracks: [
-          { id: '163eefe0-bc53-4a9b-b3d9-df0479aaac79', name: 'UBUDIYAH', targetDays: 90, level: 2 },
-          { id: 'e233e79d-ada0-485e-9ab4-6aa6634a3c11', name: 'THOHAROH', targetDays: 60, level: 1 },
-          { id: '555428b0-b978-4350-9393-74727c028915', name: 'Kajian Kitab', targetDays: 120, level: 3 },
-          { id: '765d4702-74fb-46a5-bf3c-7ac9269838b8', name: 'Tahfidz', targetDays: 180, level: 4 }
+          { id: 'e7f8a9b0-c1d2-3456-7890-567890123456', name: 'UBUDIYAH', targetDays: 90, level: 1 },
+          { id: 'f8a9b0c1-d2e3-4567-8901-678901234567', name: 'Kajian Kitab', targetDays: 120, level: 2 }
         ]
       },
       {
-        dormitory: { id: '25a6914c-47f2-4a6d-8072-092a56d4e024', name: 'TAKHOSSUS', level: 2 },
+        dormitory: { id: 'a9b0c1d2-e3f4-5678-9012-789012345678', name: 'TASAWWUF', level: 2, gender: GenderType.PUTRI },
         tracks: [
-          { id: '163eefe0-bc53-4a9b-b3d9-df0479aaac79', name: 'UBUDIYAH', targetDays: 90, level: 2 },
-          { id: 'e233e79d-ada0-485e-9ab4-6aa6634a3c11', name: 'THOHAROH', targetDays: 60, level: 1 },
-          { id: '555428b0-b978-4350-9393-74727c028915', name: 'Kajian Kitab', targetDays: 120, level: 3 },
-          { id: '765d4702-74fb-46a5-bf3c-7ac9269838b8', name: 'Tahfidz', targetDays: 180, level: 4 }
+          { id: 'b0c1d2e3-f4a5-6789-0123-890123456789', name: 'UBUDIYAH', targetDays: 90, level: 1 },
+          { id: 'c1d2e3f4-a5b6-7890-1234-901234567890', name: 'Kajian Kitab', targetDays: 120, level: 2 }
         ]
       },
       {
-        dormitory: { id: '7c526ed0-0fe8-4632-bc2e-8b01dc998a04', name: 'AKSELERASI', level: 2 },
+        dormitory: {
+          id: 'd2e3f4a5-b6c7-8901-2345-01234567890a',
+          name: 'DARUSSALAM',
+          level: 3,
+          gender: GenderType.PUTRA
+        },
         tracks: [
-          { id: '163eefe0-bc53-4a9b-b3d9-df0479aaac79', name: 'UBUDIYAH', targetDays: 90, level: 2 },
-          { id: 'e233e79d-ada0-485e-9ab4-6aa6634a3c11', name: 'THOHAROH', targetDays: 60, level: 1 },
-          { id: '555428b0-b978-4350-9393-74727c028915', name: 'Kajian Kitab', targetDays: 120, level: 3 },
-          { id: '765d4702-74fb-46a5-bf3c-7ac9269838b8', name: 'Tahfidz', targetDays: 180, level: 4 }
+          { id: 'e3f4a5b6-c7d8-9012-3456-1234567890ab', name: 'UBUDIYAH', targetDays: 90, level: 2 },
+          { id: 'f4a5b6c7-d8e9-0123-4567-234567890abc', name: 'THOHAROH', targetDays: 60, level: 1 },
+          { id: 'a5b6c7d8-e9f0-1234-5678-34567890abcd', name: 'Kajian Kitab', targetDays: 120, level: 3 },
+          { id: 'b6c7d8e9-f0a1-2345-6789-4567890abcde', name: 'Tahfidz', targetDays: 180, level: 4 }
+        ]
+      },
+      {
+        dormitory: {
+          id: 'c7d8e9f0-a1b2-3456-7890-567890abcdef',
+          name: 'DARUL LUGHOH',
+          level: 3,
+          gender: GenderType.PUTRI
+        },
+        tracks: [
+          { id: 'd8e9f0a1-b2c3-4567-8901-67890abcdef0', name: 'UBUDIYAH', targetDays: 90, level: 2 },
+          { id: 'e9f0a1b2-c3d4-5678-9012-7890abcdef01', name: 'THOHAROH', targetDays: 60, level: 1 },
+          { id: 'f0a1b2c3-d4e5-6789-0123-890abcdef012', name: 'Kajian Kitab', targetDays: 120, level: 3 },
+          { id: 'a1b2c3d4-e5f6-7890-1234-90abcdef0123', name: 'Tahfidz', targetDays: 180, level: 4 }
+        ]
+      },
+      {
+        dormitory: { id: 'b2c3d4e5-f6a7-8901-2345-abcdef012345', name: 'ILLIYYIN', level: 4, gender: GenderType.PUTRA },
+        tracks: [
+          { id: 'c3d4e5f6-a7b8-9012-3456-bcdef0123456', name: 'UBUDIYAH', targetDays: 90, level: 2 },
+          { id: 'd4e5f6a7-b8c9-0123-4567-cdef01234567', name: 'THOHAROH', targetDays: 60, level: 1 },
+          { id: 'e5f6a7b8-c9d0-1234-5678-def012345678', name: 'Kajian Kitab', targetDays: 120, level: 3 },
+          { id: 'f6a7b8c9-d0e1-2345-6789-ef0123456789', name: 'Tahfidz', targetDays: 180, level: 4 }
+        ]
+      },
+      {
+        dormitory: { id: 'a7b8c9d0-e1f2-3456-7890-f01234567890', name: 'PASCA', level: 4, gender: GenderType.PUTRI },
+        tracks: [
+          { id: 'b8c9d0e1-f2a3-4567-8901-01234567890a', name: 'UBUDIYAH', targetDays: 90, level: 2 },
+          { id: 'c9d0e1f2-a3b4-5678-9012-1234567890ab', name: 'THOHAROH', targetDays: 60, level: 1 },
+          { id: 'd0e1f2a3-b4c5-6789-0123-234567890abc', name: 'Kajian Kitab', targetDays: 120, level: 3 },
+          { id: 'e1f2a3b4-c5d6-7890-1234-34567890abcd', name: 'Tahfidz', targetDays: 180, level: 4 }
+        ]
+      },
+      {
+        dormitory: { id: 'f2a3b4c5-d6e7-8901-2345-4567890abcde', name: 'AZ-ZAHRO', level: 4, gender: GenderType.PUTRI },
+        tracks: [
+          { id: 'a3b4c5d6-e7f8-9012-3456-567890abcdef', name: 'UBUDIYAH', targetDays: 90, level: 2 },
+          { id: 'b4c5d6e7-f8a9-0123-4567-67890abcdef1', name: 'THOHAROH', targetDays: 60, level: 1 },
+          { id: 'c5d6e7f8-a9b0-1234-5678-7890abcdef12', name: 'Kajian Kitab', targetDays: 120, level: 3 },
+          { id: 'd6e7f8a9-b0c1-2345-6789-890abcdef123', name: 'Tahfidz', targetDays: 180, level: 4 }
+        ]
+      },
+      {
+        dormitory: {
+          id: 'e7f8a9b0-c1d2-3456-7890-90abcdef1234',
+          name: 'TAKHOSSUS',
+          level: 2,
+          gender: GenderType.PUTRA
+        },
+        tracks: [
+          { id: 'f8a9b0c1-d2e3-4567-8901-0abcdef12345', name: 'UBUDIYAH', targetDays: 90, level: 2 },
+          { id: 'a9b0c1d2-e3f4-5678-9012-abcdef123456', name: 'THOHAROH', targetDays: 60, level: 1 },
+          { id: 'b0c1d2e3-f4a5-6789-0123-bcdef1234567', name: 'Kajian Kitab', targetDays: 120, level: 3 },
+          { id: 'c1d2e3f4-a5b6-7890-1234-cdef12345678', name: 'Tahfidz', targetDays: 180, level: 4 }
+        ]
+      },
+      {
+        dormitory: {
+          id: 'd2e3f4a5-b6c7-8901-2345-def123456789',
+          name: 'TAKHOSSUS',
+          level: 2,
+          gender: GenderType.PUTRI
+        },
+        tracks: [
+          { id: 'e3f4a5b6-c7d8-9012-3456-ef1234567890', name: 'UBUDIYAH', targetDays: 90, level: 2 },
+          { id: 'f4a5b6c7-d8e9-0123-4567-f12345678901', name: 'THOHAROH', targetDays: 60, level: 1 },
+          { id: 'a5b6c7d8-e9f0-1234-5678-123456789012', name: 'Kajian Kitab', targetDays: 120, level: 3 },
+          { id: 'b6c7d8e9-f0a1-2345-6789-234567890123', name: 'Tahfidz', targetDays: 180, level: 4 }
+        ]
+      },
+      {
+        dormitory: {
+          id: 'c7d8e9f0-a1b2-3456-7890-345678901234',
+          name: 'AKSELERASI',
+          level: 2,
+          gender: GenderType.PUTRA
+        },
+        tracks: [
+          { id: 'd8e9f0a1-b2c3-4567-8901-456789012345', name: 'UBUDIYAH', targetDays: 90, level: 2 },
+          { id: 'e9f0a1b2-c3d4-5678-9012-567890123456', name: 'THOHAROH', targetDays: 60, level: 1 },
+          { id: 'f0a1b2c3-d4e5-6789-0123-678901234567', name: 'Kajian Kitab', targetDays: 120, level: 3 },
+          { id: 'a1b2c3d4-e5f6-7890-1234-789012345678', name: 'Tahfidz', targetDays: 180, level: 4 }
         ]
       }
     ]
@@ -472,7 +561,7 @@ export async function main() {
 
     // 5. Buat user per dormitory dan hubungkan ke dormitory lewat UserDormitory
     for (const dorm of allDormitories) {
-      const username = `operator_${dorm.name.toLowerCase().replace(/\s+/g, '_')}`
+      const username = `operator_${dorm.name.toLowerCase().replace(/\s+/g, '_')}_${dorm!.gender!.toLowerCase().replace(/\s+/g, '_')}`
 
       console.log(`  - Processing Dormitory: "${dorm.name}"`)
 

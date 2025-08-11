@@ -2,580 +2,589 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-    provider        = "prisma-client-js"
-    output          = "../src/generated/prisma"
-    previewFeatures = ["metrics"]
+  provider        = "prisma-client-js"
+  output          = "../src/generated/prisma"
+  previewFeatures = ["metrics"]
 }
 
 datasource db {
-    provider  = "postgresql"
-    url       = env("DATABASE_URL")
-    directUrl = env("DIRECT_DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
 }
 
 model User {
-    id                    String           @id @default(uuid()) @map("id")
-    name                  String           @map("name")
-    username              String           @unique @map("username")
-    password              String           @map("password")
-    roleId                String
-    role                  Role             @relation(fields: [roleId], references: [id])
-    teacher               Teacher?
-    mustChangeCredentials Boolean          @default(false)
-    userPermissions       UserPermission[]
-    userDormitories       UserDormitory[]
+  id                    String           @id @default(uuid()) @map("id")
+  name                  String           @map("name")
+  username              String           @unique @map("username")
+  password              String           @map("password")
+  roleId                String
+  role                  Role             @relation(fields: [roleId], references: [id])
+  teacher               Teacher?
+  mustChangeCredentials Boolean          @default(false)
+  userPermissions       UserPermission[]
+  userDormitories       UserDormitory[]
 
-    @@index([roleId])
+  @@index([roleId])
 }
 
 model Role {
-    id      String   @id @default(uuid())
-    name    String   @unique
-    canEdit Boolean? @default(true)
+  id      String   @id @default(uuid())
+  name    String   @unique
+  canEdit Boolean? @default(true)
 
-    users           User[]
-    rolePermissions RolePermission[]
-    roleDormitories RoleDormitory[]
+  users           User[]
+  rolePermissions RolePermission[]
+  roleDormitories RoleDormitory[]
 }
 
 model Permission {
-    id       String  @id @default(uuid())
-    resource String // e.g., "dormitory"
-    action   String // e.g., "edit", "view"
-    name     String  @unique // e.g., "dormitory:edit"
-    label    String?
+  id       String  @id @default(uuid())
+  resource String // e.g., "dormitory"
+  action   String // e.g., "edit", "view"
+  name     String  @unique // e.g., "dormitory:edit"
+  label    String?
 
-    rolePermissions RolePermission[]
-    userPermissions UserPermission[]
+  rolePermissions RolePermission[]
+  userPermissions UserPermission[]
 }
 
 model RolePermission {
-    roleId       String
-    permissionId String     @map("permission_id")
-    role         Role       @relation(fields: [roleId], references: [id])
-    permission   Permission @relation(fields: [permissionId], references: [id])
+  roleId       String
+  permissionId String     @map("permission_id")
+  role         Role       @relation(fields: [roleId], references: [id])
+  permission   Permission @relation(fields: [permissionId], references: [id])
 
-    @@id([roleId, permissionId])
+  @@id([roleId, permissionId])
 }
 
 model UserPermission {
-    userId       String
-    permissionId String     @map("permission_id")
-    allow        Boolean
-    user         User       @relation(fields: [userId], references: [id])
-    permission   Permission @relation(fields: [permissionId], references: [id])
+  userId       String
+  permissionId String     @map("permission_id")
+  allow        Boolean
+  user         User       @relation(fields: [userId], references: [id])
+  permission   Permission @relation(fields: [permissionId], references: [id])
 
-    @@id([userId, permissionId])
+  @@id([userId, permissionId])
 }
 
 model UserDormitory {
-    userId      String
-    dormitoryId String    @map("dormitory_id")
-    user        User      @relation(fields: [userId], references: [id])
-    dormitory   Dormitory @relation(fields: [dormitoryId], references: [id])
+  userId      String
+  dormitoryId String    @map("dormitory_id")
+  user        User      @relation(fields: [userId], references: [id])
+  dormitory   Dormitory @relation(fields: [dormitoryId], references: [id])
 
-    @@id([userId, dormitoryId])
+  @@id([userId, dormitoryId])
 }
 
 model RoleDormitory {
-    roleId      String
-    dormitoryId String    @map("dormitory_id")
-    role        Role      @relation(fields: [roleId], references: [id], onDelete: Cascade)
-    dormitory   Dormitory @relation(fields: [dormitoryId], references: [id], onDelete: Cascade)
+  roleId      String
+  dormitoryId String    @map("dormitory_id")
+  role        Role      @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  dormitory   Dormitory @relation(fields: [dormitoryId], references: [id], onDelete: Cascade)
 
-    @@id([roleId, dormitoryId])
-    @@map("role_dormitory")
+  @@id([roleId, dormitoryId])
+  @@map("role_dormitory")
 }
 
 // ENUMS
 enum StudentStatus {
-    ACTIVE
-    INACTIVE
-    TRANSFERRED
+  ACTIVE
+  INACTIVE
+  TRANSFERRED
 }
 
 enum HistoryStatus {
-    STUDYING
-    GRADUATED
-    REPEATED
-    TRANSFERRED
+  STUDYING
+  GRADUATED
+  REPEATED
+  TRANSFERRED
 }
 
 enum AbsenceStatus {
-    PRESENT
-    SICK
-    PERMIT
-    ABSENT
+  PRESENT
+  SICK
+  PERMIT
+  ABSENT
 }
 
 enum DormitoryStatus {
-    ACTIVE
-    GRADUATED
-    TRANSFERRED
+  ACTIVE
+  GRADUATED
+  TRANSFERRED
+}
+
+enum GenderType {
+  PUTRA
+  PUTRI
 }
 
 // MASTER DATA
 model Student {
-    id           String   @id @default(uuid())
-    nis          String   @unique
-    name         String
-    placeOfBirth String
-    dateOfBirth  DateTime
-    address      String?
-    fatherName   String?
-    motherName   String?
-    parrentPhone String?
+  id           String   @id @default(uuid())
+  nis          String   @unique
+  name         String
+  placeOfBirth String
+  dateOfBirth  DateTime
+  address      String?
+  fatherName   String?
+  motherName   String?
+  parrentPhone String?
 
-    dormitoryId String
-    dormitory   Dormitory @relation(fields: [dormitoryId], references: [id])
-    villageId   Int?
-    village     Village?  @relation(fields: [villageId], references: [id])
+  gender GenderType? @default(PUTRA)
 
-    histories          History[]
-    absences           Absence[]
-    permits            Permit[]
-    dormitoryHistories DormitoryHistory[]
+  dormitoryId String
+  dormitory   Dormitory @relation(fields: [dormitoryId], references: [id])
+  villageId   Int?
+  village     Village?  @relation(fields: [villageId], references: [id])
 
-    status StudentStatus? @default(ACTIVE)
+  histories          History[]
+  absences           Absence[]
+  permits            Permit[]
+  dormitoryHistories DormitoryHistory[]
 
-    createdAt                 DateTime                    @default(now())
-    updatedAt                 DateTime                    @updatedAt
-    testRegistration          TestRegistration[]
-    formalClass               FormalClass?                @relation(fields: [formalClassId], references: [id])
-    formalClassId             String?
-    dormitoryRoom             DormitoryRoom?              @relation(fields: [dormitoryRoomId], references: [id])
-    dormitoryRoomId           String?
-    positionHistoryLeadership PositionHistoryLeadership[]
+  status StudentStatus? @default(ACTIVE)
 
-    @@index([name]) // <-- TAMBAHKAN: Untuk pencarian berdasarkan nama
-    @@index([dormitoryId]) // <-- TAMBAHKAN: Untuk filter santri per asrama
-    @@index([status]) // <-- TAMBAHKAN: Untuk filter santri berdasarkan status (misal: semua yg aktif)
-    @@index([formalClassId]) // <-- TAMBAHKAN: Untuk filter santri per kelas formal
-    @@index([dormitoryRoomId]) // <-- TAMBAHKAN: Untuk filter santri per kamar
+  createdAt                 DateTime                    @default(now())
+  updatedAt                 DateTime                    @updatedAt
+  testRegistration          TestRegistration[]
+  formalClass               FormalClass?                @relation(fields: [formalClassId], references: [id])
+  formalClassId             String?
+  dormitoryRoom             DormitoryRoom?              @relation(fields: [dormitoryRoomId], references: [id])
+  dormitoryRoomId           String?
+  positionHistoryLeadership PositionHistoryLeadership[]
+
+  @@index([name]) // <-- TAMBAHKAN: Untuk pencarian berdasarkan nama
+  @@index([dormitoryId]) // <-- TAMBAHKAN: Untuk filter santri per asrama
+  @@index([status]) // <-- TAMBAHKAN: Untuk filter santri berdasarkan status (misal: semua yg aktif)
+  @@index([formalClassId]) // <-- TAMBAHKAN: Untuk filter santri per kelas formal
+  @@index([dormitoryRoomId]) // <-- TAMBAHKAN: Untuk filter santri per kamar
+  @@index([gender])
 }
 
 enum PositionRole {
-    CHAIRMAN
-    MEMBER
+  CHAIRMAN
+  MEMBER
 }
 
 model Leadership {
-    id          String  @id @default(uuid())
-    name        String  @unique
-    description String?
+  id          String  @id @default(uuid())
+  name        String  @unique
+  description String?
 
-    positionHistories PositionHistoryLeadership[]
+  positionHistories PositionHistoryLeadership[]
 }
 
 model TermLeadership {
-    id        String   @id @default(uuid())
-    name      String   @unique // e.g., "2024-2025"
-    startDate DateTime
-    endDate   DateTime
+  id        String   @id @default(uuid())
+  name      String   @unique // e.g., "2024-2025"
+  startDate DateTime
+  endDate   DateTime
 
-    positionHistories PositionHistoryLeadership[]
+  positionHistories PositionHistoryLeadership[]
 }
 
 model PositionHistoryLeadership {
-    id    String       @id @default(uuid())
-    role  PositionRole @default(MEMBER)
-    notes String?
+  id    String       @id @default(uuid())
+  role  PositionRole @default(MEMBER)
+  notes String?
 
-    studentId String
-    student   Student @relation(fields: [studentId], references: [id])
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id])
 
-    leadershipId String
-    leadership   Leadership @relation(fields: [leadershipId], references: [id])
+  leadershipId String
+  leadership   Leadership @relation(fields: [leadershipId], references: [id])
 
-    termLeadershipId String
-    termLeadership   TermLeadership @relation(fields: [termLeadershipId], references: [id])
+  termLeadershipId String
+  termLeadership   TermLeadership @relation(fields: [termLeadershipId], references: [id])
 
-    createdAt DateTime @default(now())
+  createdAt DateTime @default(now())
 }
 
 model FormalClass {
-    id      String    @id @default(uuid())
-    name    String    @unique
-    Student Student[]
+  id      String    @id @default(uuid())
+  name    String    @unique
+  Student Student[]
 }
 
 model Teacher {
-    id                 String                @id @default(uuid())
-    name               String
-    subjects           TeacherSubjectClass[]
-    schedules          Schedule[]
-    absences           TeacherAbsence[]
-    createdAt          DateTime              @default(now())
-    updatedAt          DateTime              @updatedAt
-    absence            Absence[]
-    teacherDormitories TeacherDormitory[]
+  id                 String                @id @default(uuid())
+  name               String
+  subjects           TeacherSubjectClass[]
+  schedules          Schedule[]
+  absences           TeacherAbsence[]
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  absence            Absence[]
+  teacherDormitories TeacherDormitory[]
 
-    userId String @unique
-    user   User   @relation(fields: [userId], references: [id])
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id])
 
-    @@index([name])
+  @@index([name])
 }
 
 model Dormitory {
-    id               String             @id @default(uuid())
-    name             String
-    level            Int
-    students         Student[]
-    classes          Class[]
-    userDormitories  UserDormitory[]
-    roleDormitories  RoleDormitory[]
-    createdAt        DateTime           @default(now())
-    updatedAt        DateTime           @updatedAt
-    dormitoryHistory DormitoryHistory[]
-    dormitoryTracks  DormitoryTrack[] // pivot relasi ke track
-    teacherDormitory TeacherDormitory[]
+  id               String             @id @default(uuid())
+  name             String
+  level            Int
+  students         Student[]
+  classes          Class[]
+  userDormitories  UserDormitory[]
+  roleDormitories  RoleDormitory[]
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  gender           GenderType?        @default(PUTRA)
+  dormitoryHistory DormitoryHistory[]
+  dormitoryTracks  DormitoryTrack[] // pivot relasi ke track
+  teacherDormitory TeacherDormitory[]
 
-    dormitoryRoom DormitoryRoom[]
-    scheduleSlots ScheduleSlot[]
+  dormitoryRoom DormitoryRoom[]
+  scheduleSlots ScheduleSlot[]
 }
 
 model DormitoryRoom {
-    id          String    @id @default(cuid())
-    name        String
-    dormitory   Dormitory @relation(fields: [dormitoryId], references: [id])
-    dormitoryId String
-    students    Student[]
+  id          String    @id @default(cuid())
+  name        String
+  dormitory   Dormitory @relation(fields: [dormitoryId], references: [id])
+  dormitoryId String
+  students    Student[]
 }
 
 model DormitoryHistory {
-    id                 String          @id @default(uuid())
-    studentId          String
-    dormitoryId        String
-    startDate          DateTime
-    endDate            DateTime?
-    status             DormitoryStatus
-    dormNameAtThatTime String
+  id                 String          @id @default(uuid())
+  studentId          String
+  dormitoryId        String
+  startDate          DateTime
+  endDate            DateTime?
+  status             DormitoryStatus
+  dormNameAtThatTime String
 
-    student   Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
-    dormitory Dormitory @relation(fields: [dormitoryId], references: [id])
+  student   Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  dormitory Dormitory @relation(fields: [dormitoryId], references: [id])
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    @@index([studentId]) // <-- TAMBAHKAN INI
-    @@index([dormitoryId]) // <-- TAMBAHKAN INI
+  @@index([studentId]) // <-- TAMBAHKAN INI
+  @@index([dormitoryId]) // <-- TAMBAHKAN INI
 }
 
 // AKADEMIK
 model Track {
-    id              String           @id @default(uuid()) // Fan
-    name            String
-    targetDays      Int              @default(0)
-    classes         Class[]
-    subjects        Subject[]
-    createdAt       DateTime         @default(now())
-    updatedAt       DateTime         @updatedAt
-    dormitoryTracks DormitoryTrack[] // pivot relasi ke dormitory
-    level           Int?             @default(0)
+  id              String           @id @default(uuid()) // Fan
+  name            String
+  targetDays      Int              @default(0)
+  classes         Class[]
+  subjects        Subject[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  dormitoryTracks DormitoryTrack[] // pivot relasi ke dormitory
+  level           Int?             @default(0)
 
-    sks Sks[]
+  sks Sks[]
 }
 
 model Sks {
-    id               String             @id @default(uuid())
-    name             String
-    Track            Track?             @relation(fields: [trackId], references: [id])
-    trackId          String?
-    passingGrade     Int?               @default(0)
-    testRegistration TestRegistration[]
+  id               String             @id @default(uuid())
+  name             String
+  Track            Track?             @relation(fields: [trackId], references: [id])
+  trackId          String?
+  passingGrade     Int?               @default(0)
+  testRegistration TestRegistration[]
 }
 
 model TestRegistration {
-    id          String             @id @default(uuid())
-    studentId   String
-    sksId       String
-    scheduledAt DateTime?
-    status      RegistrationStatus @default(PENDING)
-    createdAt   DateTime           @default(now())
+  id          String             @id @default(uuid())
+  studentId   String
+  sksId       String
+  scheduledAt DateTime?
+  status      RegistrationStatus @default(PENDING)
+  createdAt   DateTime           @default(now())
 
-    student   Student  @relation(fields: [studentId], references: [id])
-    sks       Sks      @relation(fields: [sksId], references: [id])
-    test      Test?
-    Subject   Subject? @relation(fields: [subjectId], references: [id])
-    subjectId String?
+  student   Student  @relation(fields: [studentId], references: [id])
+  sks       Sks      @relation(fields: [sksId], references: [id])
+  test      Test?
+  Subject   Subject? @relation(fields: [subjectId], references: [id])
+  subjectId String?
 
-    @@index([studentId]) // <-- TAMBAHKAN
-    @@index([sksId]) // <-- TAMBAHKAN
-    @@index([status]) // <-- TAMBAHKAN
-    @@index([subjectId]) // <-- TAMBAHKAN
+  @@index([studentId]) // <-- TAMBAHKAN
+  @@index([sksId]) // <-- TAMBAHKAN
+  @@index([status]) // <-- TAMBAHKAN
+  @@index([subjectId]) // <-- TAMBAHKAN
 }
 
 model Test {
-    id             String   @id @default(uuid())
-    registrationId String   @unique
-    score          Float
-    passed         Boolean
-    attemptNumber  Int
-    createdAt      DateTime @default(now())
+  id             String   @id @default(uuid())
+  registrationId String   @unique
+  score          Float
+  passed         Boolean
+  attemptNumber  Int
+  createdAt      DateTime @default(now())
 
-    registration TestRegistration @relation(fields: [registrationId], references: [id])
+  registration TestRegistration @relation(fields: [registrationId], references: [id])
 }
 
 enum RegistrationStatus {
-    PENDING
-    COMPLETED
-    CANCELLED
+  PENDING
+  COMPLETED
+  CANCELLED
 }
 
 model Subject {
-    id               String                @id @default(uuid())
-    name             String
-    trackId          String
-    track            Track                 @relation(fields: [trackId], references: [id])
-    // histories    History[]
-    schedules        Schedule[]
-    teacherLinks     TeacherSubjectClass[]
-    createdAt        DateTime              @default(now())
-    updatedAt        DateTime              @updatedAt
-    TestRegistration TestRegistration[]
+  id               String                @id @default(uuid())
+  name             String
+  trackId          String
+  track            Track                 @relation(fields: [trackId], references: [id])
+  // histories    History[]
+  schedules        Schedule[]
+  teacherLinks     TeacherSubjectClass[]
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  TestRegistration TestRegistration[]
 
-    @@index([name]) // <-- TAMBAHKAN
-    @@index([trackId]) // <-- TAMBAHKAN
+  @@index([name]) // <-- TAMBAHKAN
+  @@index([trackId]) // <-- TAMBAHKAN
 }
 
 model TeacherDormitory {
-    teacherId   String
-    dormitoryId String
+  teacherId   String
+  dormitoryId String
 
-    teacher   Teacher   @relation(fields: [teacherId], references: [id])
-    dormitory Dormitory @relation(fields: [dormitoryId], references: [id])
+  teacher   Teacher   @relation(fields: [teacherId], references: [id])
+  dormitory Dormitory @relation(fields: [dormitoryId], references: [id])
 
-    @@id([teacherId, dormitoryId])
+  @@id([teacherId, dormitoryId])
 }
 
 model DormitoryTrack {
-    dormitoryId String
-    trackId     String
+  dormitoryId String
+  trackId     String
 
-    dormitory Dormitory @relation(fields: [dormitoryId], references: [id])
-    track     Track     @relation(fields: [trackId], references: [id])
+  dormitory Dormitory @relation(fields: [dormitoryId], references: [id])
+  track     Track     @relation(fields: [trackId], references: [id])
 
-    @@id([dormitoryId, trackId])
+  @@id([dormitoryId, trackId])
 }
 
 model Class {
-    id          String @id @default(uuid())
-    name        String // e.g., "Ubudiyah - Ust Umam"
-    teacher     String // Wali kelas
-    trackId     String
-    dormitoryId String
+  id          String @id @default(uuid())
+  name        String // e.g., "Ubudiyah - Ust Umam"
+  teacher     String // Wali kelas
+  trackId     String
+  dormitoryId String
 
-    track     Track     @relation(fields: [trackId], references: [id])
-    dormitory Dormitory @relation(fields: [dormitoryId], references: [id])
+  track     Track     @relation(fields: [trackId], references: [id])
+  dormitory Dormitory @relation(fields: [dormitoryId], references: [id])
 
-    active Boolean? @default(true)
+  active Boolean? @default(true)
 
-    histories    History[]
-    schedules    Schedule[]
-    teacherLinks TeacherSubjectClass[]
+  histories    History[]
+  schedules    Schedule[]
+  teacherLinks TeacherSubjectClass[]
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    @@index([trackId]) // <-- TAMBAHKAN
-    @@index([dormitoryId]) // <-- TAMBAHKAN
-    @@index([active]) // <-- TAMBAHKAN
+  @@index([trackId]) // <-- TAMBAHKAN
+  @@index([dormitoryId]) // <-- TAMBAHKAN
+  @@index([active]) // <-- TAMBAHKAN
 }
 
 model TeacherSubjectClass {
-    id        String @id @default(uuid())
-    teacherId String
-    subjectId String
-    classId   String
+  id        String @id @default(uuid())
+  teacherId String
+  subjectId String
+  classId   String
 
-    teacher Teacher @relation(fields: [teacherId], references: [id])
-    subject Subject @relation(fields: [subjectId], references: [id])
-    class   Class   @relation(fields: [classId], references: [id])
+  teacher Teacher @relation(fields: [teacherId], references: [id])
+  subject Subject @relation(fields: [subjectId], references: [id])
+  class   Class   @relation(fields: [classId], references: [id])
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model History {
-    id        String        @id @default(uuid())
-    studentId String
-    classId   String
-    // subjectId String
-    startDate DateTime      @default(now())
-    endDate   DateTime?
-    status    HistoryStatus
-    score     Int?
+  id        String        @id @default(uuid())
+  studentId String
+  classId   String
+  // subjectId String
+  startDate DateTime      @default(now())
+  endDate   DateTime?
+  status    HistoryStatus
+  score     Int?
 
-    classNameAtThatTime    String?
-    classTeacherAtThatTime String?
-    dormNameAtThatTime     String?
-    trackNameAtThatTime    String?
+  classNameAtThatTime    String?
+  classTeacherAtThatTime String?
+  dormNameAtThatTime     String?
+  trackNameAtThatTime    String?
 
-    student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
-    class   Class   @relation(fields: [classId], references: [id])
-    // subject Subject @relation(fields: [subjectId], references: [id])
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  class   Class   @relation(fields: [classId], references: [id])
+  // subject Subject @relation(fields: [subjectId], references: [id])
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    @@index([classId, status, studentId])
-    @@index([studentId]) // <-- TAMBAHKAN INI
+  @@index([classId, status, studentId])
+  @@index([studentId]) // <-- TAMBAHKAN INI
 }
 
 // JADWAL
 model ScheduleSlot {
-    id        String @id @default(uuid())
-    slot      Int // Jam ke-n
-    startTime String // ex: "07:00"
-    endTime   String
+  id        String @id @default(uuid())
+  slot      Int // Jam ke-n
+  startTime String // ex: "07:00"
+  endTime   String
 
-    dormitoryId String
-    dormitory   Dormitory  @relation(fields: [dormitoryId], references: [id])
-    schedules   Schedule[]
+  dormitoryId String
+  dormitory   Dormitory  @relation(fields: [dormitoryId], references: [id])
+  schedules   Schedule[]
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Schedule {
-    id             String @id @default(uuid())
-    classId        String
-    subjectId      String
-    teacherId      String
-    scheduleSlotId String
-    dayOfWeek      Int // 1 = Senin, ..., 7 = Ahad
+  id             String @id @default(uuid())
+  classId        String
+  subjectId      String
+  teacherId      String
+  scheduleSlotId String
+  dayOfWeek      Int // 1 = Senin, ..., 7 = Ahad
 
-    class        Class        @relation(fields: [classId], references: [id])
-    subject      Subject      @relation(fields: [subjectId], references: [id])
-    teacher      Teacher      @relation(fields: [teacherId], references: [id])
-    scheduleSlot ScheduleSlot @relation(fields: [scheduleSlotId], references: [id])
+  class        Class        @relation(fields: [classId], references: [id])
+  subject      Subject      @relation(fields: [subjectId], references: [id])
+  teacher      Teacher      @relation(fields: [teacherId], references: [id])
+  scheduleSlot ScheduleSlot @relation(fields: [scheduleSlotId], references: [id])
 
-    absences Absence[]
+  absences Absence[]
 
-    createdAt      DateTime         @default(now())
-    updatedAt      DateTime         @updatedAt
-    teacherAbsence TeacherAbsence[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  teacherAbsence TeacherAbsence[]
 
-    @@index([classId, dayOfWeek]) // <-- TAMBAHKAN
-    @@index([teacherId, dayOfWeek]) // <-- TAMBAHKAN
+  @@index([classId, dayOfWeek]) // <-- TAMBAHKAN
+  @@index([teacherId, dayOfWeek]) // <-- TAMBAHKAN
 }
 
 // ABSENSI SANTRI
 model Absence {
-    id             String        @id @default(uuid())
-    studentId      String
-    scheduleId     String
-    date           DateTime
-    absentDate     String        @default("")
-    status         AbsenceStatus
-    autoFromPermit Boolean       @default(false)
-    note           String?
+  id             String        @id @default(uuid())
+  studentId      String
+  scheduleId     String
+  date           DateTime
+  absentDate     String        @default("")
+  status         AbsenceStatus
+  autoFromPermit Boolean       @default(false)
+  note           String?
 
-    filledByTeacherId String? // Guru yang melakukan absensi
-    filledByTeacher   Teacher? @relation(fields: [filledByTeacherId], references: [id])
+  filledByTeacherId String? // Guru yang melakukan absensi
+  filledByTeacher   Teacher? @relation(fields: [filledByTeacherId], references: [id])
 
-    student  Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
-    schedule Schedule @relation(fields: [scheduleId], references: [id])
+  student  Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  schedule Schedule @relation(fields: [scheduleId], references: [id])
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    @@unique([studentId, scheduleId, absentDate])
-    @@index([absentDate]) // <-- TAMBAHKAN
-    @@index([scheduleId]) // <-- TAMBAHKAN
+  @@unique([studentId, scheduleId, absentDate])
+  @@index([absentDate]) // <-- TAMBAHKAN
+  @@index([scheduleId]) // <-- TAMBAHKAN
 }
 
 // PERIZINAN SANTRI
 model Permit {
-    id           String        @id @default(uuid())
-    studentId    String
-    startDate    DateTime
-    endDate      DateTime
-    allowedSlots Int[] // Contoh: [1, 3, 5]
-    reason       String
-    permitSTatus AbsenceStatus
-    student      Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
-    createdAt    DateTime      @default(now())
-    updatedAt    DateTime      @updatedAt
+  id           String        @id @default(uuid())
+  studentId    String
+  startDate    DateTime
+  endDate      DateTime
+  allowedSlots Int[] // Contoh: [1, 3, 5]
+  reason       String
+  permitSTatus AbsenceStatus
+  student      Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 
-    @@index([studentId]) // <-- TAMBAHKAN
-    @@index([startDate, endDate]) // <-- TAMBAHKAN
+  @@index([studentId]) // <-- TAMBAHKAN
+  @@index([startDate, endDate]) // <-- TAMBAHKAN
 }
 
 // ABSENSI GURU PER HARI
 model TeacherAbsence {
-    id         String        @id @default(uuid())
-    teacherId  String
-    scheduleId String
-    date       DateTime
-    status     AbsenceStatus
-    note       String?
+  id         String        @id @default(uuid())
+  teacherId  String
+  scheduleId String
+  date       DateTime
+  status     AbsenceStatus
+  note       String?
 
-    teacher   Teacher  @relation(fields: [teacherId], references: [id])
-    schedule  Schedule @relation(fields: [scheduleId], references: [id])
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  teacher   Teacher  @relation(fields: [teacherId], references: [id])
+  schedule  Schedule @relation(fields: [scheduleId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    @@unique([teacherId, scheduleId, date])
-    @@index([teacherId, date])
-    @@index(teacherId)
-    @@index([scheduleId])
+  @@unique([teacherId, scheduleId, date])
+  @@index([teacherId, date])
+  @@index(teacherId)
+  @@index([scheduleId])
 }
 
 model Province {
-    id   Int    @id @default(autoincrement())
-    name String
-    code String
+  id   Int    @id @default(autoincrement())
+  name String
+  code String
 
-    regencies Regency[]
+  regencies Regency[]
 
-    @@index([name])
+  @@index([name])
 }
 
 model Regency {
-    id        Int        @id @default(autoincrement())
-    name      String
-    label     String?
-    type      String?
-    code      String
-    fullCode  String
-    districts District[]
+  id        Int        @id @default(autoincrement())
+  name      String
+  label     String?
+  type      String?
+  code      String
+  fullCode  String
+  districts District[]
 
-    provinceId Int
-    province   Province @relation(fields: [provinceId], references: [id])
+  provinceId Int
+  province   Province @relation(fields: [provinceId], references: [id])
 
-    @@index([provinceId])
-    @@index([name])
-    @@index([label])
+  @@index([provinceId])
+  @@index([name])
+  @@index([label])
 }
 
 model District {
-    id       Int       @id @default(autoincrement())
-    name     String
-    code     String
-    fullCode String
-    villages Village[]
+  id       Int       @id @default(autoincrement())
+  name     String
+  code     String
+  fullCode String
+  villages Village[]
 
-    regencyId Int
-    regency   Regency @relation(fields: [regencyId], references: [id])
+  regencyId Int
+  regency   Regency @relation(fields: [regencyId], references: [id])
 
-    @@index([regencyId])
-    @@index([name])
+  @@index([regencyId])
+  @@index([name])
 }
 
 model Village {
-    id         Int    @id @default(autoincrement())
-    name       String
-    code       String
-    fullCode   String
-    postalCode String
+  id         Int    @id @default(autoincrement())
+  name       String
+  code       String
+  fullCode   String
+  postalCode String
 
-    districtId Int
-    district   District  @relation(fields: [districtId], references: [id])
-    students   Student[]
+  districtId Int
+  district   District  @relation(fields: [districtId], references: [id])
+  students   Student[]
 
-    @@index([districtId])
-    @@index([name])
+  @@index([districtId])
+  @@index([name])
 }
 
 // model Student {

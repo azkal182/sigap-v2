@@ -88,7 +88,8 @@ interface StudentImportPayloadV2 {
 
   // Properti baru yang dikirim dari frontend:
   dormitoryId: string // Wajib, karena sudah divalidasi oleh Zod di frontend
-  dormitoryName: string // Wajib, karena sudah divalidasi oleh Zod di frontend
+  dormitoryName: string // Wajib, karena sudah divalidasi oleh Zod di frontend,
+  gender: 'PUTRA' | 'PUTRI' | null
 
   // Properti yang ditambahkan oleh validasi server-side di frontend
   __wilayahData?: {
@@ -215,6 +216,7 @@ export const createStudentFromImportDataV2 = async (data: StudentImportPayloadV2
         fatherName: fatherName || null,
         motherName: motherName || null,
         parrentPhone: parrentPhone || null,
+        gender: data.gender,
 
         // --- Tambahkan kolom-kolom tambahan ke data student ---
         status: statusKeaktifan ? (statusKeaktifan.toLocaleLowerCase() === 'active' ? 'ACTIVE' : undefined) : undefined, // Sesuaikan dengan nama field di model Prisma Anda

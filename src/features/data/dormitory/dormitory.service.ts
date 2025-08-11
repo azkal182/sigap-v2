@@ -1,12 +1,15 @@
 'use server'
 import db from '@/lib/prisma'
-import { HistoryStatus, Prisma } from '@/generated/prisma'
+import { $Enums, HistoryStatus, Prisma } from '@/generated/prisma'
 import type { CreateScheduleInput, FilterDormitoryParams, TrackFormSchema } from './schemas/dormitory-schema'
 import type { APIError, APIPaginatedResult, APIResult } from '@/types/api-types'
+
+import GenderType = $Enums.GenderType
 
 export type DormitoryItem = {
   id: string
   name: string
+  gender: GenderType | null
 }
 
 export type DormitoryResponse = APIPaginatedResult<DormitoryItem[]>
@@ -123,7 +126,7 @@ export async function getDormitoriesFilter(
     const { page = 1, limit = 10, search = '', dormitoryId = '', sortBy = 'name', sortOrder = 'asc' } = options
 
     const skip = (page - 1) * limit
-    const allowedSortFields = ['name'] as const
+    const allowedSortFields = ['name', 'gender'] as const
     const safeSortBy = allowedSortFields.includes(sortBy) ? sortBy : 'name'
 
     const whereCondition: Prisma.DormitoryWhereInput = {
@@ -143,7 +146,7 @@ export async function getDormitoriesFilter(
       take: limit,
       where: whereCondition,
       orderBy,
-      select: { id: true, name: true }
+      select: { id: true, name: true, gender: true }
     })
 
     return {
@@ -180,6 +183,7 @@ export async function getDormitoryDetail(dormitoryId: string): Promise<Dormitory
       select: {
         id: true,
         name: true,
+        gender: true,
         dormitoryTracks: {
           select: {
             track: {
@@ -215,6 +219,7 @@ export async function getDormitoryDetail(dormitoryId: string): Promise<Dormitory
       data: {
         id: dormitory.id,
         name: dormitory.name,
+        gender: dormitory.gender,
         tracks: dormitory.dormitoryTracks
           .map(dt => ({
             id: dt.track.id,
