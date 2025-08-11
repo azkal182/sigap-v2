@@ -122,6 +122,7 @@ jobs:
           echo "HUSKY=0" >> .env
           echo "NODE_ENV=${{ matrix.env }}" >> .env
           echo "NEXT_PUBLIC_IS_PRODUCTION=${{ matrix.env }}" >> .env
+          echo "NEXT_PUBLIC_APP_VERSION=${{ needs.start_notify.outputs.project_version || '1.0.0' }}" >> .env
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
