@@ -10,7 +10,7 @@ export type Pagination = {
 export type APIResponse<T> = {
   success: true
   data: T
-  pagination?: Pagination
+
   message?: string
 }
 
@@ -26,7 +26,7 @@ export type APIResult<T> = APIResponse<T> | APIError
 export type APIPaginatedResponse<T> = {
   success: true
   data: T
-  pagination: Pagination // wajib ada
+  pagination: Pagination
   message?: string
 }
 

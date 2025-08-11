@@ -1,58 +1,65 @@
 import { NextResponse } from 'next/server'
 
-import { z } from 'zod'
-
 import { getScheduleAction } from '@/actions/schedule-action'
+import { withAuth } from '@/lib/api/withAuth'
 
-// Validasi query param dengan Zod
-const querySchema = z.object({
-  classId: z.string().optional(),
-  teacherId: z.string().optional(),
-  userId: z.string().optional()
+export const GET = withAuth(async (req, user) => {
+  try {
+    const data = await getScheduleAction({ userId: user.id })
+
+    return NextResponse.json(data)
+  } catch (error) {}
 })
 
-export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url)
+// Validasi query param dengan Zod
+// const querySchema = z.object({
+//   classId: z.string().optional(),
+//   teacherId: z.string().optional(),
+//   userId: z.string().optional()
+// })
 
-    const query = {
-      classId: searchParams.get('classId') || undefined,
-      teacherId: searchParams.get('teacherId') || undefined,
-      userId: searchParams.get('userId') || undefined
-    }
+// export async function GET(request: Request) {
+//   try {
+//     const { searchParams } = new URL(request.url)
 
-    console.log('Received query:', JSON.stringify(query, null, 2))
+//     const query = {
+//       classId: searchParams.get('classId') || undefined,
+//       teacherId: searchParams.get('teacherId') || undefined,
+//       userId: searchParams.get('userId') || undefined
+//     }
 
-    const parseResult = querySchema.safeParse(query)
+//     console.log('Received query:', JSON.stringify(query, null, 2))
 
-    if (!parseResult.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Invalid query parameters',
-          issues: parseResult.error.format()
-        },
-        { status: 400 }
-      )
-    }
+//     const parseResult = querySchema.safeParse(query)
 
-    const scheduleResponse = await getScheduleAction(parseResult.data)
+//     if (!parseResult.success) {
+//       return NextResponse.json(
+//         {
+//           success: false,
+//           error: 'Invalid query parameters',
+//           issues: parseResult.error.format()
+//         },
+//         { status: 400 }
+//       )
+//     }
 
-    console.log(JSON.stringify(scheduleResponse, null, 2))
+//     const scheduleResponse = await getScheduleAction(parseResult.data)
 
-    if (!scheduleResponse.success) {
-      return NextResponse.json(scheduleResponse, { status: 404 })
-    }
+//     console.log(JSON.stringify(scheduleResponse, null, 2))
 
-    return NextResponse.json(scheduleResponse)
-  } catch (error: any) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Internal Server Error',
-        issues: { general: [error.message || 'Unknown error'] }
-      },
-      { status: 500 }
-    )
-  }
-}
+//     if (!scheduleResponse.success) {
+//       return NextResponse.json(scheduleResponse, { status: 404 })
+//     }
+
+//     return NextResponse.json(scheduleResponse)
+//   } catch (error: any) {
+//     return NextResponse.json(
+//       {
+//         success: false,
+//         error: 'Internal Server Error',
+//         issues: { general: [error.message || 'Unknown error'] }
+//       },
+//       { status: 500 }
+//     )
+//   }
+// }

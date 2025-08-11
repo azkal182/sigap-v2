@@ -2,6 +2,8 @@
 
 import { z } from 'zod'
 
+import { DateTime } from 'luxon'
+
 import { createAbsences, getClassAbsences, updateAbsences } from './attandence.service'
 import {
   createAbsencesSchema,
@@ -37,12 +39,13 @@ export async function createAbsencesAction(
 ): Promise<APIResult<{ count: number }>> {
   try {
     const { data, filledByTeacherId, absentDate } = createAbsencesActionSchema.parse(input)
+    const jakartaDateTime = DateTime.fromISO(absentDate, { zone: 'utc' }).setZone('Asia/Jakarta')
 
     // ✅ Tambahkan date dan absentDate ke data sebelum dikirim ke service
     const absencesData = data.map(item => ({
       ...item,
       date: new Date(absentDate), // Gunakan date dari klien
-      absentDate: new Date(absentDate).toISOString().split('T')[0] // Format YYYY-MM-DD
+      absentDate: jakartaDateTime.toFormat('yyyy-MM-dd') // Format YYYY-MM-DD
     }))
 
     const scheduleId = absencesData[0]?.scheduleId

@@ -3,6 +3,8 @@ import { DateTime } from 'luxon'
 import db from '@/lib/prisma'
 import type { FilterStudentParams } from './schemas/student-schema'
 import { HistoryStatus, Prisma, RegistrationStatus, StudentStatus } from '@/generated/prisma'
+import { handleServerError } from '@/lib/handle-error'
+import type { APIPaginatedResult, APIResult } from '@/types/api-types'
 
 export type StudentItem = {
   id: string
@@ -54,213 +56,184 @@ export type StudentHistory = {
   trackDuration?: number
 }
 
-export type PaginationMeta = {
-  total: number
-  page: number
-  limit: number
-  totalPages: number
-  hasNext: boolean
-  hasPrev: boolean
-}
+export async function getStudentsWithFilter(options: FilterStudentParams): Promise<APIPaginatedResult<StudentItem[]>> {
+  try {
+    const {
+      page = 1,
+      limit = 10,
+      search = '', //name or nis
+      classId = '',
+      trackId = '',
+      dormitoryId = '',
+      sortBy = 'name',
+      sortOrder = 'asc',
+      dormitoryIds = []
+    } = options
 
-export type StudentListSuccess = {
-  success: true
-  data: StudentItem[]
-  pagination: PaginationMeta
-}
+    const skip = (page - 1) * limit
+    const allowedSortFields = ['name', 'nis', 'id', 'activeDormitory'] as const
+    const safeSortBy = allowedSortFields.includes(sortBy) ? sortBy : 'name'
 
-export type StudentListError = {
-  success: false
-  error: string
-  issues?: Record<string, string[]>
-}
-export type StudentOptionRespose = {
-  success: true
-  data: {
-    id: string
-    name: string
-    disabled?: boolean
-  }[]
-}
-
-export type StudentListResponse = StudentListSuccess | StudentListError
-
-export async function getStudentsWithFilter(options: FilterStudentParams): Promise<StudentListSuccess> {
-  const {
-    page = 1,
-    limit = 10,
-    search = '', //name or nis
-    classId = '',
-    trackId = '',
-    dormitoryId = '',
-    sortBy = 'name',
-    sortOrder = 'asc',
-    dormitoryIds = []
-  } = options
-
-  const skip = (page - 1) * limit
-  const allowedSortFields = ['name', 'nis', 'id', 'activeDormitory'] as const
-  const safeSortBy = allowedSortFields.includes(sortBy) ? sortBy : 'name'
-
-  const whereCondition: Prisma.StudentWhereInput = {
-    AND: [
-      ...(search
-        ? [
-            {
-              OR: [
-                { name: { contains: search, mode: Prisma.QueryMode.insensitive }, status: StudentStatus.ACTIVE },
-                { nis: { contains: search, mode: Prisma.QueryMode.insensitive }, status: StudentStatus.ACTIVE }
-              ]
-            }
-          ]
-        : []),
-
-      ...(classId
-        ? [
-            {
-              status: StudentStatus.ACTIVE,
-              histories: {
-                some: {
-                  status: HistoryStatus.STUDYING,
-                  classId: classId // pastikan classId sesuai tipe
-                }
+    const whereCondition: Prisma.StudentWhereInput = {
+      AND: [
+        ...(search
+          ? [
+              {
+                OR: [
+                  { name: { contains: search, mode: Prisma.QueryMode.insensitive }, status: StudentStatus.ACTIVE },
+                  { nis: { contains: search, mode: Prisma.QueryMode.insensitive }, status: StudentStatus.ACTIVE }
+                ]
               }
-            }
-          ]
-        : []),
+            ]
+          : []),
 
-      ...(trackId
-        ? [
-            {
-              status: StudentStatus.ACTIVE,
-              histories: {
-                some: {
-                  status: HistoryStatus.STUDYING,
-                  class: {
-                    trackId
+        ...(classId
+          ? [
+              {
+                status: StudentStatus.ACTIVE,
+                histories: {
+                  some: {
+                    status: HistoryStatus.STUDYING,
+                    classId: classId // pastikan classId sesuai tipe
                   }
                 }
               }
-            }
-          ]
-        : []),
+            ]
+          : []),
 
-      ...(dormitoryId
-        ? [
-            {
-              status: StudentStatus.ACTIVE,
-              dormitoryHistories: {
-                some: {
-                  dormitoryId: dormitoryId,
-                  endDate: null
+        ...(trackId
+          ? [
+              {
+                status: StudentStatus.ACTIVE,
+                histories: {
+                  some: {
+                    status: HistoryStatus.STUDYING,
+                    class: {
+                      trackId
+                    }
+                  }
                 }
               }
-            }
-          ]
-        : []),
-      ...(dormitoryIds.length > 0
-        ? [
-            {
-              status: StudentStatus.ACTIVE,
-              dormitoryHistories: {
-                some: {
-                  dormitoryId: {
-                    in: dormitoryIds
-                  },
-                  endDate: null
+            ]
+          : []),
+
+        ...(dormitoryId
+          ? [
+              {
+                status: StudentStatus.ACTIVE,
+                dormitoryHistories: {
+                  some: {
+                    dormitoryId: dormitoryId,
+                    endDate: null
+                  }
                 }
               }
+            ]
+          : []),
+        ...(dormitoryIds.length > 0
+          ? [
+              {
+                status: StudentStatus.ACTIVE,
+                dormitoryHistories: {
+                  some: {
+                    dormitoryId: {
+                      in: dormitoryIds
+                    },
+                    endDate: null
+                  }
+                }
+              }
+            ]
+          : [])
+      ]
+    }
+
+    const total = await db.student.count({ where: whereCondition })
+
+    const orderBy =
+      safeSortBy === 'activeDormitory'
+        ? { dormitory: { name: sortOrder } }
+        : allowedSortFields.includes(safeSortBy)
+          ? { [safeSortBy]: sortOrder }
+          : { name: sortOrder }
+
+    const students = await db.student.findMany({
+      skip,
+      take: limit,
+      where: whereCondition,
+      orderBy,
+      select: {
+        id: true,
+        name: true,
+        nis: true,
+        gender: true,
+        fatherName: true,
+        motherName: true,
+        parrentPhone: true,
+        placeOfBirth: true,
+        dateOfBirth: true,
+        positionHistoryLeadership: {
+          where: {
+            termLeadership: {
+              startDate: { lte: new Date() }, // Kurang dari atau sama dengan tanggal sekarang
+              endDate: { gte: new Date() }
             }
-          ]
-        : [])
-    ]
-  }
-
-  const total = await db.student.count({ where: whereCondition })
-
-  const orderBy =
-    safeSortBy === 'activeDormitory'
-      ? { dormitory: { name: sortOrder } }
-      : allowedSortFields.includes(safeSortBy)
-        ? { [safeSortBy]: sortOrder }
-        : { name: sortOrder }
-
-  const students = await db.student.findMany({
-    skip,
-    take: limit,
-    where: whereCondition,
-    orderBy,
-    select: {
-      id: true,
-      name: true,
-      nis: true,
-      gender: true,
-      fatherName: true,
-      motherName: true,
-      parrentPhone: true,
-      placeOfBirth: true,
-      dateOfBirth: true,
-      positionHistoryLeadership: {
-        where: {
-          termLeadership: {
-            startDate: { lte: new Date() }, // Kurang dari atau sama dengan tanggal sekarang
-            endDate: { gte: new Date() }
+          },
+          select: {
+            role: true,
+            leadership: {
+              select: {
+                name: true
+              }
+            }
           }
         },
-        select: {
-          role: true,
-          leadership: {
-            select: {
-              name: true
-            }
+        formalClass: {
+          select: {
+            id: true,
+            name: true
           }
-        }
-      },
-      formalClass: {
-        select: {
-          id: true,
-          name: true
-        }
-      },
-      dormitoryRoom: {
-        select: {
-          id: true,
-          name: true
-        }
-      },
-      dormitory: {
-        select: { name: true }
-      },
-      histories: {
-        // Mengambil hanya satu histori terbaru yang berstatus 'STUDYING'
-        where: { status: 'STUDYING' },
-        orderBy: { startDate: 'desc' },
-        take: 1,
-        select: {
-          startDate: true,
-          class: {
-            select: {
-              name: true,
-              track: {
-                select: {
-                  name: true,
-                  targetDays: true,
-                  sks: {
-                    select: {
-                      id: true,
-                      name: true,
-                      passingGrade: true,
-                      testRegistration: {
-                        // Ambil satu pendaftaran dengan attemptNumber tertinggi
-                        where: {
-                          status: RegistrationStatus.COMPLETED
-                        },
-                        orderBy: {
-                          test: { attemptNumber: 'desc' }
-                        },
-                        take: 1, // Mengambil hanya 1 data tertinggi
-                        include: {
-                          test: true
+        },
+        dormitoryRoom: {
+          select: {
+            id: true,
+            name: true
+          }
+        },
+        dormitory: {
+          select: { name: true }
+        },
+        histories: {
+          // Mengambil hanya satu histori terbaru yang berstatus 'STUDYING'
+          where: { status: 'STUDYING' },
+          orderBy: { startDate: 'desc' },
+          take: 1,
+          select: {
+            startDate: true,
+            class: {
+              select: {
+                name: true,
+                track: {
+                  select: {
+                    name: true,
+                    targetDays: true,
+                    sks: {
+                      select: {
+                        id: true,
+                        name: true,
+                        passingGrade: true,
+                        testRegistration: {
+                          // Ambil satu pendaftaran dengan attemptNumber tertinggi
+                          where: {
+                            status: RegistrationStatus.COMPLETED
+                          },
+                          orderBy: {
+                            test: { attemptNumber: 'desc' }
+                          },
+                          take: 1, // Mengambil hanya 1 data tertinggi
+                          include: {
+                            test: true
+                          }
                         }
                       }
                     }
@@ -269,355 +242,214 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
               }
             }
           }
-        }
-      },
-      village: {
-        select: {
-          district: {
-            select: {
-              regency: {
-                select: {
-                  id: true,
-                  label: true
+        },
+        village: {
+          select: {
+            district: {
+              select: {
+                regency: {
+                  select: {
+                    id: true,
+                    label: true
+                  }
                 }
               }
             }
           }
         }
       }
-    }
-  })
+    })
 
-  const formattedStudents: StudentItem[] = students
-    .map(s => {
-      const history = s.histories?.[0]
-      const leadership = s.positionHistoryLeadership.length > 0 ? s.positionHistoryLeadership[0] : null
+    const formattedStudents: StudentItem[] = students
+      .map(s => {
+        const history = s.histories?.[0]
+        const leadership = s.positionHistoryLeadership.length > 0 ? s.positionHistoryLeadership[0] : null
 
-      let targetDays: number | null = null
-      let daysStudied: number | null = null
-      let daysLeft: number | null = null
+        let targetDays: number | null = null
+        let daysStudied: number | null = null
+        let daysLeft: number | null = null
 
-      if (history) {
-        targetDays = history.class?.track?.targetDays || 0
+        if (history) {
+          targetDays = history.class?.track?.targetDays || 0
 
-        const firstDate = DateTime.fromISO(history.startDate.toISOString())
-        const now = DateTime.now()
+          const firstDate = DateTime.fromISO(history.startDate.toISOString())
+          const now = DateTime.now()
 
-        daysStudied = Math.floor(now.diff(firstDate, 'days').days)
-        daysLeft = targetDays - daysStudied
-      }
+          daysStudied = Math.floor(now.diff(firstDate, 'days').days)
+          daysLeft = targetDays - daysStudied
+        }
 
-      const baseData = {
-        id: s.id,
-        name: s.name,
-        gender: s.gender,
-        nis: s.nis,
-        activeDormitory: s.dormitory?.name || null,
-        fatherName: s.fatherName || null,
-        motherName: s.motherName || null,
-        parrentPhone: s.parrentPhone || null,
-        dormitoryRoom: s.dormitoryRoom ? s.dormitoryRoom.name : null,
-        dormitoryRoomId: s.dormitoryRoom ? s.dormitoryRoom.id : null,
-        formalClass: s.formalClass ? s.formalClass.name : null,
-        formalClassId: s.formalClass ? s.formalClass.id : null,
-        regency: s.village?.district.regency.label,
-        regencyId: s.village?.district.regency.id,
-        leadership: leadership
-          ? {
-              name: leadership.leadership.name,
-              status: leadership.role
+        const baseData = {
+          id: s.id,
+          name: s.name,
+          gender: s.gender,
+          nis: s.nis,
+          activeDormitory: s.dormitory?.name || null,
+          fatherName: s.fatherName || null,
+          motherName: s.motherName || null,
+          parrentPhone: s.parrentPhone || null,
+          dormitoryRoom: s.dormitoryRoom ? s.dormitoryRoom.name : null,
+          dormitoryRoomId: s.dormitoryRoom ? s.dormitoryRoom.id : null,
+          formalClass: s.formalClass ? s.formalClass.name : null,
+          formalClassId: s.formalClass ? s.formalClass.id : null,
+          regency: s.village?.district.regency.label,
+          regencyId: s.village?.district.regency.id,
+          leadership: leadership
+            ? {
+                name: leadership.leadership.name,
+                status: leadership.role
+              }
+            : null,
+          ttl:
+            s.placeOfBirth && s.dateOfBirth
+              ? `${s.placeOfBirth}, ${new Date(s.dateOfBirth).toLocaleDateString('id-ID', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                })}`
+              : null
+        }
+
+        if (history) {
+          const { track } = history.class
+
+          const sksList = track.sks.map(sksItem => {
+            const registration = sksItem.testRegistration[0]
+            const score = registration?.test?.score ?? null
+            const passed = registration?.test?.passed ?? false
+
+            let status = 'Belum Daftar'
+
+            if (registration) {
+              status = registration.test ? (passed ? 'Lulus' : 'Tidak Lulus') : 'Menunggu Ujian'
             }
-          : null,
-        ttl:
-          s.placeOfBirth && s.dateOfBirth
-            ? `${s.placeOfBirth}, ${new Date(s.dateOfBirth).toLocaleDateString('id-ID', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-              })}`
-            : null
-      }
 
-      if (history) {
-        const { track } = history.class
+            return {
+              subjectName: sksItem.name,
+              passingGrade: sksItem.passingGrade ?? 0,
+              score,
+              passed,
+              status
+            }
+          })
 
-        const sksList = track.sks.map(sksItem => {
-          const registration = sksItem.testRegistration[0]
-          const score = registration?.test?.score ?? null
-          const passed = registration?.test?.passed ?? false
+          const totalSks = sksList.length
+          const passedCount = sksList.filter(item => item.passed).length
 
-          let status = 'Belum Daftar'
-
-          if (registration) {
-            status = registration.test ? (passed ? 'Lulus' : 'Tidak Lulus') : 'Menunggu Ujian'
-          }
+          console.log(JSON.stringify(s.dormitory?.name, null, 2))
 
           return {
-            subjectName: sksItem.name,
-            passingGrade: sksItem.passingGrade ?? 0,
-            score,
-            passed,
-            status
+            ...baseData,
+            activeTrack: track?.name || null,
+            activeClass: history?.class?.name || null,
+            targetDays,
+            daysStudied,
+            daysLeft,
+            isAheadOfSchedule: daysLeft !== null ? daysLeft < 0 : null,
+            totalSks,
+            passedCount
           }
-        })
-
-        const totalSks = sksList.length
-        const passedCount = sksList.filter(item => item.passed).length
-
-        console.log(JSON.stringify(s.dormitory?.name, null, 2))
+        }
 
         return {
           ...baseData,
-          activeTrack: track?.name || null,
-          activeClass: history?.class?.name || null,
+          activeTrack: null, // ⬅️ Diperlukan agar sesuai dengan tipe StudentItem
+          activeClass: null,
           targetDays,
           daysStudied,
           daysLeft,
           isAheadOfSchedule: daysLeft !== null ? daysLeft < 0 : null,
-          totalSks,
-          passedCount
+          totalSks: 0,
+          passedCount: 0
         }
+      })
+      .sort((a, b) => {
+        if (safeSortBy === 'activeDormitory') {
+          const aDorm = a.activeDormitory || ''
+          const bDorm = b.activeDormitory || ''
+
+          return sortOrder === 'asc' ? aDorm.localeCompare(bDorm) : bDorm.localeCompare(aDorm)
+        }
+
+        return 0
+      })
+
+    const totalPages = Math.ceil(total / limit)
+
+    return {
+      success: true,
+      data: formattedStudents,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1
       }
-
-      return {
-        ...baseData,
-        activeTrack: null, // ⬅️ Diperlukan agar sesuai dengan tipe StudentItem
-        activeClass: null,
-        targetDays,
-        daysStudied,
-        daysLeft,
-        isAheadOfSchedule: daysLeft !== null ? daysLeft < 0 : null,
-        totalSks: 0,
-        passedCount: 0
-      }
-    })
-    .sort((a, b) => {
-      if (safeSortBy === 'activeDormitory') {
-        const aDorm = a.activeDormitory || ''
-        const bDorm = b.activeDormitory || ''
-
-        return sortOrder === 'asc' ? aDorm.localeCompare(bDorm) : bDorm.localeCompare(aDorm)
-      }
-
-      return 0
-    })
-
-  const totalPages = Math.ceil(total / limit)
-
-  return {
-    success: true,
-    data: formattedStudents,
-    pagination: {
-      total,
-      page,
-      limit,
-      totalPages,
-      hasNext: page < totalPages,
-      hasPrev: page > 1
     }
+  } catch (error) {
+    const message = handleServerError('Terjadi kesalahan saat mengambil santri.', error)
+
+    return { success: false, error: message }
   }
 }
 
-export async function getStudentOption(dormitoryIds?: string[]): Promise<StudentOptionRespose> {
-  const whereClause = dormitoryIds && dormitoryIds.length > 0 ? { dormitoryId: { in: dormitoryIds } } : {}
+export async function getStudentOption(dormitoryIds?: string[]): Promise<
+  APIResult<
+    {
+      id: string
+      name: string
+      disabled?: boolean
+    }[]
+  >
+> {
+  try {
+    const whereClause = dormitoryIds && dormitoryIds.length > 0 ? { dormitoryId: { in: dormitoryIds } } : {}
 
-  const students = await db.student.findMany({
-    where: whereClause,
-    include: {
-      histories: {
-        where: {
-          status: 'STUDYING'
-        },
-        include: {
-          class: {
-            include: {
-              dormitory: true
+    const students = await db.student.findMany({
+      where: whereClause,
+      include: {
+        histories: {
+          where: {
+            status: 'STUDYING'
+          },
+          include: {
+            class: {
+              include: {
+                dormitory: true
+              }
             }
           }
         }
       }
-    }
-  })
-
-  return {
-    success: true,
-    data: students.map(s => {
-      const studyingHistory = s.histories.find(h => h.status === 'STUDYING')
-      const className = studyingHistory?.class?.name
-      const dormName = studyingHistory?.class?.dormitory?.name
-      const isAssigned = Boolean(className || dormName)
-      const nameParts = [s.name]
-
-      if (dormName) nameParts.push(`Asrama: ${dormName}`)
-      if (className) nameParts.push(`Kelas: ${className}`)
-
-      return {
-        id: s.id,
-        name: nameParts.join(' | '),
-        disabled: isAssigned
-      }
     })
+
+    return {
+      success: true,
+      data: students.map(s => {
+        const studyingHistory = s.histories.find(h => h.status === 'STUDYING')
+        const className = studyingHistory?.class?.name
+        const dormName = studyingHistory?.class?.dormitory?.name
+        const isAssigned = Boolean(className || dormName)
+        const nameParts = [s.name]
+
+        if (dormName) nameParts.push(`Asrama: ${dormName}`)
+        if (className) nameParts.push(`Kelas: ${className}`)
+
+        return {
+          id: s.id,
+          name: nameParts.join(' | '),
+          disabled: isAssigned
+        }
+      })
+    }
+  } catch (error) {
+    const message = handleServerError('Terjadi kesalahan saat mengambil santri.', error)
+
+    return { success: false, error: message }
   }
 }
-
-// export async function getStudentDetail(id: string): Promise<StudentItem | null> {
-//   const student = await db.student.findFirst({
-//     where: {
-//       id,
-//       status: StudentStatus.ACTIVE
-//     },
-//     select: {
-//       id: true,
-//       name: true,
-//       nis: true,
-//       fatherName: true,
-//       motherName: true,
-//       parrentPhone: true,
-//       placeOfBirth: true,
-//       dateOfBirth: true,
-//       dormitory: {
-//         select: {
-//           name: true
-//         }
-//       },
-//       histories: {
-//         where: {
-//           status: HistoryStatus.STUDYING
-//         },
-//         orderBy: {
-//           startDate: 'asc'
-//         },
-//         select: {
-//           startDate: true,
-//           class: {
-//             select: {
-//               name: true,
-//               track: {
-//                 select: {
-//                   id: true,
-//                   targetDays: true,
-//                   name: true,
-//                   sks: true
-//                 }
-//               }
-//             }
-//           }
-//         }
-//       }
-//     }
-//   })
-
-//   if (!student) return null
-
-//   const histories = await db.history.findMany({
-//     where: {
-//       studentId: id
-//     },
-//     select: {
-//       classNameAtThatTime: true,
-//       dormNameAtThatTime: true,
-//       trackNameAtThatTime: true,
-//       startDate: true,
-//       endDate: true,
-//       status: true
-//     }
-//   })
-
-//   const history = student.histories[0]
-//   const lastHistory = student.histories[student.histories.length - 1]
-
-//   let targetDays = null
-//   let daysStudied = null
-//   let daysLeft = null
-
-//   if (student.histories.length > 0) {
-//     targetDays = lastHistory?.class?.track?.targetDays || 0
-
-//     const firstDate = DateTime.fromISO(student.histories[0].startDate.toISOString())
-//     const now = DateTime.now()
-
-//     daysStudied = Math.floor(now.diff(firstDate, 'days').days)
-//     daysLeft = targetDays - daysStudied
-//   }
-
-//   const ttl =
-//     student.placeOfBirth && student.dateOfBirth
-//       ? `${student.placeOfBirth}, ${new Date(student.dateOfBirth).toLocaleDateString('id-ID', {
-//           year: 'numeric',
-//           month: 'long',
-//           day: 'numeric'
-//         })}`
-//       : null
-
-//   const registrations = await db.testRegistration.findMany({
-//     where: {
-//       studentId: student.id,
-//       subjectId: {
-//         in: history.class.track.sks.map(s => s.id)
-//       }
-//     },
-//     include: {
-//       test: true
-//     }
-//   })
-
-//   const regMap = new Map(registrations.map(reg => [reg.subjectId, reg]))
-
-//   const sksList: sksItem[] = history.class.track.sks.map(s => {
-//     const reg = regMap.get(s.id)
-
-//     return {
-//       subjectName: s.name,
-//       passingGrade: s.passingGrade ?? 0,
-//       score: reg?.test?.score ?? null,
-//       passed: reg?.test?.passed ?? false,
-//       status: !reg ? 'Belum Daftar' : reg.test ? (reg.test.passed ? 'Lulus' : 'Tidak Lulus') : 'Menunggu Ujian'
-//     }
-//   })
-
-//   const totalSks = sksList.length
-//   const passedCount = sksList.filter(item => item.passed).length
-
-//   return {
-//     id: student.id,
-//     name: student.name,
-//     nis: student.nis,
-//     fatherName: student.fatherName || null,
-//     motherName: student.motherName || null,
-//     parrentPhone: student.parrentPhone || null,
-//     activeDormitory: student.dormitory?.name || null,
-//     activeClass: history?.class?.name || null,
-//     activeTrack: history?.class?.track.name || null,
-//     ttl,
-//     targetDays,
-//     daysStudied,
-//     daysLeft,
-//     isAheadOfSchedule: daysLeft ? daysLeft < 0 : null,
-//     sks: sksList,
-//     totalSks,
-//     passedCount,
-//     histories:
-//       histories.length > 0
-//         ? histories.map(h => {
-//             const start = DateTime.fromJSDate(h.startDate)
-//             const end = h.endDate ? DateTime.fromJSDate(h.endDate) : DateTime.now()
-
-//             daysStudied = end.diff(start, 'days').days
-
-//             const trackDuration = Math.floor(daysStudied)
-
-//             return {
-//               className: h.classNameAtThatTime,
-//               date: h.startDate,
-//               dormitoryName: h.dormNameAtThatTime,
-//               trackName: h.trackNameAtThatTime,
-//               status: h.status,
-//               trackDuration
-//             }
-//           })
-//         : []
-//   }
-// }
 
 export async function getStudentDetail(id: string): Promise<StudentItem | null> {
   // Ambil semua data yang diperlukan dalam satu query

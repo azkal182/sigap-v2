@@ -1,6 +1,5 @@
 // MUI Imports
 import InitColorSchemeScript from '@mui/material/InitColorSchemeScript'
-import { Bounce, ToastContainer } from 'react-toastify'
 
 // Third-party Imports
 import 'react-perfect-scrollbar/dist/css/styles.css'
@@ -42,19 +41,6 @@ const RootLayout = async (props: ChildrenType) => {
         <NextAuthProviders session={session}>
           <ReactQueryProviders>{children}</ReactQueryProviders>
         </NextAuthProviders>
-        <ToastContainer
-          position='bottom-right'
-          autoClose={5000}
-          hideProgressBar={false}
-          newestOnTop={false}
-          closeOnClick={false}
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-          theme='light'
-          transition={Bounce}
-        />{' '}
       </body>
     </html>
   )

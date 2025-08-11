@@ -68,9 +68,7 @@ const AddLeadershipMemberSchemaDialog: React.FC<LeadershipFormDialogProps> = ({
       <Controller
         name='studentId'
         control={control}
-        render={({ field }) => (
-          <StudentAutocomplete allowDisable value={field.value} onChange={(_, val) => field.onChange(val)} />
-        )}
+        render={({ field }) => <StudentAutocomplete value={field.value} onChange={(_, val) => field.onChange(val)} />}
       />
       <Controller
         name='notes'

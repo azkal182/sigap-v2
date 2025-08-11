@@ -1,17 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 
-import type { StudentItem, StudentListResponse } from './student.service'
+import type { StudentItem } from './student.service'
 import { getFilteredStudents, getStudentDetailAction, getStudentOptionAction } from './actions/user.action'
 import type { FilterStudentParams } from './schemas/student-schema'
-
-export const fetchStudents = async (params: Record<string, any>): Promise<StudentListResponse> => {
-  const query = new URLSearchParams(params).toString()
-  const res = await fetch(`/api/student?${query}`)
-
-  if (!res.ok) throw new Error('Failed to fetch')
-
-  return res.json()
-}
+import { ActionError } from '@/utils/action-error'
 
 export function useStudents(params: FilterStudentParams, isValid: boolean) {
   return useQuery({
@@ -37,6 +29,10 @@ export function useStudentOption(dormitoryIds?: string[]) {
     queryKey: ['student_options'],
     queryFn: async () => {
       const res = await getStudentOptionAction(dormitoryIds)
+
+      if (!res.success) {
+        throw new ActionError(res.error, res.issues)
+      }
 
       return {
         data: res.data

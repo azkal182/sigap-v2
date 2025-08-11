@@ -145,7 +145,8 @@ export async function updateTermLeadership(params: TermLeadershipInput): Promise
 export async function addLeadershipChairman(params: {
   studentId: string
   leadershipId: string
-  termLeadershipId: string
+
+  //   termLeadershipId: string
   notes?: string
 }): Promise<APIResult<PositionHistoryLeadership>> {
   const { studentId, leadershipId, notes } = params

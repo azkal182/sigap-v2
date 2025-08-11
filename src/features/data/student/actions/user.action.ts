@@ -2,30 +2,15 @@
 
 import { getStudentDetail, getStudentOption, getStudentsWithFilter } from '../student.service'
 import type { FilterStudentParams } from '../schemas/student-schema'
-import type { StudentItem, StudentListResponse, StudentOptionRespose } from '../student.service'
-import { handleServerError } from '@/lib/handle-error'
+import { filterStudentSchema } from '../schemas/student-schema'
+import type { StudentItem } from '../student.service'
+import { validateAndRun } from '@/utils/validate-and-run'
 
-export async function getFilteredStudents(params: FilterStudentParams): Promise<StudentListResponse> {
-  try {
-    console.log(params)
-    const result = await getStudentsWithFilter(params)
-
-    return {
-      ...result
-    }
-  } catch (error) {
-    // console.error('❌ Server Action Error:', error)
-
-    const message = handleServerError('Gagal mengambil data siswa', error)
-
-    return {
-      success: false,
-      error: message
-    }
-  }
+export async function getFilteredStudents(params: FilterStudentParams) {
+  return validateAndRun(filterStudentSchema, params, getStudentsWithFilter)
 }
 
-export async function getStudentOptionAction(dormitoryIds?: string[]): Promise<StudentOptionRespose> {
+export async function getStudentOptionAction(dormitoryIds?: string[]) {
   return getStudentOption(dormitoryIds)
 }
 

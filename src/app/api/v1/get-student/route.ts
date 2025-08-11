@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 
 import { DateTime } from 'luxon'
 
+import { withAuth } from '@/lib/api/withAuth'
 import prisma from '@/lib/prisma' // sesuaikan path prisma client
 import { AbsenceStatus } from '@/generated/prisma'
 
@@ -17,21 +18,15 @@ type StudentWithAbsence = {
   }
 }
 
-export async function GET(request: Request) {
+export const GET = withAuth(async (req, user) => {
   try {
-    const url = new URL(request.url)
-    const userId = url.searchParams.get('userId')
-    const dayOfWeekStr = url.searchParams.get('dayOfWeek')
-    const searchHourStr = url.searchParams.get('searchHour')
-    const searchMinuteStr = url.searchParams.get('searchMinute')
+    const userId = user.id
 
-    if (!userId || !dayOfWeekStr || !searchHourStr || !searchMinuteStr) {
-      return NextResponse.json({ error: 'Missing query parameters' }, { status: 400 })
-    }
-
-    const dayOfWeek = Number(dayOfWeekStr)
-    const searchHour = Number(searchHourStr)
-    const searchMinute = Number(searchMinuteStr)
+    // Ambil waktu saat ini di Asia/Jakarta
+    const now = DateTime.now().setZone('Asia/Jakarta')
+    const dayOfWeek = now.weekday // 1 = Senin, 7 = Minggu
+    const searchHour = now.hour
+    const searchMinute = now.minute
 
     const result = await getStudentsFromTeacherSchedule(userId, dayOfWeek, searchHour, searchMinute)
 
@@ -45,7 +40,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})
 
 async function getStudentsFromTeacherSchedule(
   userId: string,
@@ -57,11 +52,14 @@ async function getStudentsFromTeacherSchedule(
   scheduleId: string
   teacherId: string
   dormitoryName: string
+  subjectName: string
   students: StudentWithAbsence[]
 } | null> {
   try {
     const searchTime = `${String(searchHour).padStart(2, '0')}:${String(searchMinute).padStart(2, '0')}`
     const today = DateTime.now().toISODate()
+
+    console.log(today)
 
     const teacher = await prisma.teacher.findUnique({
       where: { userId },
@@ -106,6 +104,11 @@ async function getStudentsFromTeacherSchedule(
       select: {
         id: true,
         classId: true,
+        subject: {
+          select: {
+            name: true
+          }
+        },
         class: {
           select: {
             name: true
@@ -176,6 +179,8 @@ async function getStudentsFromTeacherSchedule(
 
     const studentsWithAbsence = students.map(student => {
       const existingAbsence = student.absences[0]
+
+      console.log('exiting, ', existingAbsence)
       const activePermit = student.permits[0]
 
       let defaultStatus: AbsenceStatus = AbsenceStatus.PRESENT
@@ -204,14 +209,15 @@ async function getStudentsFromTeacherSchedule(
       }
     })
 
-    console.log(JSON.stringify(studentsWithAbsence, null, 2))
+    // console.log(JSON.stringify(studentsWithAbsence, null, 2))
 
     return {
       className: schedule.class.name,
       dormitoryName: schedule.scheduleSlot.dormitory.name,
       students: studentsWithAbsence,
       scheduleId: schedule.id,
-      teacherId: teacher.id
+      teacherId: teacher.id,
+      subjectName: schedule.subject.name
     }
   } catch (error) {
     console.error('[ERROR] Terjadi kesalahan saat mencari siswa dari jadwal guru.', error)

@@ -39,7 +39,7 @@ export default function StudentAutocomplete({
   const options = data?.data || []
 
   const selectedOption = useMemo(() => {
-    return options.find(option => option.id === value) || null
+    return options.find((option: any) => option.id === value) || null
   }, [options, value])
 
   return (
