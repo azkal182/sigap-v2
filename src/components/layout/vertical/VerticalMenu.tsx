@@ -138,13 +138,14 @@ export const menuItems: MenuConfigSection[] = [
       }
     ]
   },
-  {
-    label: 'AKADEMIK',
-    items: [
-      { title: 'Daftar Tes', href: '/academic/test-registration', icon: 'tabler-users', permissions: ['user:view'] },
-      { title: 'Hasil Tes', href: '/academic/result-registration', icon: 'tabler-key', permissions: ['role:view'] }
-    ]
-  },
+
+  // {
+  //   label: 'AKADEMIK',
+  //   items: [
+  //     { title: 'Daftar Tes', href: '/academic/test-registration', icon: 'tabler-users', permissions: ['user:view'] },
+  //     { title: 'Hasil Tes', href: '/academic/result-registration', icon: 'tabler-key', permissions: ['role:view'] }
+  //   ]
+  // },
   {
     label: 'Data',
     items: [
