@@ -1,7 +1,12 @@
 'use server'
 import db from '@/lib/prisma'
 import { $Enums, HistoryStatus, Prisma } from '@/generated/prisma'
-import type { CreateScheduleInput, FilterDormitoryParams, TrackFormSchema } from './schemas/dormitory-schema'
+import type {
+  CreateScheduleInput,
+  CreateScheduleSlotInput,
+  FilterDormitoryParams,
+  TrackFormSchema
+} from './schemas/dormitory-schema'
 import type { APIError, APIPaginatedResult, APIResult } from '@/types/api-types'
 
 import GenderType = $Enums.GenderType
@@ -794,7 +799,12 @@ export async function assignStudentToClass({
   }
 }
 
-async function getTeacherConflictInfo(teacherId: string, dayOfWeek: number, scheduleSlotId: string) {
+async function getTeacherConflictInfo(
+  teacherId: string,
+  dayOfWeek: number,
+  scheduleSlotId: string,
+  excludeScheduleId?: string
+) {
   // 1. Ambil data slot target
   const targetSlot = await db.scheduleSlot.findUnique({
     where: { id: scheduleSlotId },
@@ -808,6 +818,7 @@ async function getTeacherConflictInfo(teacherId: string, dayOfWeek: number, sche
     where: {
       teacherId,
       dayOfWeek,
+      ...(excludeScheduleId && { id: { not: excludeScheduleId } }),
       scheduleSlot: {
         startTime: { lt: targetSlot.endTime },
         endTime: { gt: targetSlot.startTime }
@@ -836,10 +847,6 @@ async function getTeacherConflictInfo(teacherId: string, dayOfWeek: number, sche
 export const createSchedule = async (input: CreateScheduleInput): Promise<CreateScheduleResult> => {
   const { classId, subjectId, teacherId, scheduleSlotId, dayOfWeek } = input
 
-  // 1. Cek konflik guru di hari & slot yang sama
-  //   const teacherConflict = await db.schedule.findFirst({
-  //     where: { teacherId, dayOfWeek, scheduleSlotId }
-  //   })
   const teacherConflict = await getTeacherConflictInfo(teacherId, dayOfWeek, scheduleSlotId)
 
   if (teacherConflict) {
@@ -892,6 +899,76 @@ export const createSchedule = async (input: CreateScheduleInput): Promise<Create
   }
 }
 
+export const updateSchedule = async (input: CreateScheduleInput): Promise<CreateScheduleResult> => {
+  const { classId, subjectId, teacherId, scheduleSlotId, dayOfWeek, id } = input
+
+  if (!input.id) {
+    return {
+      success: false,
+      error: 'invalid parameter'
+    }
+  }
+
+  // 1. Cek konflik guru di hari & slot yang sama (abaikan jadwal ini sendiri)
+  const teacherConflict = await getTeacherConflictInfo(teacherId, dayOfWeek, scheduleSlotId, id)
+
+  if (teacherConflict) {
+    return {
+      success: false,
+      error: teacherConflict.message,
+      conflict: 'teacher'
+    }
+  }
+
+  // 2. Cek konflik kelas di hari & slot yang sama (abaikan jadwal ini sendiri)
+  const classConflict = await db.schedule.findFirst({
+    where: {
+      id: { not: id },
+      classId,
+      dayOfWeek,
+      scheduleSlotId
+    }
+  })
+
+  if (classConflict) {
+    return {
+      success: false,
+      error: 'Kelas sudah memiliki pelajaran di waktu tersebut.',
+      conflict: 'class'
+    }
+  }
+
+  // 3. Opsional: batasi jumlah pelajaran per hari untuk kelas
+  const dailyScheduleCount = await db.schedule.count({
+    where: {
+      id: { not: id },
+      classId,
+      dayOfWeek
+    }
+  })
+
+  const MAX_SCHEDULE_PER_DAY = 6
+
+  if (dailyScheduleCount >= MAX_SCHEDULE_PER_DAY) {
+    return {
+      success: false,
+      error: `Kelas sudah mencapai batas maksimal ${MAX_SCHEDULE_PER_DAY} pelajaran untuk hari tersebut.`,
+      conflict: 'max_per_day'
+    }
+  }
+
+  // 4. Update jadwal
+  const schedule = await db.schedule.update({
+    where: { id },
+    data: { classId, subjectId, teacherId, scheduleSlotId, dayOfWeek }
+  })
+
+  return {
+    success: true,
+    data: schedule
+  }
+}
+
 export const getSubjectOptionByTrackId = async (trackId: string): Promise<SubjectOptionResponse> => {
   try {
     const data = await db.subject.findMany({
@@ -932,6 +1009,9 @@ export const getSlotOption = async (dormitoryIds: string[]): Promise<SlotOptionR
         startTime: true,
         endTime: true,
         dormitoryId: true
+      },
+      orderBy: {
+        slot: 'asc'
       }
     })
 
@@ -963,6 +1043,9 @@ export const getSlotData = async (dormitoryId: string): Promise<SlotOptionRespon
         slot: true,
         startTime: true,
         endTime: true
+      },
+      orderBy: {
+        slot: 'asc'
       }
     })
 
@@ -1050,6 +1133,102 @@ export const createScheduleSlot = async (data: CreateScheduleSlotData): Promise<
     return {
       success: false,
       error: 'Failed to create schedule slot.'
+    }
+  }
+}
+
+export const updateScheduleSlot = async (
+  data: CreateScheduleSlotInput
+): Promise<
+  APIResult<{
+    id: string
+    slot: number
+    startTime: string
+    endTime: string
+  }>
+> => {
+  try {
+    if (!data.id) {
+      return {
+        success: false,
+        error: 'ID slot tidak ditemukan.'
+      }
+    }
+
+    if (!data.dormitoryId) {
+      return {
+        success: false,
+        error: 'ID asrama tidak ditemukan.'
+      }
+    }
+
+    if (data.startTime >= data.endTime) {
+      return {
+        success: false,
+        error: 'Waktu mulai harus lebih awal daripada waktu selesai.'
+      }
+    }
+
+    // 1. Cek slot number tidak duplikat di dormitory yang sama (kecuali dirinya sendiri)
+    const existingSlotNumber = await db.scheduleSlot.findFirst({
+      where: {
+        dormitoryId: data.dormitoryId,
+        slot: data.slot,
+        id: { not: data.id } // pengecualian untuk slot yang sedang diupdate
+      }
+    })
+
+    if (existingSlotNumber) {
+      return {
+        success: false,
+        error: `Nomor slot ${data.slot} sudah ada di asrama ini.`
+      }
+    }
+
+    // 2. Cek tidak ada overlap waktu di dormitory yang sama (kecuali dirinya sendiri)
+    const overlappingSlot = await db.scheduleSlot.findFirst({
+      where: {
+        dormitoryId: data.dormitoryId,
+        id: { not: data.id },
+        startTime: { lt: data.endTime },
+        endTime: { gt: data.startTime }
+      }
+    })
+
+    if (overlappingSlot) {
+      return {
+        success: false,
+        error: `Rentang waktu bertabrakan dengan slot #${overlappingSlot.slot} (${overlappingSlot.startTime} - ${overlappingSlot.endTime}).`
+      }
+    }
+
+    // 3. Update slot
+    const updatedSlot = await db.scheduleSlot.update({
+      where: { id: data.id },
+      data: {
+        slot: data.slot,
+        startTime: data.startTime,
+        endTime: data.endTime,
+        dormitoryId: data.dormitoryId
+      },
+      select: {
+        id: true,
+        slot: true,
+        startTime: true,
+        endTime: true
+      }
+    })
+
+    return {
+      success: true,
+      data: updatedSlot
+    }
+  } catch (error: unknown) {
+    console.error('Failed to update schedule slot:', error)
+
+    return {
+      success: false,
+      error: 'Gagal memperbarui slot.'
     }
   }
 }

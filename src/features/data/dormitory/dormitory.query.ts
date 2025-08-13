@@ -20,7 +20,9 @@ import {
   getSubjectOptionByTrackIdAction,
   getSlotOptionAction,
   createScheduleSlotAction,
-  getSlotDataAction
+  getSlotDataAction,
+  updateScheduleSlotAction,
+  updateScheduleAction
 } from './actions/dormitory.action'
 import type {
   CreateScheduleInput,
@@ -374,6 +376,29 @@ export const useCreateSchedule = () => {
   })
 }
 
+export const useUpdateSchedule = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation<CreateScheduleResult, Error, CreateScheduleInput>({
+    mutationFn: async payload => {
+      const result = await updateScheduleAction(payload)
+
+      if (!result.success) {
+        // throw new Error(result.error)
+        throw { message: result.error, conflict: result.conflict }
+      }
+
+      return result
+    },
+    onSuccess: (_, variables) => {
+      // Lakukan revalidate query berdasarkan key dan classId
+      queryClient.invalidateQueries({
+        queryKey: ['schedule_class', variables.classId]
+      })
+    }
+  })
+}
+
 export const useSubjectOption = (trackId: string) => {
   return useQuery({
     queryKey: ['subject_option', trackId],
@@ -433,6 +458,36 @@ export const useCreateScheduleSlot = () => {
     // mutationFn menerima objek data CreateScheduleSlotInput
     mutationFn: async (data: CreateScheduleSlotInput) => {
       const res = await createScheduleSlotAction(data)
+
+      if (!res.success) {
+        throw new ActionError(res.error, res.issues)
+      }
+
+      return res.data
+    },
+    onSuccess: (_, variables) => {
+      // Revalidasi query 'slot_option' untuk asrama yang baru saja diubah
+      queryClient.invalidateQueries({
+        queryKey: ['slot_option', [variables.dormitoryId]]
+      })
+      queryClient.invalidateQueries({
+        queryKey: ['slot_data']
+      })
+
+      // Jika Anda memiliki query lain yang bergantung pada data slot, Anda bisa revalidasi di sini
+      // Contoh: query untuk detail asrama atau daftar jadwal
+      // queryClient.invalidateQueries({ queryKey: ['dormitory', variables.dormitoryId] })
+    }
+  })
+}
+
+export const useUpdateScheduleSlot = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    // mutationFn menerima objek data CreateScheduleSlotInput
+    mutationFn: async (data: CreateScheduleSlotInput) => {
+      const res = await updateScheduleSlotAction(data)
 
       if (!res.success) {
         throw new ActionError(res.error, res.issues)

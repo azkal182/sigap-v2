@@ -13,7 +13,9 @@ import CustomAutocomplete from '@/@core/components/mui/Autocomplete'
 import CustomTextField from '@/@core/components/mui/TextField'
 
 const ValidateTeacherPageView = () => {
-  const today = DateTime.local(2025, 8, 11)
+  // const today = DateTime.local(2025, 8, 11)
+  const today = DateTime.now().setZone('Asia/Jakarta')
+
   const tz = DateTime.local().zoneName
 
   const { allowedDormitoryIds } = usePermissionStore()

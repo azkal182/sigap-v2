@@ -36,6 +36,7 @@ export async function generateDailyTeacherAbsences() {
       console.log(`Absence already exists for teacherId=${schedule.teacherId}, scheduleId=${schedule.id}`)
     } else {
       console.log(`Creating ABSENT record for teacherId=${schedule.teacherId}, scheduleId=${schedule.id}`)
+
       await prisma.teacherAbsence.create({
         data: {
           teacherId: schedule.teacherId,

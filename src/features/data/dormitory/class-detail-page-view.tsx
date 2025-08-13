@@ -23,7 +23,13 @@ import TabPanel from '@mui/lab/TabPanel'
 import type { EventInput } from '@fullcalendar/core/index.js'
 
 import StudentAutocomplete from '@/components/StudentAutoComplete'
-import { useAssignStudentToClass, useClassDetail, useCreateSchedule, useSchedule } from './dormitory.query'
+import {
+  useAssignStudentToClass,
+  useClassDetail,
+  useCreateSchedule,
+  useSchedule,
+  useUpdateSchedule
+} from './dormitory.query'
 import ScheduleSubject from './schedule-subject'
 import type { CreateScheduleInput } from './schemas/dormitory-schema'
 import ScheduleFormDialog from './components/schedule-form-dialog'
@@ -41,6 +47,7 @@ const ClassDetailPageView = ({
   const { data, isLoading } = useClassDetail(classId)
   const { mutate: assignStudentToClass } = useAssignStudentToClass()
   const { mutate: createSchedule } = useCreateSchedule()
+  const { mutate: updateSchedule } = useUpdateSchedule()
   const { data: scheduleData } = useSchedule({ classId })
   const [activeTab, setActiveTab] = useState('1')
 
@@ -73,7 +80,21 @@ const ClassDetailPageView = ({
         }
       })
     } else if (scheduleDialog.mode === 'edit' && form.id) {
-      // updateClass(...) // implementasi berikutnya
+      updateSchedule(form, {
+        onSuccess: () => {
+          toast.success('Jadwal berhasil diperbaharui!')
+          closeScheduleDialog()
+        },
+        onError: (error: any) => {
+          if (error?.conflict === 'teacher') {
+            toast.error(error.message || 'Guru sudah memiliki jadwal di waktu tersebut.')
+          } else if (error?.conflict === 'class') {
+            toast.error(error.message || 'Kelas sudah memiliki pelajaran di waktu tersebut.')
+          } else {
+            toast.error(error.message || 'Gagal membuat Jadwal.')
+          }
+        }
+      })
     }
   }
 

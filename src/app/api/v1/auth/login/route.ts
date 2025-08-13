@@ -69,14 +69,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
   }
 
-  if (user.role.name !== 'PENGAJAR') {
-    return NextResponse.json({ error: 'Hanya bisa login untuk pengajar' }, { status: 401 })
-  }
-
   const isMatch = await comparePassword(password, user.password)
 
   if (!isMatch) {
     return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
+  }
+
+  if (user.role.name !== 'PENGAJAR') {
+    return NextResponse.json({ error: 'Hanya bisa login untuk pengajar' }, { status: 401 })
+  }
+
+  if (user.mustChangeCredentials) {
+    return NextResponse.json({ message: 'Login ditolak, harap login melalui website dahulu!' }, { status: 422 })
   }
 
   const token = signToken({

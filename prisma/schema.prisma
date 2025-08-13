@@ -24,6 +24,7 @@ model User {
   mustChangeCredentials Boolean          @default(false)
   userPermissions       UserPermission[]
   userDormitories       UserDormitory[]
+  permit                Permit[]
 
   @@index([roleId])
 }
@@ -106,6 +107,11 @@ enum AbsenceStatus {
   SICK
   PERMIT
   ABSENT
+}
+
+enum Permittatus {
+  SICK
+  PERMIT
 }
 
 enum DormitoryStatus {
@@ -496,16 +502,18 @@ model Absence {
 
 // PERIZINAN SANTRI
 model Permit {
-  id           String        @id @default(uuid())
-  studentId    String
-  startDate    DateTime
-  endDate      DateTime
-  allowedSlots Int[] // Contoh: [1, 3, 5]
-  reason       String
-  permitSTatus AbsenceStatus
-  student      Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  id              String      @id @default(uuid())
+  studentId       String
+  startDate       DateTime
+  endDate         DateTime
+  allowedSlots    Int[] // Contoh: [1, 3, 5]
+  reason          String
+  permitSTatus    Permittatus
+  student         Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  createdByUserId String
+  createdBy       User        @relation(fields: [createdByUserId], references: [id])
 
   @@index([studentId]) // <-- TAMBAHKAN
   @@index([startDate, endDate]) // <-- TAMBAHKAN

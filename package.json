@@ -42,6 +42,7 @@
     "exceljs": "^4.4.0",
     "file-saver": "^2.0.5",
     "husky": "^9.1.7",
+    "ioredis": "^5.7.0",
     "jsonwebtoken": "^9.0.2",
     "luxon": "^3.7.1",
     "next": "15.1.2",

@@ -156,6 +156,8 @@
 
 // lib/data-processing.ts
 
+import axios from 'axios'
+
 import { AbsenceStatus } from '@/generated/prisma'
 
 // Mendefinisikan status absensi yang tersedia
@@ -221,6 +223,7 @@ const generateAbsences = (year: number, month: number) => {
 }
 
 // Simulasi data mentah absensi
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const rawAttendanceData = (year: number, month: number) => [
   {
     studentName: 'Achmad Fachri Alfairuzzabadi',
@@ -274,8 +277,16 @@ export interface WeeklyReportData {
 }
 
 // Fungsi utama untuk mengambil data laporan absensi bulanan
-export async function getMonthlyAttendanceReport(classId: string, year: number, month: number) {
-  return rawAttendanceData(year, month)
+// export async function getMonthlyAttendanceReport(classId: string, year: number, month: number) {
+//
+//   return rawAttendanceData(year, month)
+// }
+export async function getMonthlyAttendanceReport(classId: string, date: string, tz: string) {
+  const res = await axios(`/api/attendance/report/monthly?classId=${classId}&date=${date}5&tz=${tz}`)
+
+  return res.data
+
+  // return rawAttendanceData(year, month)
 }
 
 // Helper untuk mendapatkan semua tanggal unik dari data,

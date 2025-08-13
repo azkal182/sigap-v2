@@ -271,6 +271,7 @@
 // }
 
 // app/absensi-page.tsx
+/* eslint-disable @typescript-eslint/no-unused-vars */
 'use client'
 
 import React, { useState, useEffect, useMemo } from 'react'
@@ -278,11 +279,28 @@ import React, { useState, useEffect, useMemo } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
 import { flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table'
 
-import { Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material'
+import {
+  CircularProgress,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow
+} from '@mui/material'
+
+import { DateTime } from 'luxon'
+
+import axios from 'axios'
 
 import type { AbsenceReportData, WeeklyReportData, AbsenceDetail } from './data-processing'
 import { getMonthlyAttendanceReport, getUniqueDates, groupDatesByWeek } from './data-processing'
 import { AbsenceStatus } from '@/generated/prisma'
+import { useClassesByDormitory } from '@features/dormitory/validate-teacher/query'
+import { usePermissionStore } from '@/store/permission'
+import CustomAutocomplete from '@core/components/mui/Autocomplete'
+import CustomTextField from '@core/components/mui/TextField'
 
 // Fungsi untuk mendapatkan ikon berdasarkan status absensi
 const getStatusIcon = (status: AbsenceStatus | undefined): JSX.Element => {
@@ -498,27 +516,54 @@ const WeeklyAttendanceTable: React.FC<WeeklyTableProps> = ({ week, attendanceDat
 export default function AbsensiPage() {
   const [attendanceData, setAttendanceData] = useState<AbsenceReportData[]>([])
   const [weeklyReport, setWeeklyReport] = useState<WeeklyReportData[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
+  const [classId, setClassId] = useState('')
+
+  const { data: classes, isLoading: classesLoading } = useClassesByDormitory({
+    dormitoryId: 'e7f8a9b0-c1d2-3456-7890-90abcdef1234'
+  })
 
   // Set tahun dan bulan secara hardcode untuk contoh
-  const year = 2025
-  const month = 8
+  const todayJakarta = DateTime.now().setZone('Asia/Jakarta').startOf('day')
+  const today = DateTime.now().toFormat('dd-MM-yyyy')
+  const timezone = todayJakarta.zoneName
+  const month = todayJakarta.month // angka bulan (1-12)
+  const year = todayJakarta.year
   const startDayOfWeek = 6 // 6 = Sabtu
 
   useEffect(() => {
-    async function fetchData() {
-      setIsLoading(true)
-      const data = await getMonthlyAttendanceReport('class-id-contoh', year, month)
-      const uniqueDates = getUniqueDates(data, year, month)
-      const weeklyData = groupDatesByWeek(uniqueDates, startDayOfWeek)
+    if (classId) {
+      async function fetchData() {
+        setIsLoading(true)
 
-      setAttendanceData(data)
-      setWeeklyReport(weeklyData)
-      setIsLoading(false)
+        // const data = await getMonthlyAttendanceReport(classId, today, timezone)
+        const res = await axios(
+          '/api/attendance/report/monthly?classId=dddc0c73-0072-4cce-a145-c44aa97d3bbd&date=05-08-2025&tz=Asia/Jakarta'
+        )
+
+        const data = res.data
+
+        console.log(JSON.stringify(data, null, 2))
+
+        const uniqueDates = getUniqueDates(data, year, month)
+        const weeklyData = groupDatesByWeek(uniqueDates, startDayOfWeek)
+
+        setAttendanceData(data)
+        setWeeklyReport(weeklyData)
+        setIsLoading(false)
+      }
+
+      fetchData()
     }
+  }, [year, month, startDayOfWeek, classId])
 
-    fetchData()
-  }, [year, month, startDayOfWeek])
+  if (classesLoading) {
+    return (
+      <div className='w-full h-screen flex items-center justify-center'>
+        <CircularProgress />
+      </div>
+    )
+  }
 
   if (isLoading) {
     return (
@@ -528,22 +573,40 @@ export default function AbsensiPage() {
     )
   }
 
-  if (attendanceData.length === 0) {
-    return (
-      <div className='flex justify-center items-center h-screen'>
-        <p>Tidak ada data absensi yang tersedia.</p>
-      </div>
-    )
-  }
+  // if (attendanceData.length === 0) {
+  //   return (
+  //     <div className='flex justify-center items-center h-screen'>
+  //       <p>Tidak ada data absensi yang tersedia.</p>
+  //     </div>
+  //   )
+  // }
 
   return (
     <div className='font-inter'>
       <title>Laporan Absensi Santri</title>
-      <meta name='description' content='Laporan absensi bulanan santri per minggu.' />
-      <h1 className='text-3xl font-bold mb-6 text-center'>Laporan Absensi Bulanan</h1>
-      {weeklyReport.map((week, weekIndex) => (
-        <WeeklyAttendanceTable key={weekIndex} week={week} attendanceData={attendanceData} />
-      ))}
+      <CustomAutocomplete
+        className='mb-4'
+        fullWidth
+        options={classes ?? []}
+        id='autocomplete-custom'
+        getOptionLabel={option => option.name || ''}
+        onChange={(_, value) => {
+          setClassId(value?.id || '')
+        }}
+        renderInput={params => <CustomTextField placeholder='Pilih Kelas' {...params} label='Pilih Kelas' />}
+      />
+
+      {/*<meta name='description' content='Laporan absensi bulanan santri per minggu.' />*/}
+      {/*<h1 className='text-3xl font-bold mb-6 text-center'>Laporan Absensi Bulanan</h1>*/}
+      {attendanceData.length === 0 ? (
+        <div className='flex justify-center items-center h-screen'>
+          <p>Tidak ada data absensi yang tersedia.</p>
+        </div>
+      ) : (
+        weeklyReport.map((week, weekIndex) => (
+          <WeeklyAttendanceTable key={weekIndex} week={week} attendanceData={attendanceData} />
+        ))
+      )}
     </div>
   )
 }

@@ -48,6 +48,7 @@
 
 'use server'
 import prisma from '@/lib/prisma'
+import { redis } from '@/lib/redis'
 
 // Get all roles with their dormitory access
 export async function getAllRolesWithDormitories() {
@@ -81,18 +82,47 @@ export async function createRoleWithPermissionsAndDormitories(
 }
 
 // Update role with permissions and dormitories
+// export async function updateRolePermissionsAndDormitories(
+//   roleId: string,
+//   name: string,
+//   permissionIds: string[],
+//   dormitoryIds: string[]
+// ) {
+//   return prisma.$transaction(async tx => {
+//     // Delete existing relations
+//     await tx.rolePermission.deleteMany({ where: { roleId } })
+//     await tx.roleDormitory.deleteMany({ where: { roleId } })
+//
+//     // Update role with new relations
+//     return tx.role.update({
+//       where: { id: roleId },
+//       data: {
+//         name,
+//         rolePermissions: {
+//           create: permissionIds.map(pid => ({ permissionId: pid }))
+//         },
+//         roleDormitories: {
+//           create: dormitoryIds.map(did => ({ dormitoryId: did }))
+//         }
+//       }
+//     })
+//   })
+// }
+
+// update with cache redis
 export async function updateRolePermissionsAndDormitories(
   roleId: string,
   name: string,
   permissionIds: string[],
   dormitoryIds: string[]
 ) {
-  return prisma.$transaction(async tx => {
-    // Delete existing relations
+  // 1. Lakukan update database dalam sebuah transaksi
+  const updatedRole = await prisma.$transaction(async tx => {
+    // Hapus relasi yang ada
     await tx.rolePermission.deleteMany({ where: { roleId } })
     await tx.roleDormitory.deleteMany({ where: { roleId } })
 
-    // Update role with new relations
+    // Update role dengan nama dan relasi yang baru
     return tx.role.update({
       where: { id: roleId },
       data: {
@@ -106,6 +136,25 @@ export async function updateRolePermissionsAndDormitories(
       }
     })
   })
+
+  // 2. Jika transaksi berhasil, lakukan invalidasi cache
+  // Cari semua pengguna yang memiliki roleId ini
+  const usersToInvalidate = await prisma.user.findMany({
+    where: { roleId: roleId },
+    select: { id: true } // Hanya butuh ID untuk membuat cache key
+  })
+
+  if (usersToInvalidate.length > 0) {
+    // Buat daftar semua cache key yang akan dihapus
+    const cacheKeys = usersToInvalidate.map(user => `user_permissions:${user.id}`)
+
+    console.log(`Invalidating ${cacheKeys.length} user caches for roleId: ${roleId}`)
+
+    // Hapus semua kunci dari Redis dalam satu perintah untuk efisiensi
+    await redis.del(cacheKeys)
+  }
+
+  return updatedRole
 }
 
 // Get user's effective dormitory access (role + overrides)

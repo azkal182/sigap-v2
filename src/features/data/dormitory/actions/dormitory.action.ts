@@ -18,7 +18,9 @@ import {
   getSubjectOptionByTrackId,
   getTrackDetail,
   removeTrackFromDormitory,
-  updateTrack
+  updateTrack,
+  updateScheduleSlot,
+  updateSchedule
 } from './../dormitory.service'
 
 import {
@@ -306,6 +308,10 @@ export async function createScheduleAction(input: unknown): Promise<CreateSchedu
   }
 }
 
+export async function updateScheduleAction(input: unknown): Promise<CreateScheduleResult> {
+  return validateAndRun(createScheduleSchema, input, updateSchedule)
+}
+
 export const getSubjectOptionByTrackIdAction = async (trackId: string): Promise<SubjectOptionResponse> => {
   try {
     return getSubjectOptionByTrackId(trackId)
@@ -348,4 +354,8 @@ export async function createScheduleSlotAction(data: CreateScheduleSlotData): Pr
 
     return { success: false, error: message }
   }
+}
+
+export async function updateScheduleSlotAction(data: unknown) {
+  return validateAndRun(createScheduleSlotSchema, data, updateScheduleSlot)
 }

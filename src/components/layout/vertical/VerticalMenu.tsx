@@ -58,6 +58,10 @@ export const menuItems: MenuConfigSection[] = [
     ]
   },
   {
+    label: 'Perizinan',
+    items: [{ title: 'Perizinan', href: '/permit', icon: 'tabler-license-off', permissions: ['dormitory.permit:view'] }]
+  },
+  {
     label: 'Absensi',
     items: [
       {
@@ -100,8 +104,8 @@ export const menuItems: MenuConfigSection[] = [
     label: 'Asrama',
     items: [
       { title: 'Santri', href: '/dormitory/student', icon: 'tabler-school', permissions: ['dormitory.student:view'] },
-      { title: 'Izin', href: '/dormitory/permit', icon: 'tabler-license-off', permissions: ['dormitory.permit:view'] },
-      { title: 'Laporan', href: '/dormitory/report', icon: 'tabler-report', permissions: ['dormitory.report:view'] },
+
+      // { title: 'Laporan', href: '/dormitory/report', icon: 'tabler-report', permissions: ['dormitory.report:view'] },
       {
         title: 'Validasi Absensi Santri',
         href: '/dormitory/validate-student',

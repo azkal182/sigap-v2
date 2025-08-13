@@ -73,6 +73,7 @@ const DormitoryDetailPageView: React.FC<DormitoryDetailPageViewProps> = ({ id })
   const [slotInput, setSlotInput] = useState('')
   const [startTime, setStartTime] = useState('08:00')
   const [endTime, setEndTime] = useState('10:00')
+  const [selectedSlot, setSelectedSlot] = useState<CreateScheduleSlotInput | undefined>(undefined)
 
   // React Query Hooks
   const { data, isLoading } = useDormitodyDetail(id)
@@ -256,56 +257,19 @@ const DormitoryDetailPageView: React.FC<DormitoryDetailPageViewProps> = ({ id })
       <Dialog open={dialogSLotopen} onClose={() => setDialogSlotOpen(false)} maxWidth='sm' fullWidth>
         <DialogTitle>Daftar Slot (akan berlaku semua fan)</DialogTitle>
         <DialogContent>
-          {/* <Box mb={3}>
-            <Grid container spacing={2} alignItems='flex-end'>
-              <Grid item xs={12} sm={4}>
-                <CustomTextField
-                  label='Slot'
-                  value={slotInput}
-                  onChange={e => setSlotInput(e.target.value)}
-                  fullWidth
-                />
-              </Grid>
-
-              <Grid item xs={12} sm={2}>
-                <AppReactDatepicker
-                  showTimeSelect
-                  showTimeSelectOnly
-                  selected={hhmmToDate(startTime)}
-                  timeIntervals={15}
-                  timeFormat='HH:mm'
-                  dateFormat='HH:mm'
-                  onChange={date => setStartTime(dateToHHMM(date))}
-                  customInput={<CustomTextField label='Start Time' fullWidth />}
-                />
-              </Grid>
-
-              <Grid item xs={12} sm={2}>
-                <AppReactDatepicker
-                  showTimeSelect
-                  showTimeSelectOnly
-                  selected={hhmmToDate(endTime)}
-                  timeIntervals={15}
-                  timeFormat='HH:mm'
-                  dateFormat='HH:mm'
-                  onChange={date => setEndTime(dateToHHMM(date))}
-                  customInput={<CustomTextField label='End Time' fullWidth />}
-                />
-              </Grid>
-              <Grid item xs={12} sm={4}>
-                <Button variant='contained' fullWidth>
-                  Tambah
-                </Button>
-              </Grid>
-            </Grid>
-          </Box> */}
-
-          <ScheduleSlotForm dormitoryId={id} onSuccess={() => {}} />
+          <ScheduleSlotForm
+            defaultData={selectedSlot}
+            dormitoryId={id}
+            onSuccess={() => {
+              setSelectedSlot(undefined) // reset form setelah sukses
+            }}
+          />
           <Table>
             <TableHead>
               <TableRow>
                 <TableCell>NO</TableCell>
                 <TableCell>Keterangan</TableCell>
+                <TableCell>Aksi</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -313,6 +277,27 @@ const DormitoryDetailPageView: React.FC<DormitoryDetailPageViewProps> = ({ id })
                 <TableRow key={slot.id}>
                   <TableCell>{index + 1}</TableCell>
                   <TableCell>{slot.name}</TableCell>
+                  <TableCell>
+                    <Button
+                      variant='outlined'
+                      size='small'
+                      onClick={() => {
+                        const [slotPart, timePart] = slot.name.split(' | ')
+                        const slotNumber = Number(slotPart.replace('Jam Ke ', '').trim())
+                        const [startTime, endTime] = timePart.split(' - ')
+
+                        setSelectedSlot({
+                          id: slot.id,
+                          slot: slotNumber,
+                          startTime,
+                          endTime,
+                          dormitoryId: id
+                        })
+                      }}
+                    >
+                      Edit
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

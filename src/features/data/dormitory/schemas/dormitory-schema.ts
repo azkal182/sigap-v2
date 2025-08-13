@@ -47,6 +47,7 @@ export const trackSchema = z.object({
 })
 
 export const createScheduleSlotSchema = z.object({
+  id: z.string().optional(),
   slot: z.number({ invalid_type_error: 'Slot harus berupa angka' }).min(1, 'Slot minimal 1'),
   startTime: z.string().min(1, 'Waktu mulai wajib diisi'),
   endTime: z.string().min(1, 'Waktu selesai wajib diisi'),
