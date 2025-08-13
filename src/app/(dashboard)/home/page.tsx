@@ -73,6 +73,7 @@ export default function Page() {
   const [subjectName, setSubjectName] = useState('')
   const searchParams = useSearchParams()
   const dateParam = searchParams.get('month')
+  const fetchedOnce = React.useRef(false)
 
   const [dormitories, setDormitories] = useState<Dormitory[]>([])
 
@@ -246,11 +247,28 @@ export default function Page() {
   //       setLoading(false)
   //     }
   //   }, [user.user?.id, user.user?.role])
+
+  // useEffect(() => {
+  //   if (user.user?.role === 'PENGAJAR' && user.user?.id) {
+  //     setFetchingReport(false)
+  //
+  //     if (isProduction) {
+  //       fetchStudents(user.user.id)
+  //     } else {
+  //       setLoading(false) // langsung tampilkan form input manual
+  //     }
+  //   } else {
+  //     setLoading(false)
+  //   }
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, [user.user?.id, user.user?.role])
+
   useEffect(() => {
     if (user.user?.role === 'PENGAJAR' && user.user?.id) {
       setFetchingReport(false)
 
-      if (isProduction) {
+      if (isProduction && !fetchedOnce.current) {
+        fetchedOnce.current = true // cegah loop
         fetchStudents(user.user.id)
       } else {
         setLoading(false) // langsung tampilkan form input manual
@@ -258,8 +276,7 @@ export default function Page() {
     } else {
       setLoading(false)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user.user?.id, user.user?.role, fetchStudents])
+  }, [user.user?.id, user.user?.role])
 
   useEffect(() => {
     if (!timezone) return

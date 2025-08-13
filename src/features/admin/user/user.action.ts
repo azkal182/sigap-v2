@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { getUsers, updateCredentials } from './user.service'
 import { requirePermission } from '@/utils/require-permission'
 import prisma from '@/lib/prisma'
+import { redis } from '@/lib/redis'
 
 export const getUsersAction = async () => {
   try {
@@ -222,6 +223,10 @@ export async function updateCredentialsAction(input: z.infer<typeof updateSchema
     const { userId, ...data } = parsed.data
 
     const result = await updateCredentials(userId, { username: data.username, password: data.password })
+
+    const cacheKeys = `user_permissions:${userId}`
+
+    await redis.del(cacheKeys)
 
     return { success: true, data: result }
   } catch (error) {
