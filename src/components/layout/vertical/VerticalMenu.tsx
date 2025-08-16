@@ -73,7 +73,8 @@ export const menuItems: MenuConfigSection[] = [
       {
         title: 'Daftar Absensi',
         icon: 'tabler-report',
-        permissions: ['report-attend:view'],
+
+        // permissions: ['report-attend:view'],
         subMenuItems: [
           {
             title: 'Santri',

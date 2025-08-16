@@ -56,6 +56,78 @@ export type StudentHistory = {
   trackDuration?: number
 }
 
+interface WilayahValidationSummary {
+  level: 'province' | 'regency' | 'district' | 'village'
+  missingCount: number
+  message: string
+}
+
+/**
+ * Generate ringkasan kesalahan kelengkapan wilayah santri untuk seluruh database.
+ * Hanya menghitung 1 kesalahan per santri dari top-down.
+ */
+export async function generateWilayahValidationSummary(): Promise<WilayahValidationSummary[]> {
+  const students = await db.student.findMany({
+    select: {
+      id: true,
+      provinceId: true,
+      regencyId: true,
+      districtId: true,
+      villageId: true
+    }
+  })
+
+  const counters: Record<'province' | 'regency' | 'district' | 'village', number> = {
+    province: 0,
+    regency: 0,
+    district: 0,
+    village: 0
+  }
+
+  for (const student of students) {
+    if (!student.provinceId) counters.province++
+    else if (!student.regencyId) counters.regency++
+    else if (!student.districtId) counters.district++
+    else if (!student.villageId) counters.village++
+  }
+
+  const result: WilayahValidationSummary[] = []
+
+  if (counters.province > 0) {
+    result.push({
+      level: 'province',
+      missingCount: counters.province,
+      message: `${counters.province} santri tidak mempunyai Provinsi`
+    })
+  }
+
+  if (counters.regency > 0) {
+    result.push({
+      level: 'regency',
+      missingCount: counters.regency,
+      message: `${counters.regency} santri tidak mempunyai Kabupaten/Kota`
+    })
+  }
+
+  if (counters.district > 0) {
+    result.push({
+      level: 'district',
+      missingCount: counters.district,
+      message: `${counters.district} santri tidak mempunyai Kecamatan`
+    })
+  }
+
+  if (counters.village > 0) {
+    result.push({
+      level: 'village',
+      missingCount: counters.village,
+      message: `${counters.village} santri tidak mempunyai Desa/Kelurahan`
+    })
+  }
+
+  return result
+}
+
 export async function getStudentsWithFilter(options: FilterStudentParams): Promise<APIPaginatedResult<StudentItem[]>> {
   try {
     const {
@@ -376,9 +448,12 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
 
     const totalPages = Math.ceil(total / limit)
 
+    const summary = await generateWilayahValidationSummary()
+
     return {
       success: true,
       data: formattedStudents,
+      message: summary.length > 0 ? summary.map(item => item.message).join(', ') : 'Semua data telah lengkap',
       pagination: {
         total,
         page,

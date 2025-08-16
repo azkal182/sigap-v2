@@ -92,18 +92,41 @@ interface StudentImportPayloadV2 {
   gender: 'PUTRA' | 'PUTRI' | null
 
   // Properti yang ditambahkan oleh validasi server-side di frontend
-  __wilayahData?: {
-    id: number
-    name: string
-    code: string
-    fullCode: string
-    postalCode: string
+  __wilayahData: {
+    province?: {
+      id: number
+      name: string
+      code: string
+    }
+    regency?: {
+      id: number
+      name: string
+      type?: string
+      code: string
+      fullCode?: string
+    }
+    district?: {
+      id: number
+      name: string
+      code: string
+      fullCode?: string
+    }
+    village?: {
+      id: number
+      name: string
+      code: string
+      fullCode?: string
+      postalCode?: string
+    }
   } | null
   __placeOfBirth?: string | null
   __dateOfBirth?: Date | null
 
   // villageId, placeOfBirth, dateOfBirth juga harus ada jika tidak ada di atas
-  villageId: number // ID desa/kelurahan dari __wilayahData.id
+  villageId?: number | null // ID desa/kelurahan dari __wilayahData.id
+  districtId?: number | null
+  regencyId?: number | null
+  provinceId?: number | null
   placeOfBirth: string // Dari __placeOfBirth
   dateOfBirth: Date // Dari __dateOfBirth
 }
@@ -122,6 +145,9 @@ export const createStudentFromImportDataV2 = async (data: StudentImportPayloadV2
     const placeOfBirth = data.placeOfBirth?.trim()
     const dateOfBirth = data.dateOfBirth
     const villageId = data.villageId
+    const districtId = data.districtId
+    const regencyId = data.regencyId
+    const provinceId = data.provinceId
     const fatherName = data['NAMA AYAH']?.trim()
     const motherName = data['NAMA IBU']?.trim()
     const parrentPhone = data['NO TELP ORTU']?.trim()
@@ -205,22 +231,89 @@ export const createStudentFromImportDataV2 = async (data: StudentImportPayloadV2
       throw new Error(`Dormitory dengan ID '${dormitoryId}' tidak ditemukan di database. Pastikan ID di sel A1 benar.`)
     }
 
-    const result = await db.student.create({
-      data: {
+    // const result = await db.student.create({
+    //   data: {
+    //     name,
+    //     nis,
+    //     dormitoryId,
+    //     placeOfBirth: placeOfBirth,
+    //     dateOfBirth: new Date(dateOfBirth), // Pastikan ini adalah objek Date yang valid
+    //     villageId: villageId,
+    //     districtId: districtId,
+    //     regencyId: regencyId,
+    //     provinceId: provinceId,
+    //     fatherName: fatherName || null,
+    //     motherName: motherName || null,
+    //     parrentPhone: parrentPhone || null,
+    //     gender: data.gender,
+
+    //     // --- Tambahkan kolom-kolom tambahan ke data student ---
+    //     status: statusKeaktifan ? (statusKeaktifan.toLocaleLowerCase() === 'active' ? 'ACTIVE' : undefined) : undefined, // Sesuaikan dengan nama field di model Prisma Anda
+    //     // --- Akhir penambahan kolom tambahan ---
+    //     formalClassId,
+    //     dormitoryRoomId,
+    //     dormitoryHistories: {
+    //       create: [
+    //         {
+    //           dormitoryId: dormitoryId,
+    //           startDate: new Date(),
+    //           endDate: null,
+    //           status: 'ACTIVE',
+    //           dormNameAtThatTime: dormitoryName // Gunakan dormitoryName yang didapat dari sheetName
+    //         }
+    //       ]
+    //     }
+    //   }
+    // })
+    const result = await db.student.upsert({
+      where: {
+        nis: nis // Kolom unik yang menjadi acuan upsert
+      },
+      update: {
         name,
-        nis,
         dormitoryId,
         placeOfBirth: placeOfBirth,
-        dateOfBirth: new Date(dateOfBirth), // Pastikan ini adalah objek Date yang valid
+        dateOfBirth: new Date(dateOfBirth),
         villageId: villageId,
+        districtId: districtId,
+        regencyId: regencyId,
+        provinceId: provinceId,
         fatherName: fatherName || null,
         motherName: motherName || null,
         parrentPhone: parrentPhone || null,
         gender: data.gender,
+        status: statusKeaktifan ? (statusKeaktifan.toLocaleLowerCase() === 'active' ? 'ACTIVE' : undefined) : undefined,
+        formalClassId,
+        dormitoryRoomId,
 
-        // --- Tambahkan kolom-kolom tambahan ke data student ---
-        status: statusKeaktifan ? (statusKeaktifan.toLocaleLowerCase() === 'active' ? 'ACTIVE' : undefined) : undefined, // Sesuaikan dengan nama field di model Prisma Anda
-        // --- Akhir penambahan kolom tambahan ---
+        // Jika ingin tetap menambahkan dormitoryHistories saat update:
+        dormitoryHistories: {
+          create: [
+            {
+              dormitoryId: dormitoryId,
+              startDate: new Date(),
+              endDate: null,
+              status: 'ACTIVE',
+              dormNameAtThatTime: dormitoryName
+            }
+          ]
+        }
+      },
+      create: {
+        name,
+        nis,
+        dormitoryId,
+        placeOfBirth: placeOfBirth,
+        dateOfBirth: new Date(dateOfBirth),
+        villageId: villageId,
+        districtId: districtId,
+        regencyId: regencyId,
+        provinceId: provinceId,
+        fatherName: fatherName || null,
+        motherName: motherName || null,
+        parrentPhone: parrentPhone || null,
+        gender: data.gender,
+        status: statusKeaktifan ? (statusKeaktifan.toLocaleLowerCase() === 'active' ? 'ACTIVE' : undefined) : undefined,
         formalClassId,
         dormitoryRoomId,
         dormitoryHistories: {
@@ -230,7 +323,7 @@ export const createStudentFromImportDataV2 = async (data: StudentImportPayloadV2
               startDate: new Date(),
               endDate: null,
               status: 'ACTIVE',
-              dormNameAtThatTime: dormitoryName // Gunakan dormitoryName yang didapat dari sheetName
+              dormNameAtThatTime: dormitoryName
             }
           ]
         }

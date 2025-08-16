@@ -26,6 +26,10 @@ export async function getTeacherAttendanceByClass(params: {
     const startOfDayUTC = localDate.toUTC().toJSDate()
     const endOfDayUTC = localDate.endOf('day').toUTC().toJSDate()
 
+    console.log('localDate ', localDate)
+    console.log('startOfDayUTC ', startOfDayUTC)
+    console.log('endOfDayUTC ', endOfDayUTC)
+
     const data = await prisma.teacherAbsence.findMany({
       where: {
         date: {

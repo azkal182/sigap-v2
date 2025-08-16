@@ -1,10 +1,12 @@
 import Redis from 'ioredis'
 
 const redis = new Redis({
-  host: process.env.REDIS_HOST || '165.22.106.176',
+  host: process.env.REDIS_HOST || 'localhost',
   port: parseInt(process.env.REDIS_PORT || '6379', 10),
-  password:
-    process.env.REDIS_PASSWORD || 'NA54h1C8iMNylvrGxek3tqhKMszcglL/CMDysi4/3l0R1gETCt1nNuhW8/1nDpkWI5aNewDkOJlsMFUr',
+
+  //   password:
+  //     process.env.REDIS_PASSWORD || 'NA54h1C8iMNylvrGxek3tqhKMszcglL/CMDysi4/3l0R1gETCt1nNuhW8/1nDpkWI5aNewDkOJlsMFUr',
+
   enableReadyCheck: false,
   maxRetriesPerRequest: null,
   retryStrategy: times => {

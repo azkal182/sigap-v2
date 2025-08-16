@@ -1,347 +1,3 @@
-// // app/actions/wilayah.ts
-// 'use server'
-
-// import type { Province, Regency, District, Village } from '@/generated/prisma'
-
-// import prisma from '@/lib/prisma'
-
-// // --- Definisi Tipe untuk Hasil Prisma ---
-// type ProvinceResult = Pick<Province, 'id' | 'name' | 'code'>
-
-// type RegencyResult = Pick<Regency, 'id' | 'name' | 'type' | 'code' | 'fullCode' | 'label'> & {
-//   province: Pick<Province, 'name'>
-// }
-
-// type DistrictResult = Pick<District, 'id' | 'name' | 'code' | 'fullCode'> & {
-//   regency: Pick<Regency, 'name' | 'type' | 'label'>
-// }
-
-// type VillageResult = Pick<Village, 'id' | 'name' | 'code' | 'fullCode' | 'postalCode'> & {
-//   district: Pick<District, 'name'> & {
-//     regency: Pick<Regency, 'name' | 'type' | 'label'> & {
-//       province: Pick<Province, 'name'>
-//     }
-//   }
-// }
-
-// // --- Definisi Tipe untuk Objek Kembalian Fungsi ---
-// interface SearchResult {
-//   province?: ProvinceResult
-//   regency?: RegencyResult
-//   district?: DistrictResult
-//   village?: VillageResult
-//   message: string
-
-//   // Properti baru untuk menunjukkan tingkat kegagalan
-//   failedLevel?: 'province' | 'regency' | 'district' | 'village' | 'validation' | 'unknown'
-// }
-
-// /**
-//  * Mencari wilayah secara top-down berdasarkan nama provinsi, label kabupaten/kota, nama kecamatan, dan nama desa.
-//  * Fungsi ini dianggap sukses HANYA JIKA sebuah desa yang spesifik berhasil ditemukan.
-//  *
-//  * @param {string | undefined} [provinceName] - Nama provinsi untuk dicari (opsional).
-//  * @param {string | undefined} [regencyLabel] - Label kabupaten/kota untuk dicari (opsional).
-//  * @param {string | undefined} [districtName] - Nama kecamatan untuk dicari (opsional).
-//  * @param {string | undefined} villageName - Nama desa/kelurahan untuk dicari (WAJIB untuk kesuksesan pencarian).
-//  * @returns {Promise<SearchResult>} Objek yang berisi hasil pencarian dan pesan status, serta tingkat kegagalan.
-//  */
-// export async function searchWilayahOrdered(
-//   provinceName?: string,
-//   regencyLabel?: string,
-//   districtName?: string,
-//   villageName?: string
-// ): Promise<SearchResult> {
-//   try {
-//     const result: SearchResult = {
-//       message: 'Pencarian gagal: Desa belum ditemukan.',
-//       failedLevel: 'unknown' // Default jika tidak ada kasus lain yang cocok
-//     }
-
-//     const createContainsCondition = (name: string) => ({
-//       contains: name.toLowerCase(),
-//       mode: 'insensitive' as const
-//     })
-
-//     let currentProvinceId: number | undefined
-//     let currentRegencyId: number | undefined
-//     let currentDistrictId: number | undefined
-
-//     // --- Validasi Awal: villageName Wajib ada untuk pencarian sukses ---
-//     if (!villageName || villageName.trim() === '') {
-//       result.message = 'Pencarian desa gagal: Nama desa wajib diisi.'
-//       result.failedLevel = 'validation' // Kegagalan validasi input
-
-//       return result
-//     }
-
-//     // 1. Cari Provinsi
-//     if (provinceName) {
-//       const provincesFound = (await prisma.province.findMany({
-//         where: {
-//           name: createContainsCondition(provinceName)
-//         },
-//         select: { id: true, name: true, code: true },
-//         take: 2
-//       })) as ProvinceResult[]
-
-//       if (provincesFound.length === 0) {
-//         result.message = `Pencarian gagal: Provinsi '${provinceName}' tidak ditemukan.`
-//         result.failedLevel = 'province' // Gagal di level provinsi
-
-//         return result
-//       }
-
-//       if (provincesFound.length > 1) {
-//         result.message = `Pencarian gagal: Ditemukan lebih dari satu provinsi dengan nama '${provinceName}'. Mohon berikan informasi yang lebih spesifik.`
-//         result.failedLevel = 'province' // Ambiguitas di level provinsi
-
-//         return result
-//       }
-
-//       result.province = provincesFound[0]
-//       currentProvinceId = result.province.id
-//     }
-
-//     // 2. Cari Kabupaten/Kota (berdasarkan label)
-//     if (regencyLabel) {
-//       const regencyWhere: any = {
-//         label: createContainsCondition(regencyLabel)
-//       }
-
-//       if (currentProvinceId !== undefined) {
-//         regencyWhere.provinceId = currentProvinceId
-//       } else if (provinceName) {
-//         result.message = `Pencarian gagal: Tidak dapat mencari Kabupaten/Kota '${regencyLabel}' karena Provinsi '${provinceName}' tidak ditemukan.`
-//         result.failedLevel = 'province' // Gagal karena provinsi tidak ditemukan sebelumnya
-
-//         return result
-//       }
-
-//       const regenciesFound = (await prisma.regency.findMany({
-//         where: regencyWhere,
-//         select: {
-//           id: true,
-//           name: true,
-//           type: true,
-//           code: true,
-//           fullCode: true,
-//           label: true,
-//           province: { select: { name: true } }
-//         },
-//         take: 2
-//       })) as RegencyResult[]
-
-//       if (regenciesFound.length === 0) {
-//         result.message = `Pencarian gagal: Kabupaten/Kota dengan label '${regencyLabel}' tidak ditemukan${currentProvinceId !== undefined ? ` di Provinsi '${result.province?.name}'` : ''}.`
-//         result.failedLevel = 'regency' // Gagal di level kabupaten/kota
-
-//         return result
-//       }
-
-//       if (regenciesFound.length > 1) {
-//         result.message = `Pencarian gagal: Ditemukan lebih dari satu Kabupaten/Kota dengan label '${regencyLabel}'${currentProvinceId !== undefined ? ` di Provinsi '${result.province?.name}'` : ''}. Mohon berikan informasi yang lebih spesifik.`
-//         result.failedLevel = 'regency' // Ambiguitas di level kabupaten/kota
-
-//         return result
-//       }
-
-//       result.regency = regenciesFound[0]
-//       currentRegencyId = result.regency.id
-//     }
-
-//     // 3. Cari Kecamatan
-//     if (districtName) {
-//       const districtWhere: any = {
-//         name: createContainsCondition(districtName)
-//       }
-
-//       if (currentRegencyId !== undefined) {
-//         districtWhere.regencyId = currentRegencyId
-//       } else if (regencyLabel) {
-//         result.message = `Pencarian gagal: Tidak dapat mencari Kecamatan '${districtName}' karena Kabupaten/Kota dengan label '${regencyLabel}' tidak ditemukan.`
-//         result.failedLevel = 'regency' // Gagal karena kabupaten/kota tidak ditemukan sebelumnya
-
-//         return result
-//       } else if (currentProvinceId !== undefined) {
-//         const regenciesInProvince = await prisma.regency.findMany({
-//           where: { provinceId: currentProvinceId },
-//           select: { id: true }
-//         })
-
-//         if (regenciesInProvince.length === 0) {
-//           // Tidak ada regency di provinsi ini
-//           result.message = `Pencarian gagal: Tidak ada Kabupaten/Kota ditemukan di Provinsi '${result.province?.name}', sehingga tidak ada Kecamatan '${districtName}'.`
-//           result.failedLevel = 'regency' // Gagal di level kabupaten/kota (karena tidak ada kecamatannya)
-
-//           return result
-//         }
-
-//         districtWhere.regencyId = {
-//           in: regenciesInProvince.map(r => r.id)
-//         }
-//       } else if (provinceName) {
-//         result.message = `Pencarian gagal: Tidak dapat mencari Kecamatan '${districtName}' karena Provinsi '${provinceName}' tidak ditemukan.`
-//         result.failedLevel = 'province' // Gagal karena provinsi tidak ditemukan sebelumnya
-
-//         return result
-//       }
-
-//       const districtsFound = (await prisma.district.findMany({
-//         where: districtWhere,
-//         select: {
-//           id: true,
-//           name: true,
-//           code: true,
-//           fullCode: true,
-//           regency: { select: { name: true, type: true, label: true } }
-//         },
-//         take: 2
-//       })) as DistrictResult[]
-
-//       if (districtsFound.length === 0) {
-//         result.message = `Pencarian gagal: Kecamatan '${districtName}' tidak ditemukan di lokasi yang ditentukan.`
-//         result.failedLevel = 'district' // Gagal di level kecamatan
-
-//         return result
-//       }
-
-//       if (districtsFound.length > 1) {
-//         result.message = `Pencarian gagal: Ditemukan lebih dari satu Kecamatan dengan nama '${districtName}' di lokasi yang ditentukan. Mohon berikan informasi yang lebih spesifik.`
-//         result.failedLevel = 'district' // Ambiguitas di level kecamatan
-
-//         return result
-//       }
-
-//       result.district = districtsFound[0]
-//       currentDistrictId = result.district.id
-//     }
-
-//     // 4. Cari Desa (Wajib ada dan ditemukan unik)
-//     const villageWhere: any = {
-//       name: createContainsCondition(villageName!)
-//     }
-
-//     if (currentDistrictId !== undefined) {
-//       villageWhere.districtId = currentDistrictId
-//     } else if (districtName) {
-//       result.message = `Pencarian gagal: Tidak dapat mencari Desa '${villageName}' karena Kecamatan '${districtName}' tidak ditemukan.`
-//       result.failedLevel = 'district' // Gagal karena kecamatan tidak ditemukan sebelumnya
-
-//       return result
-//     } else if (currentRegencyId !== undefined) {
-//       const districtsInRegency = await prisma.district.findMany({
-//         where: { regencyId: currentRegencyId },
-//         select: { id: true }
-//       })
-
-//       if (districtsInRegency.length === 0) {
-//         // Tidak ada district di regency ini
-//         result.message = `Pencarian gagal: Tidak ada Kecamatan ditemukan di Kabupaten/Kota '${result.regency?.name}', sehingga tidak ada Desa '${villageName}'.`
-//         result.failedLevel = 'district' // Gagal di level kecamatan (karena tidak ada desanya)
-
-//         return result
-//       }
-
-//       villageWhere.districtId = {
-//         in: districtsInRegency.map(d => d.id)
-//       }
-//     } else if (currentProvinceId !== undefined) {
-//       const regenciesInProvince = await prisma.regency.findMany({
-//         where: { provinceId: currentProvinceId },
-//         select: { id: true }
-//       })
-
-//       if (regenciesInProvince.length === 0) {
-//         // Tidak ada regency di province ini
-//         result.message = `Pencarian gagal: Tidak ada Kabupaten/Kota ditemukan di Provinsi '${result.province?.name}', sehingga tidak ada Desa '${villageName}'.`
-//         result.failedLevel = 'regency' // Gagal di level kabupaten/kota (karena tidak ada kecamatannya/desanya)
-
-//         return result
-//       }
-
-//       const districtsInRegencies = await prisma.district.findMany({
-//         where: { regencyId: { in: regenciesInProvince.map(r => r.id) } },
-//         select: { id: true }
-//       })
-
-//       if (districtsInRegencies.length === 0) {
-//         // Tidak ada district di regencies ini
-//         result.message = `Pencarian gagal: Tidak ada Kecamatan ditemukan di Provinsi '${result.province?.name}', sehingga tidak ada Desa '${villageName}'.`
-//         result.failedLevel = 'district' // Gagal di level kecamatan (karena tidak ada desanya)
-
-//         return result
-//       }
-
-//       villageWhere.districtId = {
-//         in: districtsInRegencies.map(d => d.id)
-//       }
-//     } else if (provinceName) {
-//       result.message = `Pencarian gagal: Tidak dapat mencari Desa '${villageName}' karena Provinsi '${provinceName}' tidak ditemukan.`
-//       result.failedLevel = 'province' // Gagal karena provinsi tidak ditemukan sebelumnya
-
-//       return result
-//     }
-
-//     const villagesFound = (await prisma.village.findMany({
-//       where: villageWhere,
-//       select: {
-//         id: true,
-//         name: true,
-//         code: true,
-//         fullCode: true,
-//         postalCode: true,
-//         district: {
-//           select: {
-//             name: true,
-//             regency: {
-//               select: {
-//                 name: true,
-//                 type: true,
-//                 label: true,
-//                 province: { select: { name: true } }
-//               }
-//             }
-//           }
-//         }
-//       },
-//       take: 2
-//     })) as VillageResult[]
-
-//     if (villagesFound.length === 0) {
-//       result.message = `Pencarian gagal: Desa '${villageName}' tidak ditemukan di lokasi yang ditentukan.`
-//       result.failedLevel = 'village' // Gagal di level desa
-
-//       return result
-//     }
-
-//     if (villagesFound.length > 1) {
-//       result.message = `Pencarian gagal: Ditemukan lebih dari satu Desa dengan nama '${villageName}' di lokasi yang ditentukan. Mohon berikan informasi yang lebih spesifik.`
-//       result.failedLevel = 'village' // Ambiguitas di level desa
-
-//       return result
-//     }
-
-//     result.village = villagesFound[0]
-
-//     // Jika sampai di sini, berarti desa telah ditemukan secara unik.
-//     result.message = 'Pencarian desa berhasil: Satu lokasi spesifik ditemukan.'
-//     result.failedLevel = undefined // Reset failedLevel jika sukses
-
-//     return result
-//   } catch (error) {
-//     console.error('Error during ordered wilayah search:', error)
-
-//     return {
-//       message: 'Terjadi kesalahan internal saat mencari wilayah. Silakan coba lagi.',
-//       failedLevel: 'unknown' // Kegagalan tak terduga
-//     }
-//   } finally {
-//     await prisma.$disconnect()
-//   }
-// }
-
-// app/actions/wilayah.ts
 'use server'
 
 import type { Province, Regency, District, Village } from '@/generated/prisma'
@@ -776,7 +432,601 @@ export async function searchWilayahOrdered(
       message: 'Terjadi kesalahan internal saat mencari wilayah. Silakan coba lagi.',
       failedLevel: 'unknown'
     }
-  } finally {
-    await prisma.$disconnect()
+  }
+}
+
+export async function searchWilayahWithFallback(
+  provinceName?: string,
+  regencyLabel?: string,
+  districtName?: string,
+  villageName?: string
+): Promise<SearchResult> {
+  try {
+    // --- Variabel untuk menyimpan hasil parsial terbaik yang pernah ditemukan ---
+    const bestPartialResult: SearchResult = {
+      message: 'Pencarian dimulai...',
+      failedLevel: 'unknown'
+    }
+
+    const createContainsCondition = (name: string) => ({
+      contains: name.toLowerCase(),
+      mode: 'insensitive' as const
+    })
+
+    let currentProvince: ProvinceResult | undefined
+    let possibleRegencies: RegencyResult[] = []
+
+    // --- Validasi Awal: villageName diperlukan untuk memulai pencarian desa ---
+    // Anda bisa mengomentari atau menghapus blok ini jika ingin fungsi berjalan
+    // bahkan tanpa input nama desa sama sekali.
+    if (!villageName || villageName.trim() === '') {
+      return {
+        message: 'Pencarian desa gagal: Nama desa wajib diisi untuk memulai.',
+        failedLevel: 'validation'
+      }
+    }
+
+    const cleanedVillageName = cleanVillageName(villageName)
+
+    if (!cleanedVillageName) {
+      return {
+        message: 'Pencarian desa gagal: Nama desa kosong setelah dibersihkan dari prefiks umum.',
+        failedLevel: 'validation'
+      }
+    }
+
+    // 1. Cari Provinsi
+    if (provinceName) {
+      const provincesFound = (await prisma.province.findMany({
+        where: { name: createContainsCondition(provinceName) },
+        select: { id: true, name: true, code: true },
+        take: 2
+      })) as ProvinceResult[]
+
+      if (provincesFound.length !== 1) {
+        return {
+          message: `Pencarian gagal: Provinsi '${provinceName}' ${provincesFound.length > 1 ? 'ambigu' : 'tidak ditemukan'}.`,
+          failedLevel: 'province'
+        }
+      }
+
+      currentProvince = provincesFound[0]
+
+      // SIMPAN HASIL SEMENTARA
+      bestPartialResult.province = currentProvince
+      bestPartialResult.message = `Provinsi ditemukan: ${currentProvince.name}.`
+      bestPartialResult.failedLevel = 'regency' // Jika gagal, kegagalannya di level bawahnya
+    }
+
+    // 2. Cari Kabupaten/Kota
+    const regencyWhere: any = {}
+
+    if (regencyLabel) {
+      regencyWhere.label = createContainsCondition(regencyLabel)
+    }
+
+    if (currentProvince) {
+      regencyWhere.provinceId = currentProvince.id
+    }
+
+    if (regencyLabel || currentProvince) {
+      possibleRegencies = (await prisma.regency.findMany({
+        where: regencyWhere,
+        select: {
+          id: true,
+          name: true,
+          type: true,
+          code: true,
+          fullCode: true,
+          label: true,
+          province: { select: { id: true, name: true, code: true } }
+        }
+      })) as RegencyResult[]
+
+      if (possibleRegencies.length === 0) {
+        // FALLBACK: Kabupaten/Kota tidak ditemukan, kembalikan hasil parsial terbaik (provinsi)
+        bestPartialResult.message = `Pencarian gagal: Kabupaten/Kota tidak ditemukan. Mengembalikan data provinsi yang cocok.`
+
+        return bestPartialResult
+      }
+    }
+
+    // --- Logika Penelusuran Hierarki untuk Mencari Desa Unik ---
+    const regenciesToSearch: RegencyResult[] = possibleRegencies.length > 0 ? possibleRegencies : []
+
+    for (const regency of regenciesToSearch) {
+      // SIMPAN HASIL SEMENTARA
+      bestPartialResult.province = regency.province
+      bestPartialResult.regency = regency
+      bestPartialResult.message = `Mencari di Kabupaten/Kota: ${regency.label}.`
+      bestPartialResult.failedLevel = 'district'
+
+      const districtWhere: any = { regencyId: regency.id }
+
+      if (districtName) {
+        districtWhere.name = createContainsCondition(districtName)
+      }
+
+      const districtsFoundInThisRegency = (await prisma.district.findMany({
+        where: districtWhere,
+        select: {
+          id: true,
+          name: true,
+          code: true,
+          fullCode: true,
+          regency: {
+            select: {
+              id: true,
+              name: true,
+              type: true,
+              label: true,
+              code: true,
+              fullCode: true,
+              province: { select: { id: true, name: true, code: true } }
+            }
+          }
+        },
+
+        // Jika nama kecamatan spesifik, cek ambiguitas. Jika tidak, ambil semua kecamatan.
+        take: districtName ? 2 : undefined
+      })) as DistrictResult[]
+
+      // Jika kita mencari nama kecamatan tertentu TAPI hasilnya ambigu (>1) atau tidak ketemu (0),
+      // maka jalur ini tidak valid, jadi kita `continue` ke kabupaten berikutnya.
+      if (districtName && districtsFoundInThisRegency.length !== 1) {
+        continue
+      }
+
+      if (districtsFoundInThisRegency.length === 0) {
+        // Tidak ada kecamatan yang cocok di kabupaten ini, coba kabupaten berikutnya.
+        continue
+      }
+
+      // Jika districtName tidak spesifik, kita harus loop semua kecamatan yang ditemukan.
+      for (const district of districtsFoundInThisRegency) {
+        // SIMPAN HASIL SEMENTARA
+        bestPartialResult.district = district
+        bestPartialResult.message = `Mencari di Kecamatan: ${district.name}.`
+        bestPartialResult.failedLevel = 'village'
+
+        const villagesFoundInThisPath = (await prisma.village.findMany({
+          where: {
+            districtId: district.id,
+            name: createContainsCondition(cleanedVillageName)
+          },
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            fullCode: true,
+            postalCode: true,
+            district: {
+              select: {
+                id: true,
+                name: true,
+                code: true,
+                fullCode: true,
+                regency: {
+                  select: {
+                    id: true,
+                    name: true,
+                    type: true,
+                    label: true,
+                    code: true,
+                    fullCode: true,
+                    province: { select: { id: true, name: true, code: true } }
+                  }
+                }
+              }
+            }
+          },
+          take: 2 // Ambil 2 untuk memeriksa apakah hasilnya unik atau ambigu.
+        })) as VillageResult[]
+
+        if (villagesFoundInThisPath.length === 1) {
+          // >>> SUKSES TOTAL! Desa unik ditemukan.
+          return {
+            province: villagesFoundInThisPath[0].district.regency.province,
+            regency: villagesFoundInThisPath[0].district.regency,
+            district: villagesFoundInThisPath[0].district,
+            village: villagesFoundInThisPath[0],
+            message: 'Pencarian desa berhasil: Satu lokasi spesifik ditemukan.',
+            failedLevel: undefined
+          }
+        }
+      }
+    }
+
+    // --- FALLBACK FINAL ---
+    // Jika seluruh loop selesai tanpa mengeksekusi `return` di atas,
+    // itu berarti desa unik tidak pernah ditemukan.
+    // Maka, kita kembalikan hasil parsial terbaik yang berhasil kita simpan.
+    return bestPartialResult
+  } catch (error) {
+    console.error('Error during search with fallback:', error)
+
+    return {
+      message: 'Terjadi kesalahan internal saat mencari wilayah. Silakan coba lagi.',
+      failedLevel: 'unknown'
+    }
+  }
+}
+
+interface SearchResultPartial {
+  province?: ProvinceResult
+  regency?: RegencyResult
+  district?: DistrictResult
+  village?: VillageResult
+  message: string
+  failedLevel?: 'province' | 'regency' | 'district' | 'village' | 'validation' | 'unknown'
+}
+
+/**
+ * Mencari wilayah secara top-down dan mengembalikan hasil terjauh yang dapat ditemukan secara unik.
+ * Fungsi ini akan berhenti mencari jika suatu tingkat tidak ditemukan atau hasilnya ambigu (lebih dari satu).
+ * Dianggap berhasil jika minimal provinsi ditemukan secara unik.
+ *
+ * @param {string} [provinceName] - Nama provinsi (paling direkomendasikan untuk memulai).
+ * @param {string} [regencyLabel] - Label kabupaten/kota.
+ * @param {string} [districtName] - Nama kecamatan.
+ * @param {string} [villageName] - Nama desa/kelurahan.
+ * @returns {Promise<SearchResultPartial>} Objek yang berisi hasil pencarian parsial dan status.
+ */
+export async function searchWilayahHybrid(
+  provinceName?: string,
+  regencyLabel?: string,
+  districtName?: string,
+  villageName?: string
+): Promise<SearchResultPartial> {
+  // --- Validasi Awal ---
+  if (!provinceName && !regencyLabel && !districtName && !villageName) {
+    return {
+      message: 'Pencarian gagal: Harap berikan setidaknya satu kriteria pencarian.',
+      failedLevel: 'validation'
+    }
+  }
+
+  // Objek untuk menyimpan hasil parsial TERBAIK yang ditemukan selama pencarian
+  const bestPartialResult: SearchResultPartial = {
+    message: 'Pencarian dimulai...',
+    failedLevel: 'unknown'
+  }
+
+  const createContainsCondition = (name: string) => ({
+    contains: name.toLowerCase(),
+    mode: 'insensitive' as const
+  })
+
+  try {
+    let currentProvince: ProvinceResult | undefined
+    let possibleRegencies: RegencyResult[] = []
+
+    // 1. Cari Provinsi (Wajib untuk memulai pencarian agresif)
+    if (provinceName) {
+      const provincesFound = (await prisma.province.findMany({
+        where: { name: createContainsCondition(provinceName) },
+        select: { id: true, name: true, code: true },
+        take: 2
+      })) as ProvinceResult[]
+
+      if (provincesFound.length !== 1) {
+        bestPartialResult.message =
+          provincesFound.length > 1
+            ? `Pencarian gagal: Provinsi '${provinceName}' ambigu.`
+            : `Pencarian gagal: Provinsi '${provinceName}' tidak ditemukan.`
+        bestPartialResult.failedLevel = 'province'
+
+        return bestPartialResult
+      }
+
+      currentProvince = provincesFound[0]
+      bestPartialResult.province = currentProvince // Simpan sebagai hasil parsial terbaik sementara
+    } else {
+      return { message: 'Pencarian agresif memerlukan nama provinsi.', failedLevel: 'validation' }
+    }
+
+    // 2. Tentukan Kabupaten/Kota yang akan ditelusuri
+    if (regencyLabel) {
+      possibleRegencies = (await prisma.regency.findMany({
+        where: {
+          provinceId: currentProvince.id,
+          label: createContainsCondition(regencyLabel)
+        },
+        select: {
+          /* ... select fields ... */
+        }
+      })) as RegencyResult[]
+
+      if (possibleRegencies.length === 0) {
+        bestPartialResult.message = `Pencarian gagal: Kabupaten/Kota '${regencyLabel}' tidak ditemukan di ${currentProvince.name}.`
+        bestPartialResult.failedLevel = 'regency'
+
+        return bestPartialResult
+      }
+    } else {
+      // Jika tidak ada label kabupaten, telusuri semua kabupaten di provinsi
+      possibleRegencies = (await prisma.regency.findMany({
+        where: { provinceId: currentProvince.id },
+        select: {
+          /* ... select fields ... */
+        }
+      })) as RegencyResult[]
+    }
+
+    // 3. === Loop Pencarian Agresif ===
+    // Loop melalui setiap kemungkinan kabupaten untuk menemukan jalur yang valid ke desa
+    for (const regency of possibleRegencies) {
+      // Update hasil parsial terbaik saat ini
+      bestPartialResult.regency = regency
+      bestPartialResult.district = undefined // Reset level yang lebih dalam
+      bestPartialResult.village = undefined
+
+      const districtWhere: any = { regencyId: regency.id }
+
+      if (districtName) {
+        districtWhere.name = createContainsCondition(districtName)
+      }
+
+      const districtsFound = (await prisma.district.findMany({
+        where: districtWhere,
+        select: {
+          /* ... select fields ... */
+        }
+      })) as DistrictResult[]
+
+      // Telusuri setiap kecamatan yang ditemukan
+      for (const district of districtsFound) {
+        bestPartialResult.district = district // Update lagi hasil parsial terbaik
+
+        const villageWhere: any = { districtId: district.id }
+
+        if (villageName) {
+          villageWhere.name = createContainsCondition(cleanVillageName(villageName))
+        }
+
+        const villagesFound = (await prisma.village.findMany({
+          where: villageWhere,
+          select: {
+            /* ... select fields ... */
+          },
+          take: 2 // Ambil 2 untuk memeriksa ambiguitas
+        })) as VillageResult[]
+
+        // >> KONDISI SUKSES UTAMA <<
+        if (villagesFound.length === 1) {
+          const finalVillage = villagesFound[0]
+
+          // Jika ditemukan SATU desa unik, pencarian berhasil! Langsung kembalikan.
+          return {
+            province: finalVillage.district.regency.province,
+            regency: finalVillage.district.regency,
+            district: finalVillage.district,
+            village: finalVillage,
+            message: 'Pencarian agresif berhasil: Satu lokasi desa unik ditemukan.',
+            failedLevel: undefined
+          }
+        }
+
+        // Jika desa ambigu ( > 1) atau tidak ditemukan (0), loop terus mencari di kecamatan/kabupaten lain.
+        // `bestPartialResult` akan tetap menyimpan jejak terakhir yang paling dalam.
+      }
+    }
+
+    // 4. === Logika Fallback ===
+    // Jika loop selesai tanpa menemukan desa unik, artinya pencarian agresif gagal.
+    // Sekarang, kita kembalikan `bestPartialResult` yang telah kita lacak.
+    if (bestPartialResult.district) {
+      bestPartialResult.message = `Pencarian desa unik gagal. Hasil terdekat ditemukan hingga tingkat Kecamatan: ${bestPartialResult.district.name}.`
+      bestPartialResult.failedLevel = 'village' // Gagal di level desa
+    } else if (bestPartialResult.regency) {
+      bestPartialResult.message = `Pencarian desa unik gagal. Hasil terdekat ditemukan hingga tingkat Kabupaten/Kota: ${bestPartialResult.regency.label}.`
+      bestPartialResult.failedLevel = 'district' // Gagal di level kecamatan
+    } else {
+      // Ini berarti hanya provinsi yang ditemukan
+      bestPartialResult.message = `Pencarian desa unik gagal. Hanya provinsi yang dapat diidentifikasi.`
+      bestPartialResult.failedLevel = 'regency'
+    }
+
+    return bestPartialResult
+  } catch (error) {
+    console.error('Error during hybrid wilayah search:', error)
+
+    return {
+      message: 'Terjadi kesalahan internal saat mencari wilayah.',
+      failedLevel: 'unknown'
+    }
+  }
+}
+
+export async function searchWilayahOrderedPartialFlexible(
+  provinceName?: string,
+  regencyLabel?: string,
+  districtName?: string,
+  villageName?: string
+): Promise<SearchResultPartial> {
+  try {
+    const result: SearchResultPartial = {
+      message: 'Tidak ada data wilayah ditemukan.',
+      failedLevel: undefined
+    }
+
+    const createContains = (s: string) => ({ contains: s, mode: 'insensitive' as const })
+
+    // --- Provinsi ---
+    if (!provinceName) {
+      result.failedLevel = 'province'
+      result.message = 'Province wajib ada.'
+
+      return result
+    }
+
+    const provinces = await prisma.province.findMany({
+      where: { name: createContains(provinceName) },
+      select: { id: true, name: true, code: true },
+      take: 2
+    })
+
+    if (provinces.length === 0) {
+      result.failedLevel = 'province'
+      result.message = `Provinsi '${provinceName}' tidak ditemukan.`
+
+      return result
+    } else if (provinces.length > 1) {
+      result.failedLevel = 'province'
+      result.message = `Lebih dari satu provinsi cocok dengan '${provinceName}'.`
+
+      return result
+    }
+
+    const province = provinces[0]
+
+    result.province = province
+
+    // --- Kabupaten/Kota ---
+    let regency: RegencyResult | undefined
+
+    if (regencyLabel) {
+      const regencyWhere: any = { label: createContains(regencyLabel), provinceId: province.id }
+
+      const regencies = await prisma.regency.findMany({
+        where: regencyWhere,
+        select: {
+          id: true,
+          name: true,
+          type: true,
+          code: true,
+          fullCode: true,
+          label: true,
+          province: { select: { id: true, name: true, code: true } }
+        },
+        take: 2
+      })
+
+      if (regencies.length > 0) {
+        regency = regencies[0]
+        result.regency = regency
+
+        if (regencies.length > 1) {
+          result.message = `Lebih dari satu Kabupaten/Kota cocok dengan '${regencyLabel}', menggunakan yang pertama.`
+        }
+      } else {
+        result.message = `Kabupaten/Kota '${regencyLabel}' tidak ditemukan.`
+      }
+    } else {
+      const regencies = await prisma.regency.findMany({
+        where: { provinceId: province.id },
+        select: {
+          id: true,
+          name: true,
+          type: true,
+          code: true,
+          fullCode: true,
+          label: true,
+          province: { select: { id: true, name: true, code: true } }
+        }
+      })
+
+      if (regencies.length > 0) {
+        regency = regencies[0]
+        result.regency = regency
+      }
+    }
+
+    // --- Kecamatan ---
+    let district: DistrictResult | undefined
+
+    if (districtName && regency) {
+      const districts = await prisma.district.findMany({
+        where: { regencyId: regency.id, name: createContains(districtName) },
+        select: {
+          id: true,
+          name: true,
+          code: true,
+          fullCode: true,
+          regency: {
+            select: {
+              id: true,
+              name: true,
+              type: true,
+              code: true,
+              fullCode: true,
+              label: true,
+              province: { select: { id: true, name: true, code: true } }
+            }
+          }
+        },
+        take: 2
+      })
+
+      if (districts.length > 0) {
+        district = districts[0]
+        result.district = district
+
+        if (districts.length > 1) {
+          result.message = `Lebih dari satu Kecamatan cocok dengan '${districtName}', menggunakan yang pertama.`
+        }
+      } else {
+        result.message = `Kecamatan '${districtName}' tidak ditemukan.`
+      }
+    }
+
+    // --- Desa ---
+    if (villageName && district) {
+      const cleanedName = cleanVillageName(villageName)
+
+      if (cleanedName) {
+        const villages = await prisma.village.findMany({
+          where: { districtId: district.id, name: createContains(cleanedName) },
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            fullCode: true,
+            postalCode: true,
+            district: {
+              select: {
+                id: true,
+                name: true,
+                code: true,
+                fullCode: true,
+                regency: {
+                  select: {
+                    id: true,
+                    name: true,
+                    type: true,
+                    code: true,
+                    fullCode: true,
+                    label: true,
+                    province: { select: { id: true, name: true, code: true } }
+                  }
+                }
+              }
+            }
+          },
+          take: 2
+        })
+
+        if (villages.length > 0) {
+          result.village = villages[0]
+
+          if (villages.length > 1) {
+            result.message = `Lebih dari satu Desa cocok dengan '${villageName}', menggunakan yang pertama.`
+          } else {
+            result.message = 'Desa ditemukan.'
+          }
+        } else {
+          result.message = `Desa '${villageName}' tidak ditemukan.`
+        }
+      }
+    }
+
+    // Hasil minimal valid: province sudah ada → dianggap valid
+    result.failedLevel = undefined
+
+    return result
+  } catch (err) {
+    console.error('searchWilayahOrderedPartialFlexible error:', err)
+
+    return { message: 'Terjadi kesalahan internal.', failedLevel: 'unknown' }
   }
 }

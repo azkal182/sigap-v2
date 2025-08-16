@@ -2,7 +2,7 @@ import React, { useMemo } from 'react'
 
 import Link from 'next/link'
 
-import { Button, IconButton } from '@mui/material'
+import { Alert, AlertTitle, Button, IconButton } from '@mui/material'
 
 import type { ColumnDef } from '@tanstack/react-table'
 
@@ -92,6 +92,10 @@ const StudentPageView = () => {
 
   return (
     <div>
+      <Alert severity='warning' sx={{ mt: 2, mb: 4 }}>
+        <AlertTitle>Warning</AlertTitle>
+        {data?.message}
+      </Alert>
       <DataTableWithParams
         columns={columns}
         data={data?.data ?? []}

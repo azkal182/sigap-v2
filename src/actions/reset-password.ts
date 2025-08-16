@@ -52,7 +52,5 @@ export async function updateNewPassword(userId: string, newPassword: string): Pr
     console.error('Error updating new password:', error)
 
     return { success: false, message: 'An unexpected error occurred.' }
-  } finally {
-    await prisma.$disconnect() // Penting untuk memutuskan koneksi Prisma di Server Actions
   }
 }

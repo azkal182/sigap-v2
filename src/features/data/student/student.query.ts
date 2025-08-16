@@ -16,6 +16,7 @@ export function useStudents(params: FilterStudentParams, isValid: boolean) {
       }
 
       return {
+        message: res.message,
         data: res.data,
         pagination: res.pagination
       }

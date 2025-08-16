@@ -14,7 +14,7 @@ import { z } from 'zod'
 import { createStudentFromImportDataV2 } from '@/actions/import-data-action'
 
 // Import Server Action validasi baru
-import { validateImportDataOnServer } from '@/actions/validate-import-data-action'
+import { validateImportDataPartialOnServer } from '@/actions/validate-import-data-action'
 import GenerateDormitoryExcelButton from './generate'
 
 // --- Definisi Tipe untuk Data Baris Excel yang Sudah Diformat ---
@@ -44,12 +44,32 @@ interface ExcelRowData {
   // Properti tambahan untuk validasi (opsional di awal)
   __isValid?: boolean
   __validationMessage?: string
-  __wilayahData?: {
-    id: number
-    name: string
-    code: string
-    fullCode: string
-    postalCode: string
+  __wilayahData: {
+    province?: {
+      id: number
+      name: string
+      code: string
+    }
+    regency?: {
+      id: number
+      name: string
+      type?: string
+      code: string
+      fullCode?: string
+    }
+    district?: {
+      id: number
+      name: string
+      code: string
+      fullCode?: string
+    }
+    village?: {
+      id: number
+      name: string
+      code: string
+      fullCode?: string
+      postalCode?: string
+    }
   } | null
   __placeOfBirth?: string | null
   __dateOfBirth?: Date | null
@@ -383,10 +403,50 @@ export default function ImportComponent() {
       // `validateImportDataOnServer` should accept ExcelRowData[] and return ExcelRowData[]
       // We pass previewData directly which is already ExcelRowData[]
       //   @ts-ignore
-      const { validatedRows, totalInvalid, message } = await validateImportDataOnServer(previewData)
+      const { validatedRows, totalInvalid, message } = await validateImportDataPartialOnServer(previewData)
 
       // Ensure validatedRows matches ExcelRowData[] before setting state
       //   @ts-ignore
+
+      const counters: Record<'province' | 'regency' | 'district' | 'village', number> = {
+        province: 0,
+        regency: 0,
+        district: 0,
+        village: 0
+      }
+
+      const filledCounters: Record<'province' | 'regency' | 'district' | 'village', number> = {
+        province: 0,
+        regency: 0,
+        district: 0,
+        village: 0
+      }
+
+      // Loop untuk menghitung
+      for (const row of validatedRows) {
+        const wilayah = row.__wilayahData
+
+        if (!wilayah?.province?.id) counters.province++
+        else filledCounters.province++
+
+        if (!wilayah?.regency?.id) counters.regency++
+        else filledCounters.regency++
+
+        if (!wilayah?.district?.id) counters.district++
+        else filledCounters.district++
+
+        if (!wilayah?.village?.id) counters.village++
+        else filledCounters.village++
+      }
+
+      // Tampilkan di console
+      console.log('=== Wilayah Validation Summary ===')
+      console.log('Missing counts:', counters)
+      console.log('Filled counts :', filledCounters)
+      console.log('Total rows    :', validatedRows.length)
+      console.log('Total invalid :', totalInvalid)
+      console.log('Message       :', message)
+
       setPreviewData(validatedRows as ExcelRowData[])
 
       if (totalInvalid > 0) {
@@ -452,24 +512,21 @@ export default function ImportComponent() {
         batch.map(async dataRow => {
           // Pastikan dormitoryId, dormitoryName, wilayahData, placeOfBirth, dan dateOfBirth ada
           // `createStudentFromImportDataV2` harus bisa menerima `dormitoryId` dan `dormitoryName`
-          if (
-            dataRow.dormitoryId &&
-            dataRow.dormitoryName &&
-            dataRow.__wilayahData &&
-            dataRow.__placeOfBirth &&
-            dataRow.__dateOfBirth
-          ) {
+          if (dataRow.dormitoryId && dataRow.dormitoryName && dataRow.__placeOfBirth && dataRow.__dateOfBirth) {
             const studentData = {
               ...dataRow,
               dormitoryId: dataRow.dormitoryId,
               dormitoryName: dataRow.dormitoryName, // <--- BARU
-              villageId: dataRow.__wilayahData.id,
+              villageId: dataRow?.__wilayahData?.village?.id ?? null,
+              districtId: dataRow?.__wilayahData?.district?.id ?? null,
+              regencyId: dataRow?.__wilayahData?.regency?.id ?? null,
+              provinceId: dataRow?.__wilayahData?.province?.id ?? null,
               placeOfBirth: dataRow.__placeOfBirth,
               dateOfBirth: dataRow.__dateOfBirth
             }
 
             // Panggil fungsi v2 yang sudah kita buat
-            return await createStudentFromImportDataV2(studentData) // <--- PENTING: Pastikan ini adalah V2
+            return await createStudentFromImportDataV2(studentData)
           } else {
             console.warn(
               `Melewatkan baris (NIS: ${dataRow.NIS}) karena data yang dibutuhkan tidak lengkap/valid setelah validasi server. Pesan: ${

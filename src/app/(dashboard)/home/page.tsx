@@ -147,7 +147,6 @@ export default function Page() {
         setTeacherId(data.teacherId)
         setDormitoryName(data.dormitoryName)
         setSubjectName(data.subjectName)
-        console.log(data.teacherId)
 
         // ✅ Inisialisasi attendances dari data students yang sudah ada
         const initialAttendances = data.students.map(student => ({
@@ -230,7 +229,12 @@ export default function Page() {
         {
           onSuccess: () => {
             toast.success('Absensi berhasil diisi!')
-            setIsAttendanceFilled(true) // Set state setelah berhasil
+
+            if (user.user?.id) {
+              fetchStudents(user.user.id)
+            }
+
+            setIsAttendanceFilled(true)
           },
           onError: (error: any) => {
             toast.error(error.message || 'Absensi gagal diisi!')
@@ -240,29 +244,6 @@ export default function Page() {
     }
   }
 
-  //   useEffect(() => {
-  //     if (user.user?.role === 'PENGAJAR' && user.user?.id) {
-  //       fetchStudents(user.user.id)
-  //     } else {
-  //       setLoading(false)
-  //     }
-  //   }, [user.user?.id, user.user?.role])
-
-  // useEffect(() => {
-  //   if (user.user?.role === 'PENGAJAR' && user.user?.id) {
-  //     setFetchingReport(false)
-  //
-  //     if (isProduction) {
-  //       fetchStudents(user.user.id)
-  //     } else {
-  //       setLoading(false) // langsung tampilkan form input manual
-  //     }
-  //   } else {
-  //     setLoading(false)
-  //   }
-  //   // eslint-disable-next-line react-hooks/exhaustive-deps
-  // }, [user.user?.id, user.user?.role])
-
   useEffect(() => {
     if (user.user?.role === 'PENGAJAR' && user.user?.id) {
       setFetchingReport(false)
@@ -271,11 +252,12 @@ export default function Page() {
         fetchedOnce.current = true // cegah loop
         fetchStudents(user.user.id)
       } else {
-        setLoading(false) // langsung tampilkan form input manual
+        setLoading(false)
       }
     } else {
       setLoading(false)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user.user?.id, user.user?.role])
 
   useEffect(() => {
@@ -288,7 +270,6 @@ export default function Page() {
       .then(res => res.json())
       .then(data => {
         setDormitories(data)
-        console.log(data)
         setFetchingReport(false)
       })
     console.log(timezone)
@@ -299,12 +280,6 @@ export default function Page() {
       <div>
         <DashboardPage dormitories={dormitories} />
       </div>
-
-      //   <Box display='flex' justifyContent='center' alignItems='center' minHeight='50vh'>
-      //     <Typography variant='h5' color='error'>
-      //       Akses Ditolak.
-      //     </Typography>
-      //   </Box>
     )
   }
 
