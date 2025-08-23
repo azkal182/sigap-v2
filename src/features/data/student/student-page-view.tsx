@@ -35,7 +35,6 @@ function EditStudentDialog({
   return (
     <Dialog open={open} onClose={onClose} maxWidth='md' fullWidth PaperProps={{ sx: { overflow: 'visible' } }}>
       <DialogTitle>
-        Edit Santri
         <Typography variant='h5' component='span'>
           Edit Santri
         </Typography>
