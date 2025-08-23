@@ -439,7 +439,11 @@ export default function EditStudentForm({ student, onDone }: { student: StudentI
         />
 
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-          <Button type='submit' variant='contained' disabled={isSubmitting}>
+          <Button
+            type='submit'
+            variant='contained'
+            disabled={isSubmitting || !provinceId || !regencyId || !districtId || !villageId}
+          >
             {isSubmitting ? 'Menyimpan…' : 'Simpan'}
           </Button>
         </Box>
