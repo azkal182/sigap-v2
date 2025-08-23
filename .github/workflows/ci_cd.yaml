@@ -124,6 +124,10 @@ jobs:
           echo "NEXT_PUBLIC_IS_PRODUCTION=${{ matrix.env }}" >> .env
           echo "NEXT_PUBLIC_APP_VERSION=${{ needs.start_notify.outputs.project_version || '1.0.0' }}" >> .env
 
+          echo "REDIS_HOST=${{ secrets.REDIS_HOST }}" >> .env
+          echo "REDIS_PORT=${{ secrets.REDIS_PORT }}" >> .env
+          echo "REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}" >> .env
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -242,6 +246,10 @@ jobs:
           echo "NODE_ENV=${{ matrix.env }}" >> .env
           echo "NEXT_PUBLIC_IS_PRODUCTION=${{ matrix.env }}" >> .env
           echo "HUSKY=0" >> .env
+
+          echo "REDIS_HOST=${{ secrets.REDIS_HOST }}" >> .env
+          echo "REDIS_PORT=${{ secrets.REDIS_PORT }}" >> .env
+          echo "REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}" >> .env
 
           # Install dependensi
           pnpm install --production

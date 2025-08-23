@@ -101,8 +101,6 @@ export default function ExcelImportPreview() {
       const response = await getDormitories()
 
       setDormitories(response) // Asumsi data memiliki field 'name'
-
-      console.log('Dormitories:', response)
     }
 
     fetchDormitories()

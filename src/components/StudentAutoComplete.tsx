@@ -10,12 +10,14 @@ import { useStudentOption } from '@/features/data/student/student.query'
 export type StudentOptions = {
   id: string
   name: string
+  trackId: string | null
   disabled?: boolean
 }
 
 type Props = {
   value?: string | null
   onChange?: (_: any, value: string | null) => void
+  onSelect?: (_: any, option: StudentOptions | null) => void
   error?: boolean
   helperText?: string
   label?: string
@@ -27,6 +29,7 @@ type Props = {
 export default function StudentAutocomplete({
   value,
   onChange,
+  onSelect,
   error,
   helperText,
   label = 'Pilih Santri',
@@ -53,6 +56,7 @@ export default function StudentAutocomplete({
       onChange={(_, newValue) => {
         if (!allowDisable || !newValue?.disabled) {
           onChange?.(_, newValue?.id || null)
+          onSelect?.(_, newValue || null)
         }
       }}
       renderOption={(props, option) => {

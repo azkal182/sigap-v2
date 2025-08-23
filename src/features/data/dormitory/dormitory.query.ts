@@ -22,12 +22,14 @@ import {
   createScheduleSlotAction,
   getSlotDataAction,
   updateScheduleSlotAction,
-  updateScheduleAction
+  updateScheduleAction,
+  getSksOptionAction
 } from './actions/dormitory.action'
 import type {
   CreateScheduleInput,
   CreateScheduleSlotInput,
   FilterDormitoryParams,
+  SksOptionParams,
   TrackFormSchema
 } from './schemas/dormitory-schema'
 import { getScheduleAction } from '@/actions/schedule-action'
@@ -249,7 +251,6 @@ export const useClassDetail = (classId: string) => {
   return useQuery({
     queryKey: ['classDetail', classId],
     queryFn: async () => {
-      console.log('useClassDetail', classId)
       const res = await getClassDetailByIdAction(classId)
 
       if (!res.success) {
@@ -508,5 +509,23 @@ export const useUpdateScheduleSlot = () => {
       // Contoh: query untuk detail asrama atau daftar jadwal
       // queryClient.invalidateQueries({ queryKey: ['dormitory', variables.dormitoryId] })
     }
+  })
+}
+
+export const useSksOption = (params: SksOptionParams) => {
+  return useQuery({
+    queryKey: ['sks_option', params.trackId],
+    queryFn: async () => {
+      const res = await getSksOptionAction(params)
+
+      if (!res.success) {
+        throw new ActionError(res.error, res.issues)
+      }
+
+      return {
+        data: res.data
+      }
+    },
+    enabled: !!params.trackId
   })
 }

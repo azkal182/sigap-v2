@@ -7,6 +7,8 @@ import { Typography, Table, TableBody, TableCell, TableContainer, TableHead, Tab
 import Chip from '@mui/material/Chip'
 import axios from 'axios'
 
+import { usePermissionStore } from '@/store/permission'
+
 const statusMap: any = {
   PRESENT: { color: 'success', label: 'Hadir' },
   ABSENT: { color: 'error', label: 'Alpa' },
@@ -55,19 +57,23 @@ const formatDate = (dateString: any) => {
 export default function StaticDataMuiPage() {
   const { data } = PAGE_DATA
   const [items, setItems] = useState<any[]>([])
+  const { allowedDormitoryIds } = usePermissionStore()
 
   useEffect(() => {
-    const fecthData = async () => {
-      const res = await axios(
-        `/api/attendance-teacher/report/daily?dormitoryId=e7f8a9b0-c1d2-3456-7890-90abcdef1234&date=13-08-2025`
-      )
+    if (allowedDormitoryIds.length > 0) {
+      const fecthData = async () => {
+        const res = await axios(
+          `/api/attendance-teacher/report/daily?dormitoryId=${allowedDormitoryIds[0]}&date=19-08-2025`
+        )
 
-      const { data } = res.data
+        const { data } = res.data
 
-      setItems(data)
+        setItems(data)
+      }
+
+      fecthData()
     }
-
-    fecthData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // @ts-ignore

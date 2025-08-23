@@ -28,6 +28,7 @@ const TeacherPageView = () => {
   })
 
   const { data, isLoading: queryLoading } = useTeachers(searchParams.params, searchParams.isReady)
+
   const { mutate: createTeacher } = useCreateTeacher()
   const { mutate: editTeacher } = useEditTeacher()
 

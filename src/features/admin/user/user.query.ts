@@ -16,8 +16,6 @@ import { updateCredentialsAction } from './user.action'
 export const useChangeCredentials = () => {
   return useMutation({
     mutationFn: async (input: { userId: string; username: string; password: string }) => {
-      console.log(JSON.stringify(input))
-
       const res = await updateCredentialsAction(input)
 
       if (res === null) return null
@@ -25,7 +23,6 @@ export const useChangeCredentials = () => {
       if (!res || !res.success) {
         const errorMsg = res?.errors || res?.message || 'Unknown error'
 
-        console.log(res)
         throw new Error(errorMsg)
       }
 

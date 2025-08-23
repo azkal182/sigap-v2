@@ -1,8 +1,10 @@
-import React, { useMemo } from 'react'
+import React, { useCallback, useMemo, useState } from 'react'
 
 import Link from 'next/link'
 
-import { Alert, AlertTitle, Button, IconButton } from '@mui/material'
+import dynamic from 'next/dynamic'
+
+import { Alert, AlertTitle, Button, Dialog, DialogContent, DialogTitle, IconButton, Typography } from '@mui/material'
 
 import type { ColumnDef } from '@tanstack/react-table'
 
@@ -14,6 +16,45 @@ import { DataTableWithParams } from '@/components/DataTableWithParams'
 import DormitorySelect from './components/dormitory-select'
 import type { StudentItem } from './student.service'
 import { convertPhoneNumber } from '@/utils/string'
+import DialogCloseButton from '@/components/dialogs/DialogCloseButton'
+
+const EditStudentForm = dynamic(() => import('./components/EditStudentForm'), {
+  ssr: false,
+  loading: () => <div>Memuat form…</div>
+})
+
+function EditStudentDialog({
+  open,
+  onClose,
+  student
+}: {
+  open: boolean
+  onClose: () => void
+  student: StudentItem | null
+}) {
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth='md' fullWidth PaperProps={{ sx: { overflow: 'visible' } }}>
+      <DialogTitle>
+        Edit Santri
+        <Typography variant='h5' component='span'>
+          Edit Santri
+        </Typography>
+        <DialogCloseButton onClick={onClose} disableRipple>
+          <i className='tabler-x' />
+        </DialogCloseButton>
+      </DialogTitle>
+      <DialogContent dividers>
+        {!student ? (
+          <div>Data tidak tersedia.</div>
+        ) : (
+          // eslint-disable-next-line lines-around-comment
+          // Kirim seluruh student atau hanya id (kalau mau fetch detail di dalam form)
+          <EditStudentForm student={student} onDone={onClose} />
+        )}
+      </DialogContent>
+    </Dialog>
+  )
+}
 
 const StudentPageView = () => {
   // 1. Dapatkan state yang diperlukan dari store menggunakan selector hook.
@@ -36,6 +77,21 @@ const StudentPageView = () => {
   })
 
   const { data, isLoading: queryLoading } = useStudents(searchParams.params, searchParams.isReady)
+
+  // === STATE & HANDLERS DIALOG ===
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [selectedStudent, setSelectedStudent] = useState<StudentItem | null>(null)
+
+  const handleOpenEdit = useCallback((student: StudentItem) => {
+    setSelectedStudent(student) // atau cukup setSelectedStudent({ id: student.id })
+    setIsEditOpen(true)
+  }, [])
+
+  const handleCloseEdit = useCallback(() => {
+    setIsEditOpen(false)
+
+    // optional: setSelectedStudent(null)
+  }, [])
 
   const columns = useMemo<ColumnDef<StudentItem>[]>(
     () => [
@@ -71,7 +127,7 @@ const StudentPageView = () => {
 
           return (
             <div className='flex gap-2'>
-              <IconButton size='small' onClick={() => console.log('Edit', student.id)}>
+              <IconButton disabled={student.villageId !== null} size='small' onClick={() => handleOpenEdit(student)}>
                 <i className='tabler-edit text-green-400' />
               </IconButton>
               <IconButton size='small' onClick={() => console.log('Delete', student.id)}>
@@ -87,6 +143,7 @@ const StudentPageView = () => {
         }
       }
     ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [searchParams.params.page, searchParams.params.limit]
   )
 
@@ -111,6 +168,8 @@ const StudentPageView = () => {
           </Link>
         }
       />
+
+      <EditStudentDialog open={isEditOpen} onClose={handleCloseEdit} student={selectedStudent} />
     </div>
   )
 }

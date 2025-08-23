@@ -14,8 +14,14 @@ export type StudentItem = {
   motherName: string | null
   parrentPhone: string | null
   gender: string | null
+  villgae?: string | null
+  villageId?: number | null
+  district?: string | null
+  districtId?: number | null
   regency?: string | null
-  regencyId?: number
+  regencyId?: number | null
+  province?: string | null
+  provinceId?: number | null
   activeDormitory: string | null
   activeTrack: string | null
   activeClass: string | null
@@ -233,7 +239,7 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
       skip,
       take: limit,
       where: whereCondition,
-      orderBy,
+      orderBy: [{ villageId: { sort: 'asc', nulls: 'first' } as any }, orderBy],
       select: {
         id: true,
         name: true,
@@ -315,20 +321,35 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
             }
           }
         },
-        village: {
-          select: {
-            district: {
-              select: {
-                regency: {
-                  select: {
-                    id: true,
-                    label: true
-                  }
-                }
-              }
-            }
-          }
-        }
+        village: true,
+        district: true,
+        regency: true,
+        province: true
+
+        // village: {
+        //   select: {
+        //     id: true,
+        //     name: true,
+        //     district: {
+        //       select: {
+        //         id: true,
+        //         name: true,
+        //         regency: {
+        //           select: {
+        //             id: true,
+        //             label: true,
+        //             province: {
+        //               select: {
+        //                 id: true,
+        //                 name: true
+        //               }
+        //             }
+        //           }
+        //         }
+        //       }
+        //     }
+        //   }
+        // }
       }
     })
 
@@ -364,8 +385,14 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
           dormitoryRoomId: s.dormitoryRoom ? s.dormitoryRoom.id : null,
           formalClass: s.formalClass ? s.formalClass.name : null,
           formalClassId: s.formalClass ? s.formalClass.id : null,
-          regency: s.village?.district.regency.label,
-          regencyId: s.village?.district.regency.id,
+          village: s.village?.name ?? null,
+          villageId: s.village?.id ?? null,
+          district: s.district?.name ?? null,
+          districtId: s.district?.id ?? null,
+          regency: s.regency?.label ?? null,
+          regencyId: s.regency?.id ?? null,
+          provinnce: s.province?.name ?? null,
+          provinceId: s.province?.id ?? null,
           leadership: leadership
             ? {
                 name: leadership.leadership.name,
@@ -393,7 +420,7 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
             let status = 'Belum Daftar'
 
             if (registration) {
-              status = registration.test ? (passed ? 'Lulus' : 'Tidak Lulus') : 'Menunggu Ujian'
+              status = registration.test ? (passed ? 'Lulus' : 'Tidak Lulus') : 'Menunggu Tes'
             }
 
             return {
@@ -408,7 +435,7 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
           const totalSks = sksList.length
           const passedCount = sksList.filter(item => item.passed).length
 
-          console.log(JSON.stringify(s.dormitory?.name, null, 2))
+          //   console.log(JSON.stringify(s.dormitory?.name, null, 2))
 
           return {
             ...baseData,
@@ -450,6 +477,8 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
 
     const summary = await generateWilayahValidationSummary()
 
+    console.log(JSON.stringify(formattedStudents, null, 2))
+
     return {
       success: true,
       data: formattedStudents,
@@ -475,6 +504,7 @@ export async function getStudentOption(dormitoryIds?: string[]): Promise<
     {
       id: string
       name: string
+      trackId: string | null
       disabled?: boolean
     }[]
   >
@@ -492,7 +522,8 @@ export async function getStudentOption(dormitoryIds?: string[]): Promise<
           include: {
             class: {
               include: {
-                dormitory: true
+                dormitory: true,
+                track: true
               }
             }
           }
@@ -506,15 +537,19 @@ export async function getStudentOption(dormitoryIds?: string[]): Promise<
         const studyingHistory = s.histories.find(h => h.status === 'STUDYING')
         const className = studyingHistory?.class?.name
         const dormName = studyingHistory?.class?.dormitory?.name
+        const trackName = studyingHistory?.class?.track?.name
+        const trackId = studyingHistory?.class?.track?.id
         const isAssigned = Boolean(className || dormName)
         const nameParts = [s.name]
 
         if (dormName) nameParts.push(`Asrama: ${dormName}`)
+        if (trackName) nameParts.push(`Fan: ${trackName}`)
         if (className) nameParts.push(`Kelas: ${className}`)
 
         return {
           id: s.id,
           name: nameParts.join(' | '),
+          trackId: trackId || null,
           disabled: isAssigned
         }
       })
@@ -685,7 +720,7 @@ export async function getStudentDetail(id: string): Promise<StudentItem | null> 
     let status = 'Belum Daftar'
 
     if (registration) {
-      status = registration.test ? (passed ? 'Lulus' : 'Tidak Lulus') : 'Menunggu Ujian'
+      status = registration.test ? (passed ? 'Lulus' : 'Tidak Lulus') : 'Menunggu Tes'
     }
 
     return {

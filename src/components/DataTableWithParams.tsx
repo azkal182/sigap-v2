@@ -439,7 +439,7 @@ export function DataTableWithParams<TData, TValue, TParams extends z.ZodSchema>(
 
   // Sync local search with URL params
   useEffect(() => {
-    console.log('URL -> localSearch', searchParams.params.search)
+    // console.log('URL -> localSearch', searchParams.params.search)
     setLocalSearch(searchParams.params.search || '')
   }, [searchParams.params.search])
 

@@ -87,7 +87,7 @@ export default function StudentPageDetailView({ id }: { id: string }) {
 
   const { data: studentDetail, isLoading } = useStudentDetail(id)
 
-  console.log(studentDetail)
+  //   console.log(studentDetail)
   useEffect(() => {
     if (studentDetail) {
       // Mengambil tanggal lahir dari string `ttl`
@@ -382,7 +382,7 @@ export default function StudentPageDetailView({ id }: { id: string }) {
                               ? 'success'
                               : item.status === 'Tidak Lulus'
                                 ? 'error'
-                                : item.status === 'Menunggu Ujian'
+                                : item.status === 'Menunggu Tes'
                                   ? 'warning'
                                   : 'default'
                           }

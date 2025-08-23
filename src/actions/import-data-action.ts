@@ -50,7 +50,7 @@ export const createStudentFromImportData = async (data: any) => {
       }
     })
 
-    console.log('✅ Student created successfully:', result.name)
+    // console.log('✅ Student created successfully:', result.name)
 
     return result
   } catch (error: any) {
@@ -330,7 +330,7 @@ export const createStudentFromImportDataV2 = async (data: StudentImportPayloadV2
       }
     })
 
-    console.log('✅ Student created successfully:', result.name)
+    // console.log('✅ Student created successfully:', result.name)
 
     return result
   } catch (error: any) {

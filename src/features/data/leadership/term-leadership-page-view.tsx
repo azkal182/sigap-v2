@@ -2,7 +2,18 @@
 
 import { useState } from 'react'
 
-import { Button, IconButton, Table, TableBody, TableCell, TableHead, TableRow } from '@mui/material'
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  IconButton,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow
+} from '@mui/material'
 
 import { toast } from 'react-toastify'
 
@@ -51,34 +62,43 @@ export default function TermLeadershipPageView() {
   }
 
   return (
-    <div className='space-y-4'>
-      <Button onClick={() => openTermDialog('create')}>Tambah Periode</Button>
+    <Card className='space-y-4'>
+      <CardHeader
+        title='Periode Kepengurusan'
+        action={
+          <Button variant='contained' onClick={() => openTermDialog('create')}>
+            Tambah
+          </Button>
+        }
+      />
 
       {/* Table */}
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>Nama Periode</TableCell>
-            <TableCell>Mulai</TableCell>
-            <TableCell>Selesai</TableCell>
-            <TableCell>Akis</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {terms?.map(t => (
-            <TableRow key={t.id}>
-              <TableCell>{t.name}</TableCell>
-              <TableCell>{new Date(t.startDate).toLocaleDateString()}</TableCell>
-              <TableCell>{new Date(t.endDate).toLocaleDateString()}</TableCell>
-              <TableCell>
-                <IconButton disabled={!t.canEdit} onClick={() => openTermDialog('edit', t)}>
-                  <i className='tabler-edit text-green-400' />
-                </IconButton>
-              </TableCell>
+      <CardContent>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Nama Periode</TableCell>
+              <TableCell>Mulai</TableCell>
+              <TableCell>Selesai</TableCell>
+              <TableCell>Akis</TableCell>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHead>
+          <TableBody>
+            {terms?.map(t => (
+              <TableRow key={t.id}>
+                <TableCell>{t.name}</TableCell>
+                <TableCell>{new Date(t.startDate).toLocaleDateString()}</TableCell>
+                <TableCell>{new Date(t.endDate).toLocaleDateString()}</TableCell>
+                <TableCell>
+                  <IconButton disabled={!t.canEdit} onClick={() => openTermDialog('edit', t)}>
+                    <i className='tabler-edit text-green-400' />
+                  </IconButton>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
 
       {/* Dialog Form */}
       <TermLeadershipDialog
@@ -132,6 +152,6 @@ export default function TermLeadershipPageView() {
           </form>
         </DialogContent>
       </Dialog> */}
-    </div>
+    </Card>
   )
 }

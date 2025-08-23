@@ -112,9 +112,9 @@ export default function Page() {
       const searchHour = isProduction ? now.hour : customHour
       const searchMinute = isProduction ? now.minute : customMinute
 
-      console.log(
-        `Fetching students for userId: ${userId}, dayOfWeek: ${now.weekday % 7}, hour: ${now.hour}, minute: ${now.minute}`
-      )
+      //   console.log(
+      //     `Fetching students for userId: ${userId}, dayOfWeek: ${now.weekday % 7}, hour: ${now.hour}, minute: ${now.minute}`
+      //   )
 
       if (
         dayOfWeek < 0 ||
@@ -272,7 +272,8 @@ export default function Page() {
         setDormitories(data)
         setFetchingReport(false)
       })
-    console.log(timezone)
+
+    // console.log(timezone)
   }, [dateParam, timezone])
 
   if (!user.user?.role || user.user?.role !== 'PENGAJAR') {

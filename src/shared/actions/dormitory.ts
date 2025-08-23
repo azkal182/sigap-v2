@@ -6,9 +6,10 @@ export const getDormitorySelect = async () => {
   const dormitorySelect = await prisma.dormitory.findMany({
     select: {
       id: true,
-      name: true
+      name: true,
+      gender: true
     }
   })
 
-  return dormitorySelect.map(dorm => ({ value: dorm.id, label: dorm.name }))
+  return dormitorySelect.map(dorm => ({ value: dorm.id, label: `${dorm.name} - ${dorm.gender}` }))
 }

@@ -10,7 +10,6 @@ export type Pagination = {
 export type APIResponse<T> = {
   success: true
   data: T
-
   message?: string
 }
 

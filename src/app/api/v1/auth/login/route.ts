@@ -80,7 +80,7 @@ export async function POST(req: Request) {
   }
 
   if (user.mustChangeCredentials) {
-    return NextResponse.json({ message: 'Login ditolak, harap login melalui website dahulu!' }, { status: 422 })
+    return NextResponse.json({ mustResetCredentials: user.mustChangeCredentials, userId: user.id })
   }
 
   const token = signToken({

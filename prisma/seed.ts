@@ -152,11 +152,7 @@ export async function main() {
       { resource: 'dormitory.teacher', action: 'edit', label: 'Pengajar Asrama' },
       { resource: 'dormitory.teacher', action: 'update', label: 'Pengajar Asrama' },
       { resource: 'dormitory.teacher', action: 'delete', label: 'Pengajar Asrama' },
-      { resource: 'dormitory.permit', action: 'view', label: 'Izin Asrama' },
-      { resource: 'dormitory.permit', action: 'create', label: 'Izin Asrama' },
-      { resource: 'dormitory.permit', action: 'edit', label: 'Izin Asrama' },
-      { resource: 'dormitory.permit', action: 'update', label: 'Izin Asrama' },
-      { resource: 'dormitory.permit', action: 'delete', label: 'Izin Asrama' },
+
       { resource: 'dormitory.validation.student', action: 'view', label: 'Validasi Santri Asrama' },
       { resource: 'dormitory.validation.student', action: 'update', label: 'Validasi Santri Asrama' },
       { resource: 'dormitory.validation.teacher', action: 'view', label: 'Validasi Pengajar Asrama' },
@@ -167,7 +163,31 @@ export async function main() {
       { resource: 'dormitory.schedule', action: 'update', label: 'Jadwal Asrama' },
       { resource: 'dormitory.schedule', action: 'delete', label: 'Jadwal Asrama' },
       { resource: 'dormitory.report', action: 'view', label: 'Laporan Asrama' },
-      { resource: 'dormitory.report', action: 'update', label: 'Laporan Asrama' }
+      { resource: 'dormitory.report', action: 'update', label: 'Laporan Asrama' },
+
+      { resource: 'teacher.schedule', action: 'view', label: 'Jadwal Pengajar' },
+
+      { resource: 'permit', action: 'view', label: 'Perizinan' },
+      { resource: 'permit', action: 'create', label: 'Perizinan' },
+      { resource: 'permit', action: 'edit', label: 'Perizinan' },
+      { resource: 'permit', action: 'update', label: 'Perizinan' },
+      { resource: 'permit', action: 'delete', label: 'Perizinan' },
+
+      { resource: 'leadership.term', action: 'view', label: 'Periode Kepengurusan' },
+      { resource: 'leadership.term', action: 'create', label: 'Periode Kepengurusan' },
+      { resource: 'leadership.term', action: 'edit', label: 'Periode Kepengurusan' },
+      { resource: 'leadership.term', action: 'update', label: 'Periode Kepengurusan' },
+      { resource: 'leadership.term', action: 'delete', label: 'Periode Kepengurusan' },
+
+      { resource: 'leadership.list', action: 'view', label: 'Daftar Kepengurusan' },
+      { resource: 'leadership.list', action: 'create', label: 'Daftar Kepengurusan' },
+      { resource: 'leadership.list', action: 'edit', label: 'Daftar Kepengurusan' },
+      { resource: 'leadership.list', action: 'update', label: 'Daftar Kepengurusan' },
+      { resource: 'leadership.list', action: 'delete', label: 'Daftar Kepengurusan' },
+
+      { resource: 'academic.registration-test', action: 'view', label: 'Akademik' },
+      { resource: 'academic.registration-test', action: 'create', label: 'Akademik' },
+      { resource: 'academic.registration-test', action: 'update', label: 'Akademik' }
     ]
 
     const permissions = await Promise.all(
@@ -196,7 +216,9 @@ export async function main() {
     const roleAdmin = await prisma.role.findUnique({ where: { name: 'ADMIN' } })
 
     if (roleAdmin) {
-      const adminPermissions = permissions.filter(p => !p.resource.startsWith('dormitory.'))
+      const adminPermissions = permissions.filter(
+        p => !p.resource.startsWith('dormitory.') && !p.resource.startsWith('teacher.')
+      )
 
       for (const perm of adminPermissions) {
         console.log(`    - Assigning "${perm.name}" to ADMIN role.`)
@@ -361,8 +383,8 @@ export async function main() {
       {
         dormitory: { id: 'f2a3b4c5-d6e7-8901-2345-4567890abcde', name: 'AZ-ZAHRO', level: 4, gender: GenderType.PUTRI },
         tracks: [
-          { id: 'a3b4c5d6-e7f8-9012-3456-567890abcdef', name: 'UBUDIYAH', targetDays: 90, level: 2 },
           { id: 'b4c5d6e7-f8a9-0123-4567-67890abcdef1', name: 'THOHAROH', targetDays: 60, level: 1 },
+          { id: 'a3b4c5d6-e7f8-9012-3456-567890abcdef', name: 'UBUDIYAH', targetDays: 90, level: 2 },
           { id: 'c5d6e7f8-a9b0-1234-5678-7890abcdef12', name: 'Kajian Kitab', targetDays: 120, level: 3 },
           { id: 'd6e7f8a9-b0c1-2345-6789-890abcdef123', name: 'Tahfidz', targetDays: 180, level: 4 }
         ]
@@ -493,7 +515,7 @@ export async function main() {
     const pengajarPermissions = await prisma.permission.findMany({
       where: {
         name: {
-          in: ['attendance:view', 'attendance:add']
+          in: ['teacher.schedule:view']
         }
       }
     })
@@ -559,6 +581,27 @@ export async function main() {
 
     console.log(`    Permissions (${dormitoryPermissions.length} items) assigned to "OPERATOR_DORM".`)
 
+    console.log(`  - Assigning attendance permissions to Role "OPERATOR_DORM"...`)
+    const attendancePermissions = permissions.filter(p => p.resource === 'attendance')
+
+    for (const perm of attendancePermissions) {
+      await prisma.rolePermission.upsert({
+        where: {
+          roleId_permissionId: {
+            roleId: operatorRole.id,
+            permissionId: perm.id
+          }
+        },
+        update: {},
+        create: {
+          roleId: operatorRole.id,
+          permissionId: perm.id
+        }
+      })
+    }
+
+    console.log(`    Permissions (${attendancePermissions.length} items) assigned to "OPERATOR_DORM".`)
+
     // 5. Buat user per dormitory dan hubungkan ke dormitory lewat UserDormitory
     for (const dorm of allDormitories) {
       const username = `operator_${dorm.name.toLowerCase().replace(/\s+/g, '_')}_${dorm!.gender!.toLowerCase().replace(/\s+/g, '_')}`
@@ -602,88 +645,122 @@ export async function main() {
 
     console.log('--- Seeding Single OPERATOR_DORM Role dan Users Selesai ---')
 
-    // // --- Seeding Dynamic OPERATOR_DORM Roles and Users ---
-    // console.log('\n--- Memulai Seeding Dynamic OPERATOR_DORM Roles dan Users ---')
+    const extraRolesData = [{ name: 'ACADEMIC' }, { name: 'KEAMANAN' }]
 
-    // const allDormitories = await prisma.dormitory.findMany()
-    // const dormitoryPermissions = permissions.filter(p => p.resource.startsWith('dormitory.'))
+    await prisma.role.createMany({
+      data: extraRolesData,
+      skipDuplicates: true
+    })
+    console.log(`  [x] Seeding ${extraRolesData.length} Role tambahan selesai.`)
 
-    // for (const dorm of allDormitories) {
-    //   const roleName = `OPERATOR_DORM_${dorm.name.replace(/\s+/g, '_').toUpperCase()}`
-    //   const username = `operator_${dorm.name.toLowerCase().replace(/\s+/g, '_')}`
+    // 2. Assign permissions untuk role ACADEMIC (mirip operator dormitory)
+    console.log('  [x] Menetapkan permissions untuk Role ACADEMIC...')
+    const roleAcademic = await prisma.role.findUnique({ where: { name: 'ACADEMIC' } })
 
-    //   console.log(`  - Processing Dormitory: "${dorm.name}" (ID: ${dorm.id})`)
+    if (roleAcademic) {
+      const academicPermissions = permissions.filter(p => p.resource.startsWith('academic.'))
 
-    //   // Create/Upsert dynamic OPERATOR_DORM role
-    //   console.log(`    - Upserting Role: "${roleName}"`)
+      for (const perm of academicPermissions) {
+        await prisma.rolePermission.upsert({
+          where: {
+            roleId_permissionId: { roleId: roleAcademic.id, permissionId: perm.id }
+          },
+          update: {},
+          create: {
+            roleId: roleAcademic.id,
+            permissionId: perm.id
+          }
+        })
+      }
 
-    //   const operatorRole = await prisma.role.upsert({
-    //     where: { name: roleName },
-    //     update: {},
-    //     create: { name: roleName, canEdit: false }
-    //   })
+      console.log(`    Permissions untuk ACADEMIC (${academicPermissions.length} items) selesai ditetapkan.`)
+    }
 
-    //   console.log(`      Role "${roleName}" (ID: ${operatorRole.id}) created/updated.`)
+    // 5. Buat user akademik per dormitory dan hubungkan ke dormitory lewat UserDormitory
+    if (roleAcademic) {
+      for (const dorm of allDormitories) {
+        const username = `akademik_${dorm.name.toLowerCase().replace(/\s+/g, '_')}_${dorm!.gender!.toLowerCase().replace(/\s+/g, '_')}`
 
-    //   // Ensure Role to Dormitory connection (via RoleDormitory)
-    //   console.log(`    - Connecting Role "${roleName}" to Dormitory "${dorm.name}"...`)
-    //   await prisma.roleDormitory.upsert({
-    //     where: {
-    //       roleId_dormitoryId: {
-    //         roleId: operatorRole.id,
-    //         dormitoryId: dorm.id
-    //       }
-    //     },
-    //     update: {},
-    //     create: {
-    //       roleId: operatorRole.id,
-    //       dormitoryId: dorm.id
-    //     }
-    //   })
-    //   console.log(`      Role "${roleName}" connected to Dormitory "${dorm.name}".`)
+        console.log(`  - Processing Dormitory: "${dorm.name}"`)
 
-    //   // Assign dormitory-specific permissions to this role
-    //   console.log(`    - Assigning dormitory-specific permissions to Role "${roleName}"...`)
+        // Buat / Update user operator untuk dormitory ini
+        const user = await prisma.user.upsert({
+          where: { username: username },
+          update: {
+            name: `Akademik ${dorm.name}`,
+            password: hashSync('akademik', 10),
+            roleId: roleAcademic.id
+          },
+          create: {
+            name: `Akademik ${dorm.name}`,
+            username: username,
+            password: hashSync('akademik', 10),
+            role: { connect: { id: roleAcademic.id } }
+          }
+        })
 
-    //   for (const perm of dormitoryPermissions) {
-    //     console.log(`      - Assigning "${perm.name}" to "${roleName}" role.`)
-    //     await prisma.rolePermission.upsert({
-    //       where: {
-    //         roleId_permissionId: {
-    //           roleId: operatorRole.id,
-    //           permissionId: perm.id
-    //         }
-    //       },
-    //       update: {},
-    //       create: {
-    //         roleId: operatorRole.id,
-    //         permissionId: perm.id
-    //       }
-    //     })
-    //   }
+        console.log(`    Dummy user "${username}" created/updated.`)
 
-    //   console.log(`      Permissions for Role "${roleName}" (${dormitoryPermissions.length} items) assigned.`)
+        // Hubungkan user ke dormitory lewat UserDormitory
+        await prisma.userDormitory.upsert({
+          where: {
+            userId_dormitoryId: {
+              userId: user.id,
+              dormitoryId: dorm.id
+            }
+          },
+          update: {},
+          create: {
+            userId: user.id,
+            dormitoryId: dorm.id
+          }
+        })
+        console.log(`    User "${username}" linked to Dormitory "${dorm.name}".`)
+      }
+    }
 
-    //   // (Optional) Add dummy user for each dormitory operator
-    //   console.log(`    - Upserting dummy user for Operator Dormitory: "${dorm.name}" (Username: "${username}")`)
-    //   await prisma.user.upsert({
-    //     where: { username: username },
-    //     update: {
-    //       name: `Operator ${dorm.name}`,
-    //       password: hashSync('operator', 10), // Added salt rounds
-    //       roleId: operatorRole.id
-    //     },
-    //     create: {
-    //       name: `Operator ${dorm.name}`,
-    //       username: username,
-    //       password: hashSync('operator', 10), // Added salt rounds
-    //       role: { connect: { id: operatorRole.id } }
-    //     }
-    //   })
-    //   console.log(`      Dummy user "${username}" created/updated.`)
-    // }
+    // 3. Assign semua permissions `permit.*` untuk role KEAMANAN
+    console.log('  [x] Menetapkan semua permissions PERMIT untuk Role KEAMANAN...')
+    const roleKeamanan = await prisma.role.findUnique({ where: { name: 'KEAMANAN' } })
 
-    // console.log('--- Seeding Dynamic OPERATOR_DORM Roles dan Users Selesai ---')
+    if (roleKeamanan) {
+      const keamananPermissions = permissions.filter(p => p.resource.startsWith('permit'))
+
+      for (const perm of keamananPermissions) {
+        await prisma.rolePermission.upsert({
+          where: {
+            roleId_permissionId: { roleId: roleKeamanan.id, permissionId: perm.id }
+          },
+          update: {},
+          create: {
+            roleId: roleKeamanan.id,
+            permissionId: perm.id
+          }
+        })
+      }
+
+      console.log(`    Permissions untuk KEAMANAN (${keamananPermissions.length} items) selesai ditetapkan.`)
+    }
+
+    console.log('  [x] Membuat User Keamanan...')
+
+    if (roleKeamanan) {
+      await prisma.user.upsert({
+        where: { username: 'keamanan' },
+        update: {
+          name: 'User Keamanan',
+          password: hashSync('keamanan', 10),
+          roleId: roleKeamanan.id
+        },
+        create: {
+          name: 'User Keamanan',
+          username: 'keamanan',
+          password: hashSync('keamanan', 10),
+          role: { connect: { id: roleKeamanan.id } }
+        }
+      })
+      console.log(`    User "keamanan" selesai di-seed.`)
+    }
 
     console.log('\n--- Semua Proses Seeding Database Selesai dengan Sukses! ---')
   } catch (error) {

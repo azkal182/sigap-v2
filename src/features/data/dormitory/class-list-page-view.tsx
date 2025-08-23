@@ -14,9 +14,11 @@ import {
   DialogTitle,
   Grid,
   IconButton,
+  Paper,
   Table,
   TableBody,
   TableCell,
+  TableContainer,
   TableHead,
   TableRow,
   Typography
@@ -193,65 +195,67 @@ const ClassListPageView = ({ trackId, dormitoryId }: { trackId: string; dormitor
             Tambah Kelas
           </Button>
 
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell className='w-6'>NO</TableCell>
-                <TableCell>NAMA</TableCell>
-                <TableCell>WALI Kelas</TableCell>
-                <TableCell>Jumlah Santri</TableCell>
-                <TableCell>AKSI</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {isLoading ? (
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
                 <TableRow>
-                  <TableCell colSpan={5} align='center'>
-                    <Typography variant='body2'>Memuat data...</Typography>
-                  </TableCell>
+                  <TableCell className='w-6'>NO</TableCell>
+                  <TableCell>NAMA</TableCell>
+                  <TableCell>WALI Kelas</TableCell>
+                  <TableCell>Jumlah Santri</TableCell>
+                  <TableCell>AKSI</TableCell>
                 </TableRow>
-              ) : data?.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} align='center'>
-                    <Typography variant='body2'>Tidak ada data kelas ditemukan.</Typography>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                data?.map((item, index) => (
-                  <TableRow key={item.id}>
-                    <TableCell>{index + 1}</TableCell>
-                    <TableCell>{item.name}</TableCell>
-                    <TableCell>{item.teacher}</TableCell>
-                    <TableCell>{item.studentCount}</TableCell>
-                    <TableCell>
-                      <div className='flex gap-2'>
-                        <IconButton
-                          size='small'
-                          onClick={() =>
-                            openClassDialog('edit', {
-                              id: item.id,
-                              className: item.name,
-                              teacherName: item.teacher
-                            })
-                          }
-                        >
-                          <i className='tabler-edit text-green-400' />
-                        </IconButton>
-                        <IconButton size='small'>
-                          <i className='tabler-trash text-red-400' />
-                        </IconButton>
-                        <Link href={`/data/dormitory/${dormitoryId}/${trackId}/${item.id}`}>
-                          <IconButton size='small'>
-                            <i className='tabler-eye text-primary' />
-                          </IconButton>
-                        </Link>
-                      </div>
+              </TableHead>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={5} align='center'>
+                      <Typography variant='body2'>Memuat data...</Typography>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : data?.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} align='center'>
+                      <Typography variant='body2'>Tidak ada data kelas ditemukan.</Typography>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  data?.map((item, index) => (
+                    <TableRow key={item.id}>
+                      <TableCell>{index + 1}</TableCell>
+                      <TableCell>{item.name}</TableCell>
+                      <TableCell>{item.teacher}</TableCell>
+                      <TableCell>{item.studentCount}</TableCell>
+                      <TableCell>
+                        <div className='flex gap-2'>
+                          <IconButton
+                            size='small'
+                            onClick={() =>
+                              openClassDialog('edit', {
+                                id: item.id,
+                                className: item.name,
+                                teacherName: item.teacher
+                              })
+                            }
+                          >
+                            <i className='tabler-edit text-green-400' />
+                          </IconButton>
+                          <IconButton size='small'>
+                            <i className='tabler-trash text-red-400' />
+                          </IconButton>
+                          <Link href={`/data/dormitory/${dormitoryId}/${trackId}/${item.id}`}>
+                            <IconButton size='small'>
+                              <i className='tabler-eye text-primary' />
+                            </IconButton>
+                          </Link>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
         </TabPanel>
 
         {/* Tab 2: Daftar Pelajaran */}
@@ -261,33 +265,35 @@ const ClassListPageView = ({ trackId, dormitoryId }: { trackId: string; dormitor
               Tambah Pelajaran
             </Button>
           </div>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell className='w-6'>NO</TableCell>
-                <TableCell>NAMA PELAJARAN</TableCell>
-                <TableCell>AKSI</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {dataSubject?.map((item, i: number) => (
-                <TableRow key={i}>
-                  <TableCell>{i + 1}</TableCell>
-                  <TableCell>{item.name}</TableCell>
-                  <TableCell>
-                    <div className='flex gap-2'>
-                      <IconButton size='small'>
-                        <i className='tabler-edit text-green-400' />
-                      </IconButton>
-                      <IconButton size='small'>
-                        <i className='tabler-trash text-red-400' />
-                      </IconButton>
-                    </div>
-                  </TableCell>
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell className='w-6'>NO</TableCell>
+                  <TableCell>NAMA PELAJARAN</TableCell>
+                  <TableCell>AKSI</TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHead>
+              <TableBody>
+                {dataSubject?.map((item, i: number) => (
+                  <TableRow key={i}>
+                    <TableCell>{i + 1}</TableCell>
+                    <TableCell>{item.name}</TableCell>
+                    <TableCell>
+                      <div className='flex gap-2'>
+                        <IconButton size='small'>
+                          <i className='tabler-edit text-green-400' />
+                        </IconButton>
+                        <IconButton size='small'>
+                          <i className='tabler-trash text-red-400' />
+                        </IconButton>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
         </TabPanel>
 
         {/* Tab 3: Daftar SKS */}
@@ -295,33 +301,35 @@ const ClassListPageView = ({ trackId, dormitoryId }: { trackId: string; dormitor
           <Button variant='contained' className='mb-4' onClick={() => openSksDialog('create')}>
             Tambah SKS
           </Button>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell className='w-6'>NO</TableCell>
-                <TableCell>JENIS SKS</TableCell>
-                <TableCell>AKSI</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {dataSks?.data?.map((item, i) => (
-                <TableRow key={i}>
-                  <TableCell>{i + 1}</TableCell>
-                  <TableCell>{item.name}</TableCell>
-                  <TableCell>
-                    <div className='flex gap-2'>
-                      <IconButton size='small'>
-                        <i className='tabler-edit text-green-400' />
-                      </IconButton>
-                      <IconButton size='small'>
-                        <i className='tabler-trash text-red-400' />
-                      </IconButton>
-                    </div>
-                  </TableCell>
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell className='w-6'>NO</TableCell>
+                  <TableCell>JENIS SKS</TableCell>
+                  <TableCell>AKSI</TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHead>
+              <TableBody>
+                {dataSks?.data?.map((item, i) => (
+                  <TableRow key={i}>
+                    <TableCell>{i + 1}</TableCell>
+                    <TableCell>{item.name}</TableCell>
+                    <TableCell>
+                      <div className='flex gap-2'>
+                        <IconButton size='small'>
+                          <i className='tabler-edit text-green-400' />
+                        </IconButton>
+                        <IconButton size='small'>
+                          <i className='tabler-trash text-red-400' />
+                        </IconButton>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
         </TabPanel>
       </TabContext>
 

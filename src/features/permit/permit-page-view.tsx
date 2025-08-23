@@ -30,7 +30,7 @@ const PermitPageView = () => {
   const { data, isLoading } = useGetPermits(user?.id)
   const { mutate: createPermit } = useCreatePermit()
 
-  console.log(JSON.stringify(data, null, 2))
+  //   console.log(JSON.stringify(data, null, 2))
 
   const handleSubmit = async (input: CreatePermitInput) => {
     createPermit(input, {

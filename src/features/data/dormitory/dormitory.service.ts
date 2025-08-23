@@ -5,7 +5,9 @@ import type {
   CreateScheduleInput,
   CreateScheduleSlotInput,
   FilterDormitoryParams,
-  TrackFormSchema
+  SksOptionParams,
+  TrackFormSchema,
+  TrackOptionParams
 } from './schemas/dormitory-schema'
 import type { APIError, APIPaginatedResult, APIResult } from '@/types/api-types'
 
@@ -1229,6 +1231,54 @@ export const updateScheduleSlot = async (
     return {
       success: false,
       error: 'Gagal memperbarui slot.'
+    }
+  }
+}
+
+export const getSksOption = async (params: SksOptionParams): Promise<APIResult<{ id: string; name: string }[]>> => {
+  try {
+    const result = await db.sks.findMany({
+      where: {
+        trackId: params.trackId
+      },
+      select: {
+        id: true,
+        name: true
+      }
+    })
+
+    return {
+      success: true,
+      data: result
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: 'Failed to get slot.'
+    }
+  }
+}
+
+export const getTrackOption = async (params: TrackOptionParams): Promise<APIResult<{ id: string; name: string }[]>> => {
+  try {
+    const result = await db.track.findMany({
+      where: {
+        id: params.trackId
+      },
+      select: {
+        id: true,
+        name: true
+      }
+    })
+
+    return {
+      success: true,
+      data: result
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: 'Failed to get tracks.'
     }
   }
 }

@@ -20,7 +20,9 @@ import {
   removeTrackFromDormitory,
   updateTrack,
   updateScheduleSlot,
-  updateSchedule
+  updateSchedule,
+  getSksOption,
+  getTrackOption
 } from './../dormitory.service'
 
 import {
@@ -30,6 +32,8 @@ import {
   CreateSksSchema,
   CreateSubjectSchema,
   filterDormitorySchema,
+  sksOptionSchema,
+  trackOptionSchema,
   trackSchema
 } from './../schemas/dormitory-schema'
 
@@ -358,4 +362,12 @@ export async function createScheduleSlotAction(data: CreateScheduleSlotData): Pr
 
 export async function updateScheduleSlotAction(data: unknown) {
   return validateAndRun(createScheduleSlotSchema, data, updateScheduleSlot)
+}
+
+export async function getSksOptionAction(params: unknown) {
+  return validateAndRun(sksOptionSchema, params, getSksOption)
+}
+
+export async function getTrackOptionAction(params: unknown) {
+  return validateAndRun(trackOptionSchema, params, getTrackOption)
 }

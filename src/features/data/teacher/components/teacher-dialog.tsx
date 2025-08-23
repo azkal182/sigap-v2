@@ -209,13 +209,10 @@ const TeacherFormDialog: React.FC<TeacherFormDialogProps> = ({
         name: defaultValues.name ?? ''
       })
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, dormitoryOptions])
+  }, [open, dormitoryOptions, reset, defaultValues.id, defaultValues.dormitoryIds, defaultValues.name])
 
   const dialogTitle = isEditMode ? 'Edit Pengajar' : 'Buat Pengajar Baru'
   const submitButtonText = isEditMode ? 'Simpan Perubahan' : 'Buat Pengajar'
-
-  console.log('render')
 
   return (
     <FormDialog

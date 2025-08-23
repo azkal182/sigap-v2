@@ -54,6 +54,15 @@ export const createScheduleSlotSchema = z.object({
   dormitoryId: z.string().min(1, 'ID asrama wajib diisi')
 })
 
+export const sksOptionSchema = z.object({
+  trackId: z.string().min(1, 'ID asrama wajib diisi')
+})
+
+export const trackOptionSchema = z.object({
+  trackId: z.string().min(1, 'ID asrama wajib diisi')
+})
+export type TrackOptionParams = z.infer<typeof trackOptionSchema>
+export type SksOptionParams = z.infer<typeof sksOptionSchema>
 export type CreateScheduleSlotInput = z.infer<typeof createScheduleSlotSchema>
 export type TrackFormSchema = z.infer<typeof trackSchema>
 

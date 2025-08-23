@@ -223,7 +223,7 @@ export default function ScheduleSlotForm({ dormitoryId, onSuccess, defaultData }
       reset(defaultData)
     }
 
-    console.log(defaultData)
+    // console.log(defaultData)
   }, [defaultData, reset])
 
   const { mutate: createSlot } = useCreateScheduleSlot()

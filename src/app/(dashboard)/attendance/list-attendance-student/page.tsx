@@ -287,7 +287,8 @@ import {
   TableCell,
   TableContainer,
   TableHead,
-  TableRow
+  TableRow,
+  Tooltip
 } from '@mui/material'
 
 import { DateTime } from 'luxon'
@@ -425,7 +426,11 @@ const WeeklyAttendanceTable: React.FC<WeeklyTableProps> = ({ week, attendanceDat
               }
             })
 
-            return <div className='text-center font-semibold text-red-600'>{absentCount}</div>
+            return (
+              <Tooltip title={rowData.studentName}>
+                <div className='text-center font-semibold text-red-600'>{absentCount}</div>
+              </Tooltip>
+            )
           }
         }
       ]
@@ -518,9 +523,10 @@ export default function AbsensiPage() {
   const [weeklyReport, setWeeklyReport] = useState<WeeklyReportData[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [classId, setClassId] = useState('')
+  const { allowedDormitoryIds } = usePermissionStore()
 
   const { data: classes, isLoading: classesLoading } = useClassesByDormitory({
-    dormitoryId: 'e7f8a9b0-c1d2-3456-7890-90abcdef1234'
+    dormitoryId: allowedDormitoryIds[0]
   })
 
   // Set tahun dan bulan secara hardcode untuk contoh
@@ -537,13 +543,9 @@ export default function AbsensiPage() {
         setIsLoading(true)
 
         // const data = await getMonthlyAttendanceReport(classId, today, timezone)
-        const res = await axios(
-          '/api/attendance/report/monthly?classId=dddc0c73-0072-4cce-a145-c44aa97d3bbd&date=05-08-2025&tz=Asia/Jakarta'
-        )
+        const res = await axios(`/api/attendance/report/monthly?classId=${classId}&date=${today}&tz=${timezone}`)
 
         const data = res.data
-
-        console.log(JSON.stringify(data, null, 2))
 
         const uniqueDates = getUniqueDates(data, year, month)
         const weeklyData = groupDatesByWeek(uniqueDates, startDayOfWeek)
@@ -555,6 +557,7 @@ export default function AbsensiPage() {
 
       fetchData()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [year, month, startDayOfWeek, classId])
 
   if (classesLoading) {
@@ -565,13 +568,13 @@ export default function AbsensiPage() {
     )
   }
 
-  if (isLoading) {
-    return (
-      <div className='flex justify-center items-center h-screen'>
-        <p>Memuat data absensi...</p>
-      </div>
-    )
-  }
+  //   if (isLoading) {
+  //     return (
+  //       <div className='flex justify-center items-center h-screen'>
+  //         <p>Memuat data absensi...</p>
+  //       </div>
+  //     )
+  //   }
 
   // if (attendanceData.length === 0) {
   //   return (

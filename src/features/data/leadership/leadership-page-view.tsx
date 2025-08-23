@@ -6,13 +6,13 @@ import {
   Button,
   Card,
   CardContent,
+  CardHeader,
   IconButton,
   Table,
   TableBody,
   TableCell,
   TableHead,
-  TableRow,
-  Typography
+  TableRow
 } from '@mui/material'
 
 import { toast } from 'react-toastify'
@@ -63,16 +63,16 @@ export default function LeadershipPageView() {
 
   return (
     <div className='space-y-4'>
-      {/* Tombol Tambah */}
-      <div className='flex items-center justify-between'>
-        <Typography variant='h5'>Kepengurusan</Typography>
-        <Button variant='contained' onClick={() => openLeadershipDialog('create')}>
-          Tambah Kepengurusan
-        </Button>
-      </div>
-
       {/* Table */}
       <Card>
+        <CardHeader
+          title='Kepengurusan'
+          action={
+            <Button variant='contained' onClick={() => openLeadershipDialog('create')}>
+              Tambah
+            </Button>
+          }
+        />
         <CardContent>
           <Table>
             <TableHead>

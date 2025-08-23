@@ -14,9 +14,11 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
+  Paper,
   Table,
   TableBody,
   TableCell,
+  TableContainer,
   TableHead,
   TableRow,
   Typography
@@ -191,60 +193,62 @@ const DormitoryDetailPageView: React.FC<DormitoryDetailPageViewProps> = ({ id })
       <Button onClick={handleOpenCreateScheduleSlot} variant='contained' color='primary' className='ml-4'>
         Atur Jam Pelajaran
       </Button>
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell className='w-6'>NO</TableCell>
-            <TableCell>NAMA</TableCell>
-            <TableCell>LEVEL</TableCell>
-            <TableCell>TARGET</TableCell>
-            <TableCell>AKSI</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {isLoading ? (
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
             <TableRow>
-              <TableCell colSpan={5} align='center'>
-                <Typography variant='body2' color='textSecondary'>
-                  Memuat data...
-                </Typography>
-              </TableCell>
+              <TableCell className='w-6'>NO</TableCell>
+              <TableCell>NAMA</TableCell>
+              <TableCell>LEVEL</TableCell>
+              <TableCell>TARGET</TableCell>
+              <TableCell>AKSI</TableCell>
             </TableRow>
-          ) : !data?.tracks || data?.tracks?.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={5} align='center'>
-                <Typography variant='body2' color='textSecondary'>
-                  Tidak ada data fan ditemukan.
-                </Typography>
-              </TableCell>
-            </TableRow>
-          ) : (
-            data?.tracks.map((track, index: number) => (
-              <TableRow key={track.id}>
-                <TableCell>{index + 1}</TableCell>
-                <TableCell>{track.name}</TableCell>
-                <TableCell>{track.level}</TableCell>
-                <TableCell>{track.targetDays} Hari</TableCell>
-                <TableCell>
-                  <div className='flex gap-2'>
-                    <IconButton size='small' onClick={() => handleOpenEditDialog(track)}>
-                      <i className='tabler-edit text-green-400' />
-                    </IconButton>
-                    <IconButton size='small' onClick={() => handleDeleteTrack(track.id)}>
-                      <i className='tabler-trash text-red-400' />
-                    </IconButton>
-                    <Link href={`/data/dormitory/${data.id}/${track.id}`}>
-                      <IconButton size='small'>
-                        <i className='tabler-eye text-primary' />
-                      </IconButton>
-                    </Link>
-                  </div>
+          </TableHead>
+          <TableBody>
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={5} align='center'>
+                  <Typography variant='body2' color='textSecondary'>
+                    Memuat data...
+                  </Typography>
                 </TableCell>
               </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+            ) : !data?.tracks || data?.tracks?.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} align='center'>
+                  <Typography variant='body2' color='textSecondary'>
+                    Tidak ada data fan ditemukan.
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            ) : (
+              data?.tracks.map((track, index: number) => (
+                <TableRow key={track.id}>
+                  <TableCell>{index + 1}</TableCell>
+                  <TableCell>{track.name}</TableCell>
+                  <TableCell>{track.level}</TableCell>
+                  <TableCell>{track.targetDays} Hari</TableCell>
+                  <TableCell>
+                    <div className='flex gap-2'>
+                      <IconButton size='small' onClick={() => handleOpenEditDialog(track)}>
+                        <i className='tabler-edit text-green-400' />
+                      </IconButton>
+                      <IconButton size='small' onClick={() => handleDeleteTrack(track.id)}>
+                        <i className='tabler-trash text-red-400' />
+                      </IconButton>
+                      <Link href={`/data/dormitory/${data.id}/${track.id}`}>
+                        <IconButton size='small'>
+                          <i className='tabler-eye text-primary' />
+                        </IconButton>
+                      </Link>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
 
       <TrackFormDialog
         open={dialogOpen}

@@ -5,10 +5,12 @@ import {
   Button,
   Card,
   IconButton,
+  Paper,
   Tab,
   Table,
   TableBody,
   TableCell,
+  TableContainer,
   TableHead,
   TableRow,
   Typography
@@ -165,51 +167,53 @@ const ClassDetailPageView = ({
               Tambahkan Santri
             </Button>
           </div>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell className='w-6'>NO</TableCell>
-                <TableCell>NAMA</TableCell>
-                <TableCell>AKSI</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {isLoading ? (
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
                 <TableRow>
-                  <TableCell colSpan={3} align='center'>
-                    <Typography variant='body2' color='textSecondary'>
-                      Memuat data...
-                    </Typography>
-                  </TableCell>
+                  <TableCell className='w-6'>NO</TableCell>
+                  <TableCell>NAMA</TableCell>
+                  <TableCell>AKSI</TableCell>
                 </TableRow>
-              ) : !data || data?.data.students.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={3} align='center'>
-                    <Typography variant='body2' color='textSecondary'>
-                      Tidak ada data fan ditemukan.
-                    </Typography>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                data?.data.students.map((student, index: number) => (
-                  <TableRow key={student.id}>
-                    <TableCell>{index + 1}</TableCell>
-                    <TableCell>{student.name}</TableCell>
-                    <TableCell>
-                      <div className='flex gap-2'>
-                        <IconButton size='small'>
-                          <i className='tabler-edit text-green-400' />
-                        </IconButton>
-                        <IconButton size='small'>
-                          <i className='tabler-trash text-red-400' />
-                        </IconButton>
-                      </div>
+              </TableHead>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={3} align='center'>
+                      <Typography variant='body2' color='textSecondary'>
+                        Memuat data...
+                      </Typography>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : !data || data?.data.students.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={3} align='center'>
+                      <Typography variant='body2' color='textSecondary'>
+                        Tidak ada data fan ditemukan.
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  data?.data.students.map((student, index: number) => (
+                    <TableRow key={student.id}>
+                      <TableCell>{index + 1}</TableCell>
+                      <TableCell>{student.name}</TableCell>
+                      <TableCell>
+                        <div className='flex gap-2'>
+                          <IconButton size='small'>
+                            <i className='tabler-edit text-green-400' />
+                          </IconButton>
+                          <IconButton size='small'>
+                            <i className='tabler-trash text-red-400' />
+                          </IconButton>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
         </TabPanel>
 
         <TabPanel value='2'>

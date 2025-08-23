@@ -59,32 +59,25 @@ export const menuItems: MenuConfigSection[] = [
   },
   {
     label: 'Perizinan',
-    items: [{ title: 'Perizinan', href: '/permit', icon: 'tabler-license-off', permissions: ['dormitory.permit:view'] }]
+    items: [{ title: 'Perizinan', href: '/permit', icon: 'tabler-license-off', permissions: ['permit:view'] }]
   },
   {
     label: 'Absensi',
     items: [
       {
-        title: 'Absensi',
-        href: '/attendance',
-        icon: 'tabler-presentation-analytics',
-        permissions: ['attendance:view']
-      },
-      {
         title: 'Daftar Absensi',
         icon: 'tabler-report',
-
-        // permissions: ['report-attend:view'],
+        permissions: ['attendance:view'],
         subMenuItems: [
           {
             title: 'Santri',
             href: '/attendance/list-attendance-student',
-            permissions: ['report-attend:view']
+            permissions: ['attendance:view']
           },
           {
             title: 'Pengajar',
             href: '/attendance/list-attendance-teacher',
-            permissions: ['report-attend:view']
+            permissions: ['attendance:view']
           }
         ]
       }
@@ -97,7 +90,7 @@ export const menuItems: MenuConfigSection[] = [
         title: 'Jadwal Pelajaran',
         href: '/schedule',
         icon: 'tabler-presentation-analytics',
-        permissions: ['attendance:view']
+        permissions: ['teacher.schedule:view']
       }
     ]
   },
@@ -105,8 +98,6 @@ export const menuItems: MenuConfigSection[] = [
     label: 'Asrama',
     items: [
       { title: 'Santri', href: '/dormitory/student', icon: 'tabler-school', permissions: ['dormitory.student:view'] },
-
-      // { title: 'Laporan', href: '/dormitory/report', icon: 'tabler-report', permissions: ['dormitory.report:view'] },
       {
         title: 'Validasi Absensi Santri',
         href: '/dormitory/validate-student',
@@ -140,13 +131,17 @@ export const menuItems: MenuConfigSection[] = [
     ]
   },
 
-  // {
-  //   label: 'AKADEMIK',
-  //   items: [
-  //     { title: 'Daftar Tes', href: '/academic/test-registration', icon: 'tabler-users', permissions: ['user:view'] },
-  //     { title: 'Hasil Tes', href: '/academic/result-registration', icon: 'tabler-key', permissions: ['role:view'] }
-  //   ]
-  // },
+  {
+    label: 'AKADEMIK',
+    items: [
+      {
+        title: 'Daftar Tes',
+        href: '/academic/test-registration',
+        icon: 'tabler-users',
+        permissions: ['academic.registration-test:view']
+      }
+    ]
+  },
   {
     label: 'Data',
     items: [
@@ -158,12 +153,13 @@ export const menuItems: MenuConfigSection[] = [
         icon: 'tabler-brand-tether',
         permissions: ['student:view']
       },
-      {
-        title: 'Kelas',
-        href: '/data/class',
-        icon: 'tabler-brand-tether',
-        permissions: ['student:view']
-      },
+
+      //   {
+      //     title: 'Kelas',
+      //     href: '/data/class',
+      //     icon: 'tabler-brand-tether',
+      //     permissions: ['student:view']
+      //   },
       {
         title: 'Kepengurusan',
         icon: 'tabler-report',
@@ -172,17 +168,17 @@ export const menuItems: MenuConfigSection[] = [
           {
             title: 'Periode Kepengurusan',
             href: '/data/leadership/term-leadership',
-            permissions: ['student:view']
+            permissions: ['leadership.term:view']
           },
           {
             title: 'List Kepengurusan',
             href: '/data/leadership/list-leadership',
-            permissions: ['student:view']
+            permissions: ['leadership.list:view']
           },
           {
             title: 'Data Kepengurusan',
             href: '/data/leadership/leadership-data',
-            permissions: ['report-attend:view']
+            permissions: ['leadership.list:view']
           }
         ]
       }
