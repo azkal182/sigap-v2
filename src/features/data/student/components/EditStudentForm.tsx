@@ -191,29 +191,60 @@ export default function EditStudentForm({ student, onDone }: { student: StudentI
   }, [districtId])
 
   // === Selected option stabil
-  const selectedProvince = useMemo<Opt | null>(() => {
-    if (provinceId == null) return null
+  //   const selectedProvince = useMemo<Opt | null>(() => {
+  //     if (provinceId == null) return null
 
-    return provinces.find((x: any) => x.id === provinceId) ?? initialRef.current.province
-  }, [provinces, provinceId])
+  //     return provinces.find((x: any) => x.id === provinceId) ?? initialRef.current.province
+  //   }, [provinces, provinceId])
 
-  const selectedRegency = useMemo<Opt | null>(() => {
-    if (regencyId == null) return null
+  //   const selectedRegency = useMemo<Opt | null>(() => {
+  //     if (regencyId == null) return null
 
-    return regencies.find((x: any) => x.id === regencyId) ?? initialRef.current.regency
-  }, [regencies, regencyId])
+  //     return regencies.find((x: any) => x.id === regencyId) ?? initialRef.current.regency
+  //   }, [regencies, regencyId])
 
-  const selectedDistrict = useMemo<Opt | null>(() => {
-    if (districtId == null) return null
+  //   const selectedDistrict = useMemo<Opt | null>(() => {
+  //     if (districtId == null) return null
 
-    return districts.find((x: any) => x.id === districtId) ?? initialRef.current.district
-  }, [districts, districtId])
+  //     return districts.find((x: any) => x.id === districtId) ?? initialRef.current.district
+  //   }, [districts, districtId])
 
-  const selectedVillage = useMemo<Opt | null>(() => {
-    if (villageId == null) return null
+  //   const selectedVillage = useMemo<Opt | null>(() => {
+  //     if (villageId == null) return null
 
-    return villages.find((x: any) => x.id === villageId) ?? initialRef.current.village
-  }, [villages, villageId])
+  //     return villages.find((x: any) => x.id === villageId) ?? initialRef.current.village
+  //   }, [villages, villageId])
+
+  const makeSelected = (id: number | null, options: Opt[], initial: Opt | null, fallbackLabel = ''): Opt | null => {
+    if (id == null) return null
+    const inList = options.find(o => o.id === id)
+
+    if (inList) return inList
+    if (initial && initial.id === id) return initial
+
+    // Placeholder agar value tetap konsisten meski option belum ada
+    return { id, name: fallbackLabel }
+  }
+
+  const selectedProvince = useMemo(
+    () => makeSelected(provinceId, provinces, initialRef.current.province, pInput),
+    [provinceId, provinces, pInput]
+  )
+
+  const selectedRegency = useMemo(
+    () => makeSelected(regencyId, regencies, initialRef.current.regency, rInput),
+    [regencyId, regencies, rInput]
+  )
+
+  const selectedDistrict = useMemo(
+    () => makeSelected(districtId, districts, initialRef.current.district, dInput),
+    [districtId, districts, dInput]
+  )
+
+  const selectedVillage = useMemo(
+    () => makeSelected(villageId, villages, initialRef.current.village, vInput),
+    [villageId, villages, vInput]
+  )
 
   // === Sinkronkan inputValue dengan label selected (agar default label muncul)
   useEffect(() => {
@@ -237,37 +268,45 @@ export default function EditStudentForm({ student, onDone }: { student: StudentI
   }, [selectedVillage, vOpen])
 
   // === Inject selected ke options (hindari flip)
-  const provincesWithSelected = useMemo(() => {
-    if (selectedProvince && !provinces.some((p: any) => p.id === selectedProvince.id)) {
-      return [selectedProvince, ...provinces]
-    }
+  //   const provincesWithSelected = useMemo(() => {
+  //     if (selectedProvince && !provinces.some((p: any) => p.id === selectedProvince.id)) {
+  //       return [selectedProvince, ...provinces]
+  //     }
 
-    return provinces
-  }, [provinces, selectedProvince])
+  //     return provinces
+  //   }, [provinces, selectedProvince])
 
-  const regenciesWithSelected = useMemo(() => {
-    if (selectedRegency && !regencies.some((p: any) => p.id === selectedRegency.id)) {
-      return [selectedRegency, ...regencies]
-    }
+  //   const regenciesWithSelected = useMemo(() => {
+  //     if (selectedRegency && !regencies.some((p: any) => p.id === selectedRegency.id)) {
+  //       return [selectedRegency, ...regencies]
+  //     }
 
-    return regencies
-  }, [regencies, selectedRegency])
+  //     return regencies
+  //   }, [regencies, selectedRegency])
 
-  const districtsWithSelected = useMemo(() => {
-    if (selectedDistrict && !districts.some((p: any) => p.id === selectedDistrict.id)) {
-      return [selectedDistrict, ...districts]
-    }
+  //   const districtsWithSelected = useMemo(() => {
+  //     if (selectedDistrict && !districts.some((p: any) => p.id === selectedDistrict.id)) {
+  //       return [selectedDistrict, ...districts]
+  //     }
 
-    return districts
-  }, [districts, selectedDistrict])
+  //     return districts
+  //   }, [districts, selectedDistrict])
 
-  const villagesWithSelected = useMemo(() => {
-    if (selectedVillage && !villages.some((p: any) => p.id === selectedVillage.id)) {
-      return [selectedVillage, ...villages]
-    }
+  //   const villagesWithSelected = useMemo(() => {
+  //     if (selectedVillage && !villages.some((p: any) => p.id === selectedVillage.id)) {
+  //       return [selectedVillage, ...villages]
+  //     }
 
-    return villages
-  }, [villages, selectedVillage])
+  //     return villages
+  //   }, [villages, selectedVillage])
+
+  const withSelected = (selected: Opt | null, options: Opt[]) =>
+    selected && !options.some(o => o.id === selected.id) ? [selected, ...options] : options
+
+  const provincesWithSelected = useMemo(() => withSelected(selectedProvince, provinces), [selectedProvince, provinces])
+  const regenciesWithSelected = useMemo(() => withSelected(selectedRegency, regencies), [selectedRegency, regencies])
+  const districtsWithSelected = useMemo(() => withSelected(selectedDistrict, districts), [selectedDistrict, districts])
+  const villagesWithSelected = useMemo(() => withSelected(selectedVillage, villages), [selectedVillage, villages])
 
   // === onChange (sinkron RHF + bersih input)
   const onProvinceChange = (onChange: (v: number | null) => void) => (_: any, val: Opt | null) => {
