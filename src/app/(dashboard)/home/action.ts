@@ -10,7 +10,7 @@ type StudentWithAbsence = {
   id: string
   name: string
   nis: string
-  dormitoryId: string
+  dormitoryId: string | null
   absence: {
     id: string | null
     status: AbsenceStatus
@@ -127,6 +127,9 @@ export async function getStudentsFromTeacherSchedule(
 
     const students = await prisma.student.findMany({
       where: {
+        dormitoryId: {
+          not: null
+        },
         histories: {
           some: {
             classId: schedule.classId,
