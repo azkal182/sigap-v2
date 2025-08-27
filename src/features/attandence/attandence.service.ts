@@ -170,6 +170,7 @@ export async function getClassAbsences(params: GetClassAbsenceParams): Promise<A
 
     const students = await db.student.findMany({
       where: {
+        dormitoryId: { not: null },
         status: 'ACTIVE',
         histories: {
           some: {
@@ -220,7 +221,7 @@ export async function getClassAbsences(params: GetClassAbsenceParams): Promise<A
       id: s.id,
       name: s.name,
       nis: s.nis,
-      dormitoryId: s.dormitoryId,
+      dormitoryId: s.dormitoryId!,
       absence:
         s.absences.length > 0
           ? {

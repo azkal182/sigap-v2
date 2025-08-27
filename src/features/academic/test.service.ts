@@ -28,7 +28,13 @@ export async function getTestRegistrationsByDormitory(
     // convert date ke zona waktu jakarta
 
     const { dormitoryIds, date } = params
-    const whereClause: any = dormitoryIds.length > 0 ? { student: { dormitoryId: { in: dormitoryIds } } } : {}
+
+    const whereClause: any = {
+      student: {
+        dormitoryId: { not: null }, // ⬅️ pastikan hanya ambil student dengan dormitoryId bukan null
+        ...(dormitoryIds.length > 0 ? { dormitoryId: { in: dormitoryIds } } : {})
+      }
+    }
 
     if (date) {
       const startOfDay = DateTime.fromJSDate(date).setZone('Asia/Jakarta').startOf('day').toJSDate()

@@ -50,6 +50,9 @@ export async function getDailyReportByDormAndClass(
   const absences = await prisma.absence.findMany({
     where: {
       ...(dormitoryId && { dormitoryId }),
+      student: {
+        dormitoryId: { not: null }
+      },
       status: AbsenceStatus.ABSENT,
       date: {
         gte: startDate,
@@ -104,7 +107,7 @@ export async function getDailyReportByDormAndClass(
 
   absences.forEach(absence => {
     const student = absence.student
-    const dormitoryName = student.dormitory.name
+    const dormitoryName = student.dormitory!.name
 
     // Mengambil nama kelas dari entri history yang berstatus STUDYING
     const className = student.histories[0]?.class.name || 'Kelas Tidak Diketahui'

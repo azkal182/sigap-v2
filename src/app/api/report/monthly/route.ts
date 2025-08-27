@@ -37,6 +37,7 @@ async function getMonthlyDormAttendanceReport(month: Date, timeZone: string) {
   const students = await prisma.student.groupBy({
     by: ['dormitoryId'],
     where: {
+      dormitoryId: { not: null },
       status: 'ACTIVE'
     },
     _count: {
@@ -58,8 +59,8 @@ async function getMonthlyDormAttendanceReport(month: Date, timeZone: string) {
 
   // Inisialisasi report dari data student
   for (const s of students) {
-    dormReports[s.dormitoryId] = {
-      dormitoryId: s.dormitoryId,
+    dormReports[s.dormitoryId!] = {
+      dormitoryId: s.dormitoryId!,
       dormitoryName: '',
       totalStudents: s._count._all,
       statusCounts: {
@@ -79,13 +80,13 @@ async function getMonthlyDormAttendanceReport(month: Date, timeZone: string) {
 
   // Proses absensi
   for (const a of absences) {
-    const dormId = a.student.dormitoryId
+    const dormId = a.student.dormitoryId!
     const status = a.status as 'PRESENT' | 'SICK' | 'PERMIT' | 'ABSENT'
 
     if (!dormReports[dormId]) {
       dormReports[dormId] = {
         dormitoryId: dormId,
-        dormitoryName: a.student.dormitory.name,
+        dormitoryName: a.student.dormitory!.name,
         totalStudents: 0,
         statusCounts: {
           PRESENT: 0,
@@ -102,7 +103,7 @@ async function getMonthlyDormAttendanceReport(month: Date, timeZone: string) {
       }
     }
 
-    dormReports[dormId].dormitoryName = a.student.dormitory.name
+    dormReports[dormId].dormitoryName = a.student.dormitory!.name
     dormReports[dormId].statusCounts[status] += 1
   }
 

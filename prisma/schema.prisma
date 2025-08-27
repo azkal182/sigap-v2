@@ -172,6 +172,7 @@ model Student {
     @@index([formalClassId]) // <-- TAMBAHKAN: Untuk filter santri per kelas formal
     @@index([dormitoryRoomId]) // <-- TAMBAHKAN: Untuk filter santri per kamar
     @@index([gender])
+    @@index([status, dormitoryId])
 }
 
 enum PositionRole {

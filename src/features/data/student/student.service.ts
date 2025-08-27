@@ -1,7 +1,7 @@
 import { DateTime } from 'luxon'
 
 import db from '@/lib/prisma'
-import type { FilterStudentParams } from './schemas/student-schema'
+import type { FilterStudentParams, StudentFormInput } from './schemas/student-schema'
 import { HistoryStatus, Prisma, RegistrationStatus, StudentStatus } from '@/generated/prisma'
 import { handleServerError } from '@/lib/handle-error'
 import type { APIPaginatedResult, APIResult } from '@/types/api-types'
@@ -793,5 +793,68 @@ export async function getStudentDetail(id: string): Promise<StudentItem | null> 
     totalSks,
     passedCount,
     histories
+  }
+}
+
+export async function addStudent(input: StudentFormInput): Promise<
+  APIResult<
+    Prisma.UserGetPayload<{
+      select: {
+        id: true
+        name: true
+      }
+    }>
+  >
+> {
+  try {
+    const {
+      nis,
+      name,
+      placeOfBirth,
+      dateOfBirth,
+      fatherName,
+      motherName,
+      parentPhone,
+      gender,
+      dormitoryId,
+      villageId,
+      districtId,
+      regencyId,
+      provinceId
+    } = input
+
+    const studentExist = await db.student.findUnique({ where: { nis } })
+
+    if (studentExist) {
+      return { success: false, error: 'nis sudah digunakan oleh santri lain!' }
+    }
+
+    const data = await db.student.create({
+      data: {
+        nis,
+        name,
+        placeOfBirth,
+        dateOfBirth,
+        fatherName,
+        motherName,
+        parrentPhone: parentPhone,
+        gender,
+        villageId,
+        districtId,
+        regencyId,
+        provinceId,
+        ...(dormitoryId && { dormitoryId })
+      },
+      select: {
+        id: true,
+        name: true
+      }
+    })
+
+    return { success: true, message: `santri ${name} berhasil ditambahkan`, data }
+  } catch (error) {
+    const message = handleServerError('Gagal menambhkan santri:', error)
+
+    return { success: false, error: message }
   }
 }

@@ -149,7 +149,7 @@ const TestRegistrationView = () => {
                   return (
                     <TableRow key={row.id}>
                       <TableCell>{row.student.name}</TableCell>
-                      <TableCell>{row.student.dormitory.name}</TableCell>
+                      <TableCell>{row.student.dormitory!.name}</TableCell>
                       <TableCell>{row.sks.name}</TableCell>
                       <TableCell>
                         {row.scheduledAt

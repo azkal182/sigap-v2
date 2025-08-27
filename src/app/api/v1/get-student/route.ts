@@ -132,6 +132,7 @@ async function getStudentsFromTeacherSchedule(
 
     const students = await prisma.student.findMany({
       where: {
+        dormitoryId: { not: null },
         histories: {
           some: {
             classId: schedule.classId,
@@ -200,7 +201,7 @@ async function getStudentsFromTeacherSchedule(
         id: student.id,
         name: student.name,
         nis: student.nis,
-        dormitoryId: student.dormitoryId,
+        dormitoryId: student.dormitoryId!,
         absence: existingAbsence || {
           id: null,
           status: defaultStatus,
