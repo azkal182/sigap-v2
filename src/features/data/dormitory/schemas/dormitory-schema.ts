@@ -6,7 +6,14 @@ import { basePaginationSchema } from '@/schemas/base-pagination-schema'
 // Student schema
 export const filterDormitorySchema = basePaginationSchema.extend({
   dormitoryId: z.string().optional().default(''),
-  sortBy: z.enum(['name', 'gender']).default('name')
+  sortBy: z.enum(['name', 'gender']).default('name'),
+  dormitoryIds: z
+    .union([
+      z.string().array(), // Bisa array string
+      z.string() // Atau string tunggal
+    ])
+    .optional()
+    .default([])
 })
 
 export const CreateSubjectSchema = z.object({

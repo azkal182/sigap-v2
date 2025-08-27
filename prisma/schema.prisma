@@ -139,16 +139,16 @@ model Student {
 
     gender GenderType? @default(PUTRA)
 
-    dormitoryId String
-    dormitory   Dormitory @relation(fields: [dormitoryId], references: [id])
+    dormitoryId String?
+    dormitory   Dormitory? @relation(fields: [dormitoryId], references: [id])
     villageId   Int?
-    village     Village?  @relation(fields: [villageId], references: [id])
+    village     Village?   @relation(fields: [villageId], references: [id])
     districtId  Int?
-    district    District? @relation(fields: [districtId], references: [id])
+    district    District?  @relation(fields: [districtId], references: [id])
     regencyId   Int?
-    regency     Regency?  @relation(fields: [regencyId], references: [id])
+    regency     Regency?   @relation(fields: [regencyId], references: [id])
     provinceId  Int?
-    province    Province? @relation(fields: [provinceId], references: [id])
+    province    Province?  @relation(fields: [provinceId], references: [id])
 
     histories          History[]
     absences           Absence[]

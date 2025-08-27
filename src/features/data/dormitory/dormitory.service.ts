@@ -130,18 +130,47 @@ export async function getDormitoriesFilter(
   options: FilterDormitoryParams
 ): Promise<APIPaginatedResult<DormitoryItem[]>> {
   try {
-    const { page = 1, limit = 10, search = '', dormitoryId = '', sortBy = 'name', sortOrder = 'asc' } = options
+    const {
+      page = 1,
+      limit = 10,
+      search = '',
+      dormitoryId = '',
+      sortBy = 'name',
+      sortOrder = 'asc',
+      dormitoryIds = []
+    } = options
 
     const skip = (page - 1) * limit
     const allowedSortFields = ['name', 'gender'] as const
     const safeSortBy = allowedSortFields.includes(sortBy) ? sortBy : 'name'
 
+    // const whereCondition: Prisma.DormitoryWhereInput = {
+    //   AND: [
+    //     ...(search ? [{ name: { contains: search, mode: Prisma.QueryMode.insensitive } }] : []),
+    //     ...(dormitoryId ? [{ id: dormitoryId }] : [])      ]
+    // }
+
+    const list = Array.isArray(dormitoryIds)
+      ? dormitoryIds.filter((v): v is string => typeof v === 'string' && v.length > 0)
+      : []
+
     const whereCondition: Prisma.DormitoryWhereInput = {
-      AND: [
-        ...(search ? [{ name: { contains: search, mode: Prisma.QueryMode.insensitive } }] : []),
-        ...(dormitoryId ? [{ id: dormitoryId }] : [])
-      ]
+      ...(search ? { name: { contains: search, mode: Prisma.QueryMode.insensitive } } : {}),
+      ...(dormitoryId ? { id: dormitoryId } : list.length > 0 ? { id: { in: list } } : {})
     }
+
+    // // Versi B — Izinkan cocok ke salah satu (OR)
+    // const whereCondition: Prisma.DormitoryWhereInput = {
+    //   ...(search ? { name: { contains: search, mode: Prisma.QueryMode.insensitive } } : {}),
+    //   ...(dormitoryId || list.length > 0
+    //     ? {
+    //         OR: [
+    //           ...(dormitoryId ? [{ id: dormitoryId } as Prisma.DormitoryWhereInput] : []),
+    //           ...(list.length > 0 ? [{ id: { in: list } } as Prisma.DormitoryWhereInput] : [])
+    //         ]
+    //       }
+    //     : {})
+    // }
 
     const total = await db.dormitory.count({ where: whereCondition })
     const totalPages = Math.ceil(total / limit)

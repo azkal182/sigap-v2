@@ -112,10 +112,23 @@ import { useDormitory } from './dormitory.query'
 import { DataTableWithParams } from '@/components/DataTableWithParams'
 import { useCustomSearchParams } from '@/hooks/useCustomSearchParams'
 import { filterDormitorySchema } from './schemas/dormitory-schema'
+import { usePermissionStore } from '@/store/permission'
 
 const DormitoryPageView = () => {
+  const allowedDormitoryIds = usePermissionStore(state => state.allowedDormitoryIds)
+
+  // 2. Memoize objek initialParams.
+  // Objek ini hanya akan dibuat ulang jika 'allowedDormitoryIds' berubah.
+  const memoizedInitialParams = useMemo(
+    () => ({
+      dormitoryIds: allowedDormitoryIds
+    }),
+    [allowedDormitoryIds]
+  ) // Tambahkan allowedDormitoryIds sebagai dependensi
+
   const searchParams = useCustomSearchParams({
-    defaultParams: filterDormitorySchema
+    defaultParams: filterDormitorySchema,
+    initialParams: memoizedInitialParams
   })
 
   const { data, isLoading: queryLoading } = useDormitory(searchParams.params, searchParams.isReady)
