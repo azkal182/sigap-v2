@@ -58,8 +58,9 @@ const ValidateStudentPageView = () => {
 
   // Ambil tanggal sekarang (Asia/Jakarta)
 
-  //   const absentDate = DateTime.now().setZone('Asia/Jakarta').toFormat('yyyy-MM-dd')
-  const absentDate = '2025-08-10' // Ganti dengan tanggal yang sesuai
+  const absentDate = DateTime.now().setZone('Asia/Jakarta').toFormat('yyyy-MM-dd')
+
+  //   const absentDate = '2025-08-27' // Ganti dengan tanggal yang sesuai
 
   // Bangun params, hanya jika semua terisi
   const params: GetClassAbsencesParams = {

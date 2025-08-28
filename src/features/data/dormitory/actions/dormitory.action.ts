@@ -70,14 +70,18 @@ export async function getDormitoryList() {
   const dormitories = await prisma.dormitory.findMany({
     select: {
       id: true,
-      name: true
+      name: true,
+      gender: true
     },
     orderBy: {
       name: 'asc'
     }
   })
 
-  return dormitories
+  return dormitories.map(item => ({
+    ...item,
+    name: `${item.name} | ${item.gender}`
+  }))
 }
 
 export async function getDormitoryDetailAction(id: string): Promise<DormitoryDetailResponse> {

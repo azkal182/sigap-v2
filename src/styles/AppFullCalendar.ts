@@ -11,7 +11,12 @@ const AppFullCalendar = styled('div')(({ theme }: { theme: Theme }) => ({
   borderRadius: 'var(--mui-shape-borderRadius)',
   '& .fc': {
     zIndex: 1,
-
+    '& .fc-scrollgrid-section > td': {
+      backgroundColor: 'var(--mui-palette-background-paper) !important'
+    },
+    '& .fc-col-header, & .fc-col-header-cell': {
+      backgroundColor: 'var(--mui-palette-background-paper) !important'
+    },
     '.fc-col-header, .fc-daygrid-body, .fc-scrollgrid-sync-table, .fc-timegrid-body, .fc-timegrid-body table': {
       width: '100% !important'
     },

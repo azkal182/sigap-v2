@@ -61,7 +61,12 @@ export async function getAllRoles() {
 }
 
 export async function getAllDormitories() {
-  return prisma.dormitory.findMany({ orderBy: { name: 'asc' } })
+  const data = await prisma.dormitory.findMany({ orderBy: { name: 'asc' } })
+
+  return data.map(item => ({
+    ...item,
+    name: `${item.name} | ${item.gender}`
+  }))
 }
 
 export async function getAllPermissions() {

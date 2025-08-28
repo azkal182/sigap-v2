@@ -515,10 +515,13 @@ export async function getStudentOption(dormitoryIds?: string[]): Promise<
     const students = await db.student.findMany({
       where: whereClause,
       include: {
+        regency: true,
+        province: true,
         histories: {
           where: {
             status: 'STUDYING'
           },
+
           include: {
             class: {
               include: {
@@ -548,7 +551,7 @@ export async function getStudentOption(dormitoryIds?: string[]): Promise<
 
         return {
           id: s.id,
-          name: nameParts.join(' | '),
+          name: isAssigned ? nameParts.join(' | ') : `${s.name} | ${s.regency?.name} | ${s.province?.name}`,
           trackId: trackId || null,
           disabled: isAssigned
         }
