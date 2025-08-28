@@ -79,15 +79,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Hanya bisa login untuk pengajar' }, { status: 401 })
   }
 
-  if (user.mustChangeCredentials) {
-    return NextResponse.json({ mustResetCredentials: user.mustChangeCredentials, userId: user.id })
-  }
-
   const token = signToken({
     id: user.id,
     name: user.name ?? '',
-    username: user.username ?? ''
+    username: user.username ?? '',
+    mustResetCredentials: user.mustChangeCredentials
   })
+
+  if (user.mustChangeCredentials) {
+    return NextResponse.json({ token, mustResetCredentials: user.mustChangeCredentials, userId: user.id })
+  }
 
   return NextResponse.json({ token })
 }
