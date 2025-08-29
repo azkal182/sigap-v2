@@ -33,7 +33,8 @@ export async function POST(req: Request) {
     where: { id },
     data: {
       username,
-      password: hashPassword
+      password: hashPassword,
+      mustChangeCredentials: false
     }
   })
 
