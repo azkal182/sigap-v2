@@ -512,7 +512,7 @@ model Permit {
     id              String      @id @default(uuid())
     studentId       String
     startDate       DateTime
-    endDate         DateTime
+    endDate         DateTime?
     allowedSlots    Int[] // Contoh: [1, 3, 5]
     reason          String
     permitSTatus    Permittatus

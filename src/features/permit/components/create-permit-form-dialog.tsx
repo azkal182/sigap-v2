@@ -23,19 +23,21 @@ interface CreatePermitFormDialogProps {
 const CreatePermitFormDialog = ({ open, onClose, onSubmit, currentUserId }: CreatePermitFormDialogProps) => {
   const { allowedDormitoryIds, user } = usePermissionStore()
 
+  const endDateRequired = user?.role !== 'KEAMANAN' && user?.role !== 'KESEHATAN'
+
   const {
     control,
     handleSubmit,
     reset,
     formState: { errors, isValid }
   } = useForm<CreatePermitInput>({
-    resolver: zodResolver(createPermitSchema),
+    resolver: zodResolver(createPermitSchema(endDateRequired)),
     mode: 'onChange',
     defaultValues: {
       studentId: '',
       reason: '',
       startDate: '',
-      endDate: '',
+      endDate: null,
       userId: currentUserId,
       allowedSlots: user?.role === 'KEAMANAN' ? [1, 2, 3] : [],
       permitSTatus: 'PERMIT'
@@ -103,7 +105,8 @@ const CreatePermitFormDialog = ({ open, onClose, onSubmit, currentUserId }: Crea
             variant='outlined'
             margin='dense'
             InputLabelProps={{ shrink: true }}
-            {...field}
+            value={field.value ?? ''} // tampilkan '' kalau null
+            onChange={e => field.onChange(e.target.value || null)} // '' -> null
             error={!!errors.endDate}
             helperText={errors.endDate?.message}
           />

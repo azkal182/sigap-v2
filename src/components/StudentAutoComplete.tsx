@@ -328,10 +328,23 @@ export default function StudentAutocomplete({
       disabled={disabled}
       getOptionDisabled={opt => allowDisable && !!opt.disabled}
       onChange={(_, newValue) => {
-        if (!newValue || !newValue.disabled) {
-          onChange?.(_, newValue?.id ?? null)
-          onSelect?.(_, newValue ?? null)
+        // if (!newValue || !newValue.disabled) {
+
+        //   onChange?.(_, newValue?.id ?? null)
+        //   onSelect?.(_, newValue ?? null)
+        // }
+        if (!newValue) {
+          onChange?.(_, null)
+          onSelect?.(_, null)
+
+          return
         }
+
+        // Hanya tolak jika allowDisable = true & opsi memang disabled
+        if (allowDisable && newValue.disabled) return
+
+        onChange?.(_, newValue.id)
+        onSelect?.(_, newValue)
       }}
       noOptionsText={isLoading ? 'Memuat…' : 'Tidak ada data'}
       // eslint-disable-next-line @typescript-eslint/no-unused-vars

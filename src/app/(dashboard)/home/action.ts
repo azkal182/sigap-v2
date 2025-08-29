@@ -125,6 +125,11 @@ export async function getStudentsFromTeacherSchedule(
       return null
     }
 
+    const todayStart = DateTime.now().setZone('Asia/Jakarta').startOf('day').toJSDate()
+    const todayEnd = DateTime.now().setZone('Asia/Jakarta').endOf('day').toJSDate()
+
+    console.log({ todayStart, todayEnd })
+
     const students = await prisma.student.findMany({
       where: {
         dormitoryId: {
@@ -150,19 +155,35 @@ export async function getStudentsFromTeacherSchedule(
           }
         },
         permits: {
+          //   where: {
+          //     startDate: { lte: new Date() },
+          //     endDate: { gte: new Date() },
+          //     OR: [
+          //       {
+          //         allowedSlots: {
+          //           has: slot.slot
+          //         }
+          //       },
+          //       {
+          //         allowedSlots: {
+          //           equals: []
+          //         }
+          //       }
+          //     ]
+          //   },
           where: {
-            startDate: { lte: new Date() },
-            endDate: { gte: new Date() },
+            // Aktif SEKARANG (WIB)
+            startDate: { lte: todayEnd },
             OR: [
+              { endDate: null }, // open-ended
+              { endDate: { gte: todayStart } } // berakhir di masa depan / masih berjalan
+            ],
+
+            // Filter slot: harus cocok dengan slot tertentu
+            // ATAU allowedSlots benar-benar kosong (artinya semua slot diizinkan)
+            AND: [
               {
-                allowedSlots: {
-                  has: slot.slot
-                }
-              },
-              {
-                allowedSlots: {
-                  equals: []
-                }
+                OR: [{ allowedSlots: { has: slot.slot } }, { allowedSlots: { equals: [] } }]
               }
             ]
           },
