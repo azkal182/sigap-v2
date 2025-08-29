@@ -2,10 +2,12 @@
 import db from '@/lib/prisma'
 import { $Enums, HistoryStatus, Prisma } from '@/generated/prisma'
 import type {
+  ClassFormInput,
   CreateScheduleInput,
   CreateScheduleSlotInput,
   FilterDormitoryParams,
   SksOptionParams,
+  SubjectFormInput,
   TrackFormSchema,
   TrackOptionParams
 } from './schemas/dormitory-schema'
@@ -1308,6 +1310,100 @@ export const getTrackOption = async (params: TrackOptionParams): Promise<APIResu
     return {
       success: false,
       error: 'Failed to get tracks.'
+    }
+  }
+}
+
+export async function updateClass(
+  data: Partial<ClassFormInput>
+): Promise<SimpleResponse<{ id: string; name: string }>> {
+  try {
+    // 1. Validasi input
+    if (!data.id) {
+      return {
+        success: false,
+        error: 'Class ID is required.'
+      }
+    }
+
+    // 4. Perbarui track utama
+    const updated = await db.class.update({
+      where: { id: data.id },
+      data: {
+        name: data.className,
+        teacher: data.teacherName
+      }
+    })
+
+    return {
+      success: true,
+      data: {
+        id: updated.id,
+        name: updated.name
+      }
+    }
+  } catch (error: unknown) {
+    console.error('Error in updateClass:', error)
+
+    return {
+      success: false,
+      error: 'Failed to update track. Please try again.'
+    }
+  }
+}
+
+export async function updateSubject(
+  data: Partial<SubjectFormInput>
+): Promise<SimpleResponse<{ id: string; name: string; trackId: string }>> {
+  try {
+    if (!data.id) {
+      return {
+        success: false,
+        error: 'Class ID is required.'
+      }
+    }
+
+    if (!data.trackId) {
+      return {
+        success: false,
+        error: 'Track ID is required.'
+      }
+    }
+
+    const track = await db.track.findUnique({ where: { id: data.trackId } })
+
+    if (!track) {
+      return {
+        success: false,
+        error: 'Fan Tidak ditemukan'
+      }
+    }
+
+    console.log(JSON.stringify(data, null, 2))
+
+    const subjectInstance = await db.subject.update({
+      where: {
+        id: data.id
+      },
+      data: {
+        name: data.name,
+        trackId: data.trackId
+      },
+      select: {
+        id: true,
+        name: true,
+        trackId: true
+      }
+    })
+
+    return {
+      success: true,
+      data: subjectInstance
+    }
+  } catch (error: unknown) {
+    return {
+      success: false,
+      error: 'Gagal update kelas '
     }
   }
 }

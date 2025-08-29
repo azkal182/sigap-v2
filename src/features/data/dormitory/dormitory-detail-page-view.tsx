@@ -233,7 +233,7 @@ const DormitoryDetailPageView: React.FC<DormitoryDetailPageViewProps> = ({ id })
                       <IconButton size='small' onClick={() => handleOpenEditDialog(track)}>
                         <i className='tabler-edit text-green-400' />
                       </IconButton>
-                      <IconButton size='small' onClick={() => handleDeleteTrack(track.id)}>
+                      <IconButton disabled size='small' onClick={() => handleDeleteTrack(track.id)}>
                         <i className='tabler-trash text-red-400' />
                       </IconButton>
                       <Link href={`/data/dormitory/${data.id}/${track.id}`}>

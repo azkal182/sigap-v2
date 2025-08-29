@@ -22,17 +22,21 @@ import {
   updateScheduleSlot,
   updateSchedule,
   getSksOption,
-  getTrackOption
+  getTrackOption,
+  updateClass,
+  updateSubject
 } from './../dormitory.service'
 
 import {
   AssignStudentToClassSchema,
+  classFormSchema,
   createScheduleSchema,
   createScheduleSlotSchema,
   CreateSksSchema,
   CreateSubjectSchema,
   filterDormitorySchema,
   sksOptionSchema,
+  subjectFormSchema,
   trackOptionSchema,
   trackSchema
 } from './../schemas/dormitory-schema'
@@ -40,9 +44,11 @@ import {
 import prisma from '@/lib/prisma'
 import type {
   AssignStudentToClassInput,
+  ClassFormInput,
   CreateSksInput,
   CreateSubjectInput,
   FilterDormitoryParams,
+  SubjectFormInput,
   TrackFormSchema
 } from '../schemas/dormitory-schema'
 import { handleServerError } from '@/lib/handle-error'
@@ -374,4 +380,15 @@ export async function getSksOptionAction(params: unknown) {
 
 export async function getTrackOptionAction(params: unknown) {
   return validateAndRun(trackOptionSchema, params, getTrackOption)
+}
+
+export async function updateClassAction(
+  // Menerima objek langsung, `Partial` karena tidak semua field harus ada
+  data: Partial<ClassFormInput>
+) {
+  return validateAndRun(classFormSchema, data, updateClass)
+}
+
+export async function updateSubjectAction(data: Partial<SubjectFormInput>) {
+  return validateAndRun(subjectFormSchema, data, updateSubject)
 }

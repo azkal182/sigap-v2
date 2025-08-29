@@ -40,7 +40,8 @@ export async function POST(req: Request) {
   const token = signToken({
     id: newUser.id,
     name: newUser.name ?? '',
-    username: newUser.username ?? ''
+    username: newUser.username ?? '',
+    mustResetCredentials: false
   })
 
   return NextResponse.json({ token })

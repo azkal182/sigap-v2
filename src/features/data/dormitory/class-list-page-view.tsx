@@ -37,7 +37,9 @@ import {
   useDormitodyDetail,
   useSks,
   useSubject,
-  useTrackDetail
+  useTrackDetail,
+  useUpdateClass,
+  useUpdateSubject
 } from './dormitory.query'
 import ClassFormDialog, { type ClassFormValues } from './components/class-dialog'
 import SubjectFormDialog from './components/subject-dialog'
@@ -63,12 +65,14 @@ const slotData: Slot[] = [
 const ClassListPageView = ({ trackId, dormitoryId }: { trackId: string; dormitoryId: string }) => {
   const { data, isLoading } = useClass(dormitoryId, trackId)
   const { mutate: createClass } = useCreateClass()
+  const { mutate: updateClass } = useUpdateClass()
   const { data: dormitoryDetail } = useDormitodyDetail(dormitoryId)
   const { data: trackDetail } = useTrackDetail(trackId)
   const { data: dataSubject } = useSubject(trackId)
   const { data: dataSks } = useSks(trackId)
 
   const { mutate: createSubject } = useCreateSubject()
+  const { mutate: updateSubject } = useUpdateSubject()
   const { mutate: createSks } = useCreateSks()
 
   const [dialogSLotopen, setDialogSlotOpen] = useState(false)
@@ -124,14 +128,24 @@ const ClassListPageView = ({ trackId, dormitoryId }: { trackId: string; dormitor
         }
       )
     } else if (classDialog.mode === 'edit' && form.id) {
-      alert(form.id)
-
-      // updateClass(...) // implementasi berikutnya
+      updateClass(
+        { id: form.id, className: form.className, teacherName: form.teacherName },
+        {
+          onSuccess: () => {
+            toast.success('Kelas berhasil diperbaharui!')
+            closeClassDialog()
+          },
+          onError: (error: any) => {
+            toast.error('Gagal memperbaharui kelas')
+            console.error(error)
+          }
+        }
+      )
     }
   }
 
   const handleSubmitSubject = (form: CreateSubjectInput) => {
-    if (classDialog.mode === 'create') {
+    if (subjectDialog.mode === 'create') {
       createSubject(
         { name: form.name, trackId },
         {
@@ -145,10 +159,20 @@ const ClassListPageView = ({ trackId, dormitoryId }: { trackId: string; dormitor
           }
         }
       )
-    } else if (classDialog.mode === 'edit' && form.id) {
-      alert(form.id)
-
-      // updateClass(...) // implementasi berikutnya
+    } else if (subjectDialog.mode === 'edit' && form.id) {
+      updateSubject(
+        { id: form.id, name: form.name, trackId: trackId },
+        {
+          onSuccess: () => {
+            toast.success('Pelajaran berhasil diperbaharui!')
+            closeSubjectDialog()
+          },
+          onError: (error: any) => {
+            toast.error('Gagal memperbaharui Pelajaran')
+            console.error(error)
+          }
+        }
+      )
     }
   }
 
@@ -281,7 +305,16 @@ const ClassListPageView = ({ trackId, dormitoryId }: { trackId: string; dormitor
                     <TableCell>{item.name}</TableCell>
                     <TableCell>
                       <div className='flex gap-2'>
-                        <IconButton size='small'>
+                        <IconButton
+                          size='small'
+                          onClick={() =>
+                            openSubjectDialog('edit', {
+                              id: item.id,
+                              name: item.name,
+                              trackId: item.trackId
+                            })
+                          }
+                        >
                           <i className='tabler-edit text-green-400' />
                         </IconButton>
                         <IconButton size='small'>

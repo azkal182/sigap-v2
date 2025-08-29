@@ -68,6 +68,23 @@ export const sksOptionSchema = z.object({
 export const trackOptionSchema = z.object({
   trackId: z.string().min(1, 'ID asrama wajib diisi')
 })
+
+export const classFormSchema = z.object({
+  id: z.string().optional(),
+  className: z.string().min(1, 'Nama kelas wajib diisi'),
+  teacherName: z.string().min(1, 'Nama pengajar wajib diisi')
+})
+
+export const subjectFormSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().min(1, 'Nama kelas wajib diisi'),
+  trackId: z.string().min(1, 'Fan kelas wajib diisi')
+})
+
+export type SubjectFormInput = z.infer<typeof subjectFormSchema>
+
+export type ClassFormInput = z.infer<typeof classFormSchema>
+
 export type TrackOptionParams = z.infer<typeof trackOptionSchema>
 export type SksOptionParams = z.infer<typeof sksOptionSchema>
 export type CreateScheduleSlotInput = z.infer<typeof createScheduleSlotSchema>

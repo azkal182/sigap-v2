@@ -23,13 +23,17 @@ import {
   getSlotDataAction,
   updateScheduleSlotAction,
   updateScheduleAction,
-  getSksOptionAction
+  getSksOptionAction,
+  updateClassAction,
+  updateSubjectAction
 } from './actions/dormitory.action'
 import type {
+  ClassFormInput,
   CreateScheduleInput,
   CreateScheduleSlotInput,
   FilterDormitoryParams,
   SksOptionParams,
+  SubjectFormInput,
   TrackFormSchema
 } from './schemas/dormitory-schema'
 import { getScheduleAction } from '@/actions/schedule-action'
@@ -527,5 +531,41 @@ export const useSksOption = (params: SksOptionParams) => {
       }
     },
     enabled: !!params.trackId
+  })
+}
+
+export const useUpdateClass = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    // Menerima objek data Partial<TrackFormSchema>
+    mutationFn: async (data: Partial<ClassFormInput>) => {
+      const res = await updateClassAction(data)
+
+      if (!res.success) throw new ActionError(res.error, res.issues)
+
+      return res.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['class'] })
+    }
+  })
+}
+
+export const useUpdateSubject = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    // Menerima objek data Partial<TrackFormSchema>
+    mutationFn: async (data: Partial<SubjectFormInput>) => {
+      const res = await updateSubjectAction(data)
+
+      if (!res.success) throw new ActionError(res.error, res.issues)
+
+      return res.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['subject'] })
+    }
   })
 }

@@ -174,7 +174,7 @@ const generateFullMonthDates = (year: number, month: number): string[] => {
 
   for (let d = firstDay; d <= lastDay; d.setDate(d.getDate() + 1)) {
     // getDay() 5 adalah Jumat. Kita abaikan tanggal ini.
-    if (d.getDay() !== 5) {
+    if (d.getDay() !== 6) {
       dates.push(d.toISOString().slice(0, 10))
     }
   }
