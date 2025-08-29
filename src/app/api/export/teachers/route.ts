@@ -671,6 +671,7 @@ export async function GET(req: NextRequest) {
       const safeName = slugify(d.name, { lower: true, strict: true })
       const filename = `teachers-${safeName || d.id}-${ts}.pdf`
 
+      // @ts-ignore
       return new Response(pdfBuffer, {
         status: 200,
         headers: {
@@ -711,6 +712,7 @@ export async function GET(req: NextRequest) {
 
     const filename = `teachers-by-dormitory-${ts}.zip`
 
+    // @ts-ignore
     return new Response(zipBuffer, {
       status: 200,
       headers: {

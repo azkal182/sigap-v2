@@ -20,6 +20,7 @@ export async function verifyOldPassword(userId: string, oldPasswordAttempt: stri
       return { success: false, message: 'User not found.' }
     }
 
+    console.log(userId, oldPasswordAttempt)
     const isMatch = await bcrypt.compare(oldPasswordAttempt, user.password)
 
     if (isMatch) {

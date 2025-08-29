@@ -1,6 +1,8 @@
 import type { NextAuthConfig } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 
+import bcrypt from 'bcryptjs'
+
 import prisma from '@/lib/prisma'
 
 const authConfig = {
@@ -19,6 +21,13 @@ const authConfig = {
         })
 
         if (!user) return null
+
+        const isPasswordValid = await bcrypt.compare(
+          typeof credentials?.password === 'string' ? credentials.password : '',
+          user.password // pastikan field password ada di tabel user
+        )
+
+        if (!isPasswordValid) return null
 
         return {
           id: user.id,
