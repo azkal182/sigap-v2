@@ -16,12 +16,15 @@ import { useCreateTeacher, useEditTeacher, useTeachers } from './teacher.query'
 import { DataTableWithParams } from '@/components/DataTableWithParams'
 import TeacherFormDialog from './components/teacher-dialog'
 import type { TeacherItem } from './teacher.service'
+import { usePermissionStore } from '@/store/permission'
 
 const TeacherPageView = () => {
   // 1. Change the state variable name for clarity and consistency
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedTeacher, setSelectedTeacher] = useState<Partial<CreateTeacherInput> | null>(null)
   const [dialogMode, setDialogMode] = useState<'create' | 'edit'>('create')
+
+  const { allowedDormitoryIds: dormitoryId } = usePermissionStore()
 
   const searchParams = useCustomSearchParams({
     defaultParams: filterTeacherSchema
@@ -179,9 +182,19 @@ const TeacherPageView = () => {
         isLoading={queryLoading || !searchParams.isReady}
         searchPlaceholder='Cari Pengajar...'
         addButton={
-          <Button variant='contained' startIcon={<i className='tabler-plus' />} onClick={handleOpenCreateDialog}>
-            Tambah Pengajar
-          </Button>
+          <>
+            <Link
+              href={{
+                pathname: '/api/export/teachers',
+                query: { dormitoryId }
+              }}
+            >
+              <Button variant='outlined'>Export</Button>
+            </Link>
+            <Button variant='contained' startIcon={<i className='tabler-plus' />} onClick={handleOpenCreateDialog}>
+              Tambah Pengajar
+            </Button>
+          </>
         }
       />
     </div>

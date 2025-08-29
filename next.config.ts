@@ -13,7 +13,8 @@ const nextConfig: NextConfig = {
     ]
   },
   experimental: {
-    authInterrupts: true
+    authInterrupts: true,
+    serverComponentsExternalPackages: ['pdfkit']
   }
 }
 
