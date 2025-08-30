@@ -605,6 +605,23 @@ model Village {
     @@index([name])
 }
 
+model Recipient {
+    id       String  @id @default(uuid())
+    name     String
+    isActive Boolean @default(true)
+
+    // Telegram
+    enableTelegram Boolean @default(false)
+    telegramChatId String? @unique
+
+    // WhatsApp
+    enableWhatsApp Boolean @default(false)
+    whatsappPhone  String? @unique
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
 // model Student {
 //     id                      String                    @id @default(uuid()) @map("id")
 //     name                    String                    @map("name")
