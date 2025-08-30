@@ -25,8 +25,8 @@ export default function ScheduleSubject({
             plugins={[timeGridPlugin]}
             initialView='timeGridWeek'
             allDaySlot={false}
-            slotMinTime='07:00:00'
-            slotMaxTime='12:00:00'
+            slotMinTime='05:00:00'
+            slotMaxTime='22:00:00'
             slotDuration='00:25:00'
             hiddenDays={[5]} // Sembunyikan Jumat
             firstDay={6} // Mulai dari Sabtu

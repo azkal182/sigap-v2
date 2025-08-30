@@ -11,6 +11,21 @@ const AppFullCalendar = styled('div')(({ theme }: { theme: Theme }) => ({
   borderRadius: 'var(--mui-shape-borderRadius)',
   '& .fc': {
     zIndex: 1,
+
+    '& .fc-timegrid-slot[data-time^="12:"], \
+    & .fc-timegrid-slot[data-time^="13:"], \
+    & .fc-timegrid-slot[data-time^="14:"], \
+    & .fc-timegrid-slot[data-time^="15:"], \
+    & .fc-timegrid-slot[data-time^="16:"], \
+    & .fc-timegrid-slot[data-time^="17:"], \
+    & .fc-timegrid-slot-label[data-time^="12:"], \
+    & .fc-timegrid-slot-label[data-time^="13:"], \
+    & .fc-timegrid-slot-label[data-time^="14:"], \
+    & .fc-timegrid-slot-label[data-time^="15:"], \
+    & .fc-timegrid-slot-label[data-time^="16:"], \
+    & .fc-timegrid-slot-label[data-time^="17:"]': {
+      display: 'none !important'
+    },
     '& .fc-scrollgrid-section > td': {
       backgroundColor: 'var(--mui-palette-background-paper) !important'
     },

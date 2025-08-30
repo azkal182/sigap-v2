@@ -44,14 +44,14 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        app: [dev, sigap]
+        app: [sigap]
         include:
-          - app: dev
-            port: 4042
-            folder: dev
-            db: dev
-            env: staging
-            url: https://dev.amtsilatipusat.com
+          # - app: dev
+          #   port: 4042
+          #   folder: dev
+          #   db: dev
+          #   env: staging
+          #   url: https://dev.amtsilatipusat.com
           - app: sigap
             port: 4043
             folder: sigap
@@ -170,14 +170,14 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        app: [dev, sigap]
+        app: [sigap]
         include:
-          - app: dev
-            port: 4042
-            folder: dev
-            db: dev
-            env: staging
-            url: https://dev.amtsilatipusat.com
+          # - app: dev
+          #   port: 4042
+          #   folder: dev
+          #   db: dev
+          #   env: staging
+          #   url: https://dev.amtsilatipusat.com
           - app: sigap
             port: 4043
             folder: sigap
@@ -288,7 +288,7 @@ jobs:
           MESSAGE="<b>$STATUS_ICON $STATUS_TEXT</b>%0A"
           MESSAGE+="📦 Project: ${{ env.PROJECT_NAME }}%0A"
           MESSAGE+="🔖 Version: ${{ env.PROJECT_VERSION }}%0A"
-          MESSAGE+="🌍 URL: https://dev.amtsilatipusat.com%0A"
+          MESSAGE+="🌍 URL: https://sigap.amtsilatipusat.com%0A"
           MESSAGE+="🕒 Time: ${{ env.TIMESTAMP }}%0A"
 
           if [[ "$STATUS_TEXT" == "CI/CD Failed" ]]; then

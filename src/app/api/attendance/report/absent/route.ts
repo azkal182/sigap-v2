@@ -204,7 +204,8 @@
 
 // api/absences/daily-report-by-dorm/route.ts
 
-import { NextResponse, type NextRequest } from 'next/server'
+import type { NextRequest } from 'next/server'
+import { NextResponse } from 'next/server'
 
 import { DateTime } from 'luxon'
 
