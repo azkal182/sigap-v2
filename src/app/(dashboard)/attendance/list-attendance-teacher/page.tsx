@@ -382,7 +382,7 @@ function buildMonthOptions(now = new Date()) {
 }
 
 export default function TeacherAttendancePage() {
-  const baseUrl = 'http://localhost:3000/api/attendance-teacher/report/daily'
+  const baseUrl = '/api/attendance-teacher/report/daily'
 
   // 1) ambil daftar asrama
   const dormQuery = useDormitoryList()
