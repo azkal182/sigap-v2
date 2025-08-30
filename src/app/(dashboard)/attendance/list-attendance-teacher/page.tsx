@@ -415,7 +415,10 @@ export default function TeacherAttendancePage() {
   // 5) panggil API attendance hanya jika dormitoryId & dateValue ada
   const apiUrl = React.useMemo(() => {
     if (!dormitoryId || !dateValue) return ''
-    const u = new URL(baseUrl)
+
+    // const u = new URL(baseUrl)
+    const origin = typeof window !== 'undefined' ? window.location.origin : ''
+    const u = new URL(baseUrl, origin) // <-- perbaikan penting
 
     // value date adalah "01-MM-YYYY" sesuai permintaan
     u.searchParams.set('dormitoryId', dormitoryId)

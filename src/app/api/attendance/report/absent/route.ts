@@ -210,7 +210,8 @@ import { NextResponse } from 'next/server'
 import { DateTime } from 'luxon'
 
 import { getDailyReportByDormAndClass } from '@/lib/get-report-daily-by-dormitory-and-class'
-import { generatePdfBuffer } from '@/lib/pdfService'
+import { generateAndSendReport, generatePdfBuffer } from '@/lib/pdfService'
+import { parseBoolean } from '@/lib/parseBoolean'
 
 // --- Endpoint GET untuk Laporan Harian berdasarkan Asrama & Kelas ---
 export async function GET(req: NextRequest) {
@@ -218,6 +219,7 @@ export async function GET(req: NextRequest) {
     const searchParams = req.nextUrl.searchParams
     const dateStr = searchParams.get('date') // e.g., '05-08-2025'
     const timeZone = searchParams.get('tz') // e.g., 'Asia/Jakarta'
+    const sendReport = parseBoolean(searchParams.get('send_report'), false)
 
     if (!dateStr || !timeZone) {
       return NextResponse.json({ error: 'Parameter `date` dan `tz` wajib diisi.' }, { status: 400 })
@@ -237,6 +239,12 @@ export async function GET(req: NextRequest) {
     const day = luxonDate.day
 
     const data = await getDailyReportByDormAndClass(year, month, day, timeZone)
+
+    if (sendReport) {
+      const result = await generateAndSendReport(data, ['404000198'])
+
+      return NextResponse.json({ data: result })
+    }
 
     // 2. Panggil fungsi yang hanya membuat buffer
     const pdfBuffer = await generatePdfBuffer(data)

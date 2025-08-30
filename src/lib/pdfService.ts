@@ -166,11 +166,12 @@ export const sendPdfToTelegram = async (pdfBuffer: Buffer, caption: string, tele
 
     while (attempt < maxRetries) {
       try {
-        const TOKEN_TELEGRAM = process.env.TOKEN_TELEGRAM
+        const TELEGRAM_BOT_TOKEN_REPORT = process.env.TELEGRAM_BOT_TOKEN_REPORT
 
-        if (!TOKEN_TELEGRAM) throw new Error('TOKEN_TELEGRAM tidak ditemukan di environment variables.')
+        if (!TELEGRAM_BOT_TOKEN_REPORT)
+          throw new Error('TELEGRAM_BOT_TOKEN_REPORT tidak ditemukan di environment variables.')
 
-        const response = await fetch(`https://api.telegram.org/bot${TOKEN_TELEGRAM}/sendDocument`, {
+        const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN_REPORT}/sendDocument`, {
           method: 'POST',
           body: formData
         })
@@ -635,11 +636,11 @@ export const generateAndSendReport = async (data: Dormitory[], telegramId: strin
 
 //     while (attempt < maxRetries) {
 //       try {
-//         const TOKEN_TELEGRAM = process.env.TOKEN_TELEGRAM
+//         const TELEGRAM_BOT_TOKEN_REPORT = process.env.TELEGRAM_BOT_TOKEN_REPORT
 
-//         if (!TOKEN_TELEGRAM) throw new Error('TOKEN_TELEGRAM tidak ditemukan di environment variables.')
+//         if (!TELEGRAM_BOT_TOKEN_REPORT) throw new Error('TELEGRAM_BOT_TOKEN_REPORT tidak ditemukan di environment variables.')
 
-//         const response = await fetch(`https://api.telegram.org/bot${TOKEN_TELEGRAM}/sendDocument`, {
+//         const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN_REPORT}/sendDocument`, {
 //           method: 'POST',
 //           body: formData
 //         })
