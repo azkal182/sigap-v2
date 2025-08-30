@@ -1,8 +1,13 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import type { StudentItem } from './student.service'
-import { getFilteredStudents, getStudentDetailAction, getStudentOptionAction } from './actions/user.action'
-import type { FilterStudentParams } from './schemas/student-schema'
+import {
+  addStudentAction,
+  getFilteredStudents,
+  getStudentDetailAction,
+  getStudentOptionAction
+} from './actions/user.action'
+import type { FilterStudentParams, StudentFormInput } from './schemas/student-schema'
 import { ActionError } from '@/utils/action-error'
 
 export function useStudents(params: FilterStudentParams, isValid: boolean) {
@@ -51,5 +56,23 @@ export function useStudentDetail(id: string | undefined) {
       return getStudentDetailAction(id)
     },
     enabled: !!id // hanya jalan jika ID ada
+  })
+}
+
+export const useAddStudent = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (data: StudentFormInput) => {
+      const res = await addStudentAction(data)
+
+      if (!res.success) throw new ActionError(res.error, res.issues)
+
+      return res
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['students'], exact: false, refetchType: 'all' })
+      queryClient.invalidateQueries({ queryKey: ['student_options'], exact: false, refetchType: 'all' })
+    }
   })
 }

@@ -832,29 +832,59 @@ export async function addStudent(input: StudentFormInput): Promise<
       return { success: false, error: 'nis sudah digunakan oleh santri lain!' }
     }
 
-    const data = await db.student.create({
-      data: {
-        nis,
-        name,
-        placeOfBirth,
-        dateOfBirth,
-        fatherName,
-        motherName,
-        parrentPhone: parentPhone,
-        gender,
-        villageId,
-        districtId,
-        regencyId,
-        provinceId,
-        ...(dormitoryId && { dormitoryId })
-      },
-      select: {
-        id: true,
-        name: true
+    const result = await db.$transaction(async tx => {
+      // (opsional) ambil nama asrama untuk di-embed ke history
+      const dorm = dormitoryId
+        ? await tx.dormitory.findUnique({
+            where: { id: dormitoryId },
+            select: { id: true, name: true }
+          })
+        : null
+
+      if (dormitoryId && !dorm) {
+        throw new Error('Asrama tidak ditemukan')
       }
+
+      // 1) buat student
+      const student = await tx.student.create({
+        data: {
+          nis,
+          name,
+          placeOfBirth,
+          dateOfBirth,
+          fatherName,
+          motherName,
+          parrentPhone: parentPhone, // field di schema kamu: "parrentPhone"
+          gender,
+          villageId,
+          districtId,
+          regencyId,
+          provinceId,
+          ...(dormitoryId && { dormitoryId })
+        },
+        select: {
+          id: true,
+          name: true
+        }
+      })
+
+      // 2) jika ada dormitoryId, catat ke DormitoryHistory
+      if (dormitoryId) {
+        await tx.dormitoryHistory.create({
+          data: {
+            studentId: student.id,
+            dormitoryId: dormitoryId,
+            startDate: new Date(),
+            status: 'ACTIVE', // enum DormitoryStatus
+            dormNameAtThatTime: dorm!.name
+          }
+        })
+      }
+
+      return student
     })
 
-    return { success: true, message: `santri ${name} berhasil ditambahkan`, data }
+    return { success: true, message: `santri ${name} berhasil ditambahkan`, data: result }
   } catch (error) {
     const message = handleServerError('Gagal menambhkan santri:', error)
 

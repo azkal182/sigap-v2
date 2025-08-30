@@ -22,22 +22,21 @@ import {
   Typography
 } from '@mui/material'
 
+import { toast } from 'react-toastify'
+
 import CustomTextField from '@/@core/components/mui/TextField'
 import AppReactDatepicker from '@/lib/styles/AppReactDatepicker'
 import { useDistricts, useProvinces, useRegencies, useVillages } from '@/hooks/useGeo'
 import type { StudentFormInput } from '../schemas/student-schema'
 import { studentFormSchema } from '../schemas/student-schema'
+import { useDormitoryList } from '../../dormitory/dormitory.query'
+import { useAddStudent } from '../student.query'
 
 // --- Tipe Data & Data Statis ---
 interface GeoOption {
   id: number
   name: string
 }
-
-const dormitories = [
-  { id: 'dormA', name: 'Asrama Putra A' },
-  { id: 'dormB', name: 'Asrama Putri B' }
-]
 
 // --- Komponen Form ---
 export default function StudentForm() {
@@ -46,6 +45,7 @@ export default function StudentForm() {
     handleSubmit,
     watch,
     setValue,
+    reset,
     formState: { errors }
   } = useForm<StudentFormInput>({
     resolver: zodResolver(studentFormSchema),
@@ -65,6 +65,9 @@ export default function StudentForm() {
       villageId: undefined
     }
   })
+
+  const dormQuery = useDormitoryList()
+  const { mutate: addStudent } = useAddStudent()
 
   // Mengamati perubahan pada field ID
   const provinceId = watch('provinceId')
@@ -157,6 +160,16 @@ export default function StudentForm() {
 
   const onSubmit: SubmitHandler<StudentFormInput> = data => {
     console.log('Form Submitted:', data)
+
+    addStudent(data, {
+      onSuccess: data => {
+        toast.success(data.message ?? 'santri berhasil dibuat!')
+        reset()
+      },
+      onError: error => {
+        toast.error(error.message ?? 'Gagal membuat santri')
+      }
+    })
   }
 
   return (
@@ -221,6 +234,8 @@ export default function StudentForm() {
               control={control}
               render={({ field }) => (
                 <AppReactDatepicker
+                  showYearDropdown
+                  showMonthDropdown
                   selected={field.value}
                   onChange={date => field.onChange(date)}
                   customInput={
@@ -319,9 +334,9 @@ export default function StudentForm() {
                   <MenuItem value=''>
                     <em>Pilih Asrama</em>
                   </MenuItem>
-                  {dormitories.map(dorm => (
+                  {dormQuery.data?.map(dorm => (
                     <MenuItem key={dorm.id} value={dorm.id}>
-                      {dorm.name}
+                      {dorm.name} - {dorm.gender}
                     </MenuItem>
                   ))}
                 </CustomTextField>
