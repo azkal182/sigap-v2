@@ -25,7 +25,8 @@ import {
   updateScheduleAction,
   getSksOptionAction,
   updateClassAction,
-  updateSubjectAction
+  updateSubjectAction,
+  handleClassTransferAction
 } from './actions/dormitory.action'
 import type {
   ClassFormInput,
@@ -566,6 +567,27 @@ export const useUpdateSubject = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['subject'] })
+    }
+  })
+}
+
+export const useHandleClassTransfer = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    // Menerima objek data Partial<TrackFormSchema>
+    mutationFn: async (data: any) => {
+      const res = await handleClassTransferAction(data)
+
+      if (!res.success) throw new ActionError(res.error, res.issues)
+
+      return res
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['student_options'], exact: false, refetchType: 'all' })
+      queryClient.invalidateQueries({ queryKey: ['students'], exact: false, refetchType: 'all' })
+      queryClient.invalidateQueries({ queryKey: ['class'], exact: false, refetchType: 'all' })
+      queryClient.invalidateQueries({ queryKey: ['classDetail'], exact: false, refetchType: 'all' })
     }
   })
 }

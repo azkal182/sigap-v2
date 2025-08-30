@@ -67,6 +67,9 @@ import type {
   TrackDetailResponse
 } from '../dormitory.service'
 import { validateAndRun } from '@/utils/validate-and-run'
+import type { ClassTransferInput } from '../schemas/class-transfer.schema'
+import { ClassTransferSchema, MoveWithinTrackSchema, PromoteAcrossTrackSchema } from '../schemas/class-transfer.schema'
+import { moveStudentsWithinTrack, promoteStudentsToTrack } from '../class-transfer.service'
 
 export async function getDormitories(params: FilterDormitoryParams) {
   return validateAndRun(filterDormitorySchema, params, getDormitoriesFilter)
@@ -391,4 +394,50 @@ export async function updateClassAction(
 
 export async function updateSubjectAction(data: Partial<SubjectFormInput>) {
   return validateAndRun(subjectFormSchema, data, updateSubject)
+}
+
+// export async function handleClassTransferAction(input: ClassTransferInput) {
+//   // Pertahankan guard awal agar bisa fail-fast dan sekaligus mengakses discriminant
+//   const parsed = ClassTransferSchema.safeParse(input)
+
+//   if (!parsed.success) {
+//     return {
+//       success: false,
+//       error: 'Validasi gagal',
+//       issues: parsed.error.flatten().fieldErrors
+//     }
+//   }
+
+//   // Sudah tahu variannya: pilih schema & serviceFn yang sesuai
+//   if (parsed.data.action === 'MOVE') {
+//     // <-- di sini pakai MoveWithinTrackSchema (bukan ClassTransferSchema)
+//     return validateAndRun(MoveWithinTrackSchema, parsed.data, moveStudentsWithinTrack)
+//   } else {
+//     // <-- di sini pakai PromoteAcrossTrackSchema (bukan ClassTransferSchema)
+//     return validateAndRun(PromoteAcrossTrackSchema, parsed.data, promoteStudentsToTrack)
+//   }
+// }
+
+export async function handleClassTransferAction(input: ClassTransferInput) {
+  // Pertahankan guard awal agar bisa fail-fast dan sekaligus mengakses discriminant
+  const parsed = ClassTransferSchema.safeParse(input)
+
+  if (!parsed.success) {
+    console.log(parsed.error.flatten().fieldErrors)
+
+    return {
+      success: false,
+      error: 'Validasi gagal',
+      issues: parsed.error.flatten().fieldErrors
+    }
+  }
+
+  // Sudah tahu variannya: pilih schema & serviceFn yang sesuai
+  if (parsed.data.action === 'MOVE') {
+    // <-- di sini pakai MoveWithinTrackSchema (bukan ClassTransferSchema)
+    return validateAndRun(MoveWithinTrackSchema, parsed.data, moveStudentsWithinTrack)
+  } else {
+    // <-- di sini pakai PromoteAcrossTrackSchema (bukan ClassTransferSchema)
+    return validateAndRun(PromoteAcrossTrackSchema, parsed.data, promoteStudentsToTrack)
+  }
 }
