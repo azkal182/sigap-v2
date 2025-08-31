@@ -353,6 +353,11 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
       }
     })
 
+    console.log({
+      total: students.filter(s => s.dormitory?.name).length,
+      totalWithoutDoem: students.filter(s => !s.dormitory?.name).length
+    })
+
     const formattedStudents: StudentItem[] = students
       .map(s => {
         const history = s.histories?.[0]
@@ -477,7 +482,7 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
 
     const summary = await generateWilayahValidationSummary()
 
-    console.log(JSON.stringify(formattedStudents, null, 2))
+    // console.log(JSON.stringify(formattedStudents, null, 2))
 
     return {
       success: true,

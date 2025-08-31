@@ -100,9 +100,11 @@
 
 // 'use client'
 
-import React, { useMemo } from 'react'
+import React, { useEffect, useMemo } from 'react'
 
 import Link from 'next/link'
+
+import { useRouter } from 'next/navigation'
 
 import type { ColumnDef } from '@tanstack/react-table'
 
@@ -115,6 +117,7 @@ import { filterDormitorySchema } from './schemas/dormitory-schema'
 import { usePermissionStore } from '@/store/permission'
 
 const DormitoryPageView = () => {
+  const router = useRouter()
   const allowedDormitoryIds = usePermissionStore(state => state.allowedDormitoryIds)
 
   // 2. Memoize objek initialParams.
@@ -180,6 +183,12 @@ const DormitoryPageView = () => {
     ],
     [searchParams.params.page, searchParams.params.limit]
   )
+
+  useEffect(() => {
+    if (allowedDormitoryIds.length === 1) {
+      router.push(`/data/dormitory/${allowedDormitoryIds[0]}`)
+    }
+  }, [allowedDormitoryIds, router])
 
   return (
     <div>
