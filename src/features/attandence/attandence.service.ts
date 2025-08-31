@@ -126,6 +126,137 @@ type GetClassAbsenceParams = {
   absentDate: string // 'YYYY-MM-DD'
 }
 
+// export async function getClassAbsences(params: GetClassAbsenceParams): Promise<APIResult<ClassAbsenceDetail>> {
+//   const { classId, slotId, absentDate } = params
+
+//   try {
+//     console.log('[getClassAbsences] Params:', params)
+
+//     const schedule = await db.schedule.findFirst({
+//       where: {
+//         classId,
+//         scheduleSlotId: slotId
+//       },
+//       include: {
+//         class: {
+//           select: {
+//             name: true,
+//             dormitory: {
+//               select: {
+//                 name: true
+//               }
+//             }
+//           }
+//         },
+//         teacher: {
+//           select: {
+//             id: true
+//           }
+//         },
+//         subject: {
+//           select: {
+//             name: true
+//           }
+//         }
+//       }
+//     })
+
+//     if (!schedule) {
+//       return {
+//         success: true,
+//         data: null
+//       }
+//     }
+
+//     const students = await db.student.findMany({
+//       where: {
+//         dormitoryId: { not: null },
+//         status: 'ACTIVE',
+//         histories: {
+//           some: {
+//             status: 'STUDYING'
+//           }
+//         }
+//       },
+//       select: {
+//         id: true,
+//         name: true,
+//         nis: true,
+//         dormitoryId: true,
+//         histories: {
+//           where: {
+//             status: 'STUDYING'
+//           },
+//           orderBy: {
+//             startDate: 'asc'
+//           },
+//           take: 1,
+//           select: {
+//             classId: true
+//           }
+//         },
+//         absences: {
+//           where: {
+//             scheduleId: schedule.id,
+//             absentDate
+//           },
+//           select: {
+//             id: true,
+//             status: true,
+//             note: true
+//           },
+//           take: 1
+//         }
+//       },
+//       orderBy: {
+//         name: 'asc'
+//       }
+//     })
+
+//     const filteredStudents = students.filter(
+//       student => student.histories.length > 0 && student.histories[0].classId === schedule.classId
+//     )
+
+//     const studentsWithAbsence: StudentWithAbsence[] = filteredStudents.map(s => ({
+//       id: s.id,
+//       name: s.name,
+//       nis: s.nis,
+//       dormitoryId: s.dormitoryId!,
+//       absence:
+//         s.absences.length > 0
+//           ? {
+//               id: s.absences[0].id,
+//               status: s.absences[0].status,
+//               note: s.absences[0].note
+//             }
+//           : {
+//               id: null,
+//               status: null,
+//               note: null
+//             }
+//     }))
+
+//     return {
+//       success: true,
+//       data: {
+//         className: schedule.class.name,
+//         scheduleId: schedule.id,
+//         teacherId: schedule.teacher.id,
+//         dormitoryName: schedule.class.dormitory.name,
+//         subjectName: schedule.subject.name,
+//         students: studentsWithAbsence
+//       }
+//     }
+//   } catch (error) {
+//     console.error('[getClassAbsences] Error:', error)
+
+//     return {
+//       success: false,
+//       error: 'Gagal mengambil data absensi kelas'
+//     }
+//   }
+// }
+
 export async function getClassAbsences(params: GetClassAbsenceParams): Promise<APIResult<ClassAbsenceDetail>> {
   const { classId, slotId, absentDate } = params
 
@@ -161,7 +292,11 @@ export async function getClassAbsences(params: GetClassAbsenceParams): Promise<A
       }
     })
 
+    console.log('[getClassAbsences] Found schedule:', schedule)
+
     if (!schedule) {
+      console.warn('[getClassAbsences] No schedule found for classId:', classId, 'slotId:', slotId)
+
       return {
         success: true,
         data: null
@@ -213,40 +348,56 @@ export async function getClassAbsences(params: GetClassAbsenceParams): Promise<A
       }
     })
 
+    console.log('[getClassAbsences] Total students found:', students.length)
+
     const filteredStudents = students.filter(
       student => student.histories.length > 0 && student.histories[0].classId === schedule.classId
     )
 
-    const studentsWithAbsence: StudentWithAbsence[] = filteredStudents.map(s => ({
-      id: s.id,
-      name: s.name,
-      nis: s.nis,
-      dormitoryId: s.dormitoryId!,
-      absence:
-        s.absences.length > 0
+    console.log('[getClassAbsences] Filtered students:', filteredStudents.length)
+
+    const studentsWithAbsence: StudentWithAbsence[] = filteredStudents.map(s => {
+      const absence = s.absences.length > 0 ? s.absences[0] : null
+
+      console.debug('[getClassAbsences] Mapping student:', {
+        id: s.id,
+        name: s.name,
+        nis: s.nis,
+        dormitoryId: s.dormitoryId,
+        absence
+      })
+
+      return {
+        id: s.id,
+        name: s.name,
+        nis: s.nis,
+        dormitoryId: s.dormitoryId!,
+        absence: absence
           ? {
-              id: s.absences[0].id,
-              status: s.absences[0].status,
-              note: s.absences[0].note
+              id: absence.id,
+              status: absence.status,
+              note: absence.note
             }
           : {
               id: null,
               status: null,
               note: null
             }
-    }))
-
-    return {
-      success: true,
-      data: {
-        className: schedule.class.name,
-        scheduleId: schedule.id,
-        teacherId: schedule.teacher.id,
-        dormitoryName: schedule.class.dormitory.name,
-        subjectName: schedule.subject.name,
-        students: studentsWithAbsence
       }
+    })
+
+    const result = {
+      className: schedule.class.name,
+      scheduleId: schedule.id,
+      teacherId: schedule.teacher.id,
+      dormitoryName: schedule.class.dormitory.name,
+      subjectName: schedule.subject.name,
+      students: studentsWithAbsence
     }
+
+    console.log('[getClassAbsences] Final result:', JSON.stringify(result, null, 2))
+
+    return { success: true, data: result }
   } catch (error) {
     console.error('[getClassAbsences] Error:', error)
 

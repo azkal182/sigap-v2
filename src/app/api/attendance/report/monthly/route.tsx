@@ -33,6 +33,10 @@ async function getMonthlyAttendanceReport(
   const startDate = startLuxon.toJSDate()
   const endDate = endLuxon.toJSDate()
 
+  console.log(
+    `Fetching data for classId: ${classId}, month: ${month}-${year}, from ${startLuxon.toISO()} to ${endLuxon.toISO()} in timezone ${timeZone}`
+  )
+
   // Ambil semua siswa yang sedang berada di kelas yang diberikan
   const studentsInClass = await prisma.history.findMany({
     where: {

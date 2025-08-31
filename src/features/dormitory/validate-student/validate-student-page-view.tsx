@@ -105,6 +105,8 @@ const ValidateStudentPageView = () => {
 
   useEffect(() => {
     if (data?.students) {
+      console.log(data)
+
       const mapped = data.students.map(student => ({
         id: student.absence.id,
         studentId: student.id,

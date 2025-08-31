@@ -167,26 +167,59 @@ const statuses = [AbsenceStatus.PRESENT, AbsenceStatus.ABSENT, AbsenceStatus.SIC
 const getRandomStatus = () => statuses[Math.floor(Math.random() * statuses.length)]
 
 // FUNGSI BARU: Menghasilkan semua tanggal untuk satu bulan penuh, kecuali hari Jumat
-const generateFullMonthDates = (year: number, month: number): string[] => {
-  const dates: string[] = []
-  const firstDay = new Date(year, month - 1, 1)
-  const lastDay = new Date(year, month, 0)
+// const generateFullMonthDates = (year: number, month: number): string[] => {
+//   const dates: string[] = []
+//   const firstDay = new Date(year, month - 1, 1)
+//   const lastDay = new Date(year, month, 0)
 
-  for (let d = firstDay; d <= lastDay; d.setDate(d.getDate() + 1)) {
-    // getDay() 5 adalah Jumat. Kita abaikan tanggal ini.
-    if (d.getDay() !== 6) {
-      dates.push(d.toISOString().slice(0, 10))
+//   console.log(`Generating dates for ${year}-${month}, from ${firstDay.toISOString()} to ${lastDay.toISOString()}`)
+//   console.log(firstDay.toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }))
+//   console.log(lastDay.toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }))
+
+//   //   for (let d = firstDay; d <= lastDay; d.setDate(d.getDate() + 1)) {
+//   //     // getDay() 5 adalah Jumat. Kita abaikan tanggal ini.
+//   //     if (d.getDay() !== 6) {
+//   //       dates.push(d.toISOString().slice(0, 10))
+//   //     }
+//   //   }
+
+//   for (let d = new Date(firstDay); d <= lastDay; d.setDate(d.getDate() + 1)) {
+//     if (d.getDay() !== 6) {
+//       dates.push(d.toISOString().slice(0, 10))
+//     }
+//   }
+
+//   return dates
+// }
+
+// Menghasilkan semua tanggal (YYYY-MM-DD) dalam 1 bulan penuh, tanpa skip hari
+// skipWeekdays: array angka 0..6 (Minggu=0, Senin=1, ... Sabtu=6)
+export const generateFullMonthDates = (year: number, month: number, skipWeekdays: number[] = []): string[] => {
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate()
+  const pad = (n: number) => n.toString().padStart(2, '0')
+
+  const dates: string[] = []
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dUTC = new Date(Date.UTC(year, month - 1, day)) // representasi stabil di UTC
+    const weekday = dUTC.getUTCDay() // 0..6, aman dari TZ
+
+    if (!skipWeekdays.includes(weekday)) {
+      dates.push(`${year}-${pad(month)}-${pad(day)}`)
     }
   }
 
   return dates
 }
 
+// contoh: skip Sabtu(6) & Minggu(0)
+// const dates = generateFullMonthDatesWithSkip(2025, 8, [0, 6]);
+
 // Helper untuk membuat absencesByDay untuk seluruh bulan,
 // dengan data palsu untuk beberapa tanggal dan kosong untuk yang lainnya.
 const generateAbsences = (year: number, month: number) => {
   const absencesByDay: Record<string, { slot: number; subjectName: string; status: AbsenceStatus }[]> = {}
-  const fullDateRange = generateFullMonthDates(year, month)
+  const fullDateRange = generateFullMonthDates(year, month, [5]) // skip Jumat(5)
 
   // Contoh tanggal yang punya data.
   // Dalam implementasi nyata, ini akan diambil dari database.
