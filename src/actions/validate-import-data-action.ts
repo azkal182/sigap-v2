@@ -31,23 +31,6 @@ interface RawExcelRowData {
   gender: 'PUTRA' | 'PUTRI' | null
 }
 
-// --- Definisi Tipe Hasil Validasi yang Dikembalikan ke Client ---
-// Ini akan sesuai dengan 'ExcelRowData' di client setelah validasi
-// interface ValidatedExcelRowData extends RawExcelRowData {
-//   __isValid: boolean
-//   __validationMessage: string
-//   __wilayahData: {
-//     id: number
-//     name: string
-//     code: string
-//     fullCode: string
-//     postalCode: string
-//   } | null // Bisa null jika tidak valid
-//   __placeOfBirth: string | null
-//   __dateOfBirth: Date | null
-// }
-
-// --- Tipe hasil validasi (semua level) ---
 interface ValidatedExcelRowData extends RawExcelRowData {
   __isValid: boolean
   __validationMessage: string
@@ -331,222 +314,282 @@ export async function validateImportDataPartialOnServer(dataRows: RawExcelRowDat
   }
 }
 
-// export async function validateImportDataPartialOnServer(dataRows: RawExcelRowData[]): Promise<ServerValidationResult> {
-//   const validatedRows: ValidatedExcelRowData[] = []
-//   const SERVER_VALIDATION_BATCH_SIZE = 50
+// --- Definisi Tipe Data dari Client (NO DORMITORY) ---
+export interface RawExcelRowDataWithoutDormitory {
+  id: number
+  NO: number | null
+  'NAMA SANTRI': string | null
+  NIS: string | null
+  TTL: string | null
+  'NAMA AYAH': string | null
+  'NAMA IBU': string | null
+  'NO TELP ORTU': string | null
+  'ALAMAT RUMAH': string | null
+  'RT/RW': string | null
+  KECAMATAN: string | null
+  'KABUPATEN/KOTA': string | null
+  PROVINSI: string | null
+  MADIN: string | null
+  'KELAS FORMAL': string | null
+  'STATUS KEAKTIFAN': string | null
+  gender: 'PUTRA' | 'PUTRI' | null
 
-//   for (let i = 0; i < dataRows.length; i += SERVER_VALIDATION_BATCH_SIZE) {
-//     const batch = dataRows.slice(i, i + SERVER_VALIDATION_BATCH_SIZE)
+  // Catatan: kolom terkait dormitory (ASRAMA, 'ASRAMA ID', KAMAR, dormitoryId, dormitoryName)
+  // TIDAK ada di interface ini. Jika kolom itu muncul di Excel, abaikan saja di layer parsing.
+}
 
-//     const batchValidationResults = await Promise.all(
-//       batch.map(async row => {
-//         const currentRow = { ...row } as ValidatedExcelRowData
-//         const validationMessages: string[] = []
-//         let rowOverallValid = true
+export interface ValidatedExcelRowDataWithoutDormitory extends RawExcelRowDataWithoutDormitory {
+  __isValid: boolean
+  __validationMessage: string
+  __wilayahData: {
+    province?: { id: number; name: string; code: string }
+    regency?: { id: number; name: string; type?: string; code: string; fullCode?: string }
+    district?: { id: number; name: string; code: string; fullCode?: string }
+    village?: { id: number; name: string; code: string; fullCode?: string; postalCode?: string }
+  } | null
+  __placeOfBirth: string | null
+  __dateOfBirth: Date | null
+  __deepestWilayahLevel?: 'village' | 'district' | 'regency' | 'province' | 'notFound'
+}
 
-//         // --- Validasi TTL ---
-//         const ttlString = currentRow['TTL'] || ''
+export interface ServerValidationResultWithoutDormitory {
+  validatedRows: ValidatedExcelRowDataWithoutDormitory[]
+  totalInvalid: number
+  totalValid: number
+  message: string
+}
 
-//         const { placeOfBirth, dateOfBirth, isValid: isTtlValid, message: ttlMessage } = extractBirthData(ttlString)
+/**
+ * Validasi penuh (TTL + wilayah) TANPA dormitory.
+ * Baris dianggap tidak valid jika TTL tidak valid ATAU wilayah tidak ketemu hingga desa.
+ */
+export async function validateImportDataOnServer_NoDormitory(
+  dataRows: RawExcelRowDataWithoutDormitory[]
+): Promise<ServerValidationResultWithoutDormitory> {
+  const validatedRows: ValidatedExcelRowDataWithoutDormitory[] = []
+  let invalidCount = 0
+  let validCount = 0
 
-//         if (isTtlValid) {
-//           currentRow.__placeOfBirth = placeOfBirth
-//           currentRow.__dateOfBirth = dateOfBirth
-//         } else {
-//           rowOverallValid = false
-//           validationMessages.push(`TTL: ${ttlMessage}`)
-//           currentRow.__placeOfBirth = null
-//           currentRow.__dateOfBirth = null
-//         }
+  const SERVER_VALIDATION_BATCH_SIZE = 50
 
-//         // --- Validasi Wilayah (longgar) ---
-//         const provinceName = currentRow['PROVINSI']?.trim()
-//         const regencyLabel = currentRow['KABUPATEN/KOTA']?.trim()
-//         const districtName = currentRow['KECAMATAN']?.trim()
-//         const villageName = currentRow['ALAMAT RUMAH']?.trim()
+  for (let i = 0; i < dataRows.length; i += SERVER_VALIDATION_BATCH_SIZE) {
+    const batch = dataRows.slice(i, i + SERVER_VALIDATION_BATCH_SIZE)
 
-//         const wilayahData: any = {}
+    const batchValidationResults = await Promise.all(
+      batch.map(async row => {
+        const currentRow: ValidatedExcelRowDataWithoutDormitory = {
+          ...row,
+          __isValid: true,
+          __validationMessage: '',
+          __wilayahData: null,
+          __placeOfBirth: null,
+          __dateOfBirth: null
+        }
 
-//         if (provinceName || regencyLabel || districtName || villageName) {
-//           const wilayahResult = await searchWilayahOrderedPartial(provinceName, regencyLabel, districtName, villageName)
+        const messages: string[] = []
+        let isValid = true
 
-//           // Pilih level tertinggi yang ditemukan
-//           if (wilayahResult.province) wilayahData.province = wilayahResult.province
-//           if (wilayahResult.regency) wilayahData.regency = wilayahResult.regency
-//           if (wilayahResult.district) wilayahData.district = wilayahResult.district
-//           if (wilayahResult.village) wilayahData.village = wilayahResult.village
+        // --- Validasi TTL ---
+        const {
+          placeOfBirth,
+          dateOfBirth,
+          isValid: isTtlValid,
+          message: ttlMessage
+        } = extractBirthData(currentRow.TTL || '')
 
-//           //   console.log(JSON.stringify(wilayahResult, null, 2))
+        if (isTtlValid) {
+          currentRow.__placeOfBirth = placeOfBirth
+          currentRow.__dateOfBirth = dateOfBirth
+        } else {
+          isValid = false
+          messages.push(`TTL: ${ttlMessage}`)
+        }
 
-//           // Province wajib minimal
-//           if (!wilayahResult.province) {
-//             rowOverallValid = false
-//             validationMessages.push(`Wilayah: ${wilayahResult.message}`)
-//           }
-//         }
+        // --- Validasi Wilayah (hingga desa) ---
+        const provinceName = currentRow['PROVINSI']?.trim()
+        const regencyLabel = currentRow['KABUPATEN/KOTA']?.trim()
+        const districtName = currentRow['KECAMATAN']?.trim()
+        const villageName = currentRow['ALAMAT RUMAH']?.trim()
 
-//         currentRow.__wilayahData = wilayahData || null
-//         currentRow.__isValid = rowOverallValid
-//         currentRow.__validationMessage = validationMessages.length > 0 ? validationMessages.join('; ') : 'Data valid.'
+        const wilayahValidationResult = await searchWilayahOrdered(
+          provinceName,
+          regencyLabel,
+          districtName,
+          villageName
+        )
 
-//         return currentRow
-//       })
-//     )
+        if (wilayahValidationResult.village) {
+          currentRow.__wilayahData = wilayahValidationResult.village
+        } else {
+          isValid = false
+          messages.push(`Wilayah: ${wilayahValidationResult.message}`)
+          currentRow.__wilayahData = null
+        }
 
-//     console.log(JSON.stringify(batchValidationResults, null, 2))
+        currentRow.__isValid = isValid
+        currentRow.__validationMessage = messages.length ? messages.join('; ') : 'Data valid.'
 
-//     validatedRows.push(...batchValidationResults)
-//   }
+        return currentRow
+      })
+    )
 
-//   const invalidCount = validatedRows.filter(row => !row.__isValid).length
-//   const validCount = validatedRows.length - invalidCount
+    validatedRows.push(...batchValidationResults)
+  }
 
-//   return {
-//     validatedRows,
-//     totalInvalid: invalidCount,
-//     totalValid: validCount,
-//     message:
-//       invalidCount > 0
-//         ? `Validasi selesai. Ditemukan ${invalidCount} baris bermasalah.`
-//         : 'Validasi data berhasil! Semua baris valid.'
-//   }
-// }
+  invalidCount = validatedRows.filter(r => !r.__isValid).length
+  validCount = validatedRows.length - invalidCount
 
-// export async function validateImportDataPartialOnServer(dataRows: RawExcelRowData[]): Promise<ServerValidationResult> {
-//   const validatedRows: ValidatedExcelRowData[] = []
-//   const SERVER_VALIDATION_BATCH_SIZE = 50
+  return {
+    validatedRows,
+    totalInvalid: invalidCount,
+    totalValid: validCount,
+    message:
+      invalidCount > 0
+        ? `Validasi selesai. Ditemukan ${invalidCount} baris bermasalah.`
+        : 'Validasi data berhasil! Semua baris valid.'
+  }
+}
 
-//   // OBJEK BARU: Untuk ringkasan hasil validasi wilayah yang lebih akurat
-//   const wilayahSummary = {
-//     foundDownToVillage: 0,
-//     foundDownToDistrict: 0,
-//     foundDownToRegency: 0,
-//     foundDownToProvince: 0,
-//     notFound: 0
-//   }
+/**
+ * Validasi parsial TANPA dormitory.
+ * Aturan: Baris TIDAK otomatis invalid jika desa/kecamatan/kab tidak ketemu;
+ * tetapi jika **PROVINSI** tidak ketemu, tandai pesan peringatan.
+ */
+export async function validateImportDataPartialOnServer_NoDormitory(
+  dataRows: RawExcelRowDataWithoutDormitory[]
+): Promise<ServerValidationResultWithoutDormitory> {
+  const validatedRows: ValidatedExcelRowDataWithoutDormitory[] = []
+  const SERVER_VALIDATION_BATCH_SIZE = 50
 
-//   for (let i = 0; i < dataRows.length; i += SERVER_VALIDATION_BATCH_SIZE) {
-//     const batch = dataRows.slice(i, i + SERVER_VALIDATION_BATCH_SIZE)
+  const wilayahSummary = {
+    foundDownToVillage: 0,
+    foundDownToDistrict: 0,
+    foundDownToRegency: 0,
+    foundDownToProvince: 0,
+    notFound: 0
+  }
 
-//     const batchValidationResults = await Promise.all(
-//       batch.map(async row => {
-//         const currentRow = { ...row } as ValidatedExcelRowData
-//         const validationMessages: string[] = []
-//         let rowOverallValid = true
+  for (let i = 0; i < dataRows.length; i += SERVER_VALIDATION_BATCH_SIZE) {
+    const batch = dataRows.slice(i, i + SERVER_VALIDATION_BATCH_SIZE)
 
-//         // --- Validasi TTL (tidak ada perubahan) ---
-//         const ttlString = currentRow['TTL'] || ''
-//         const { placeOfBirth, dateOfBirth, isValid: isTtlValid, message: ttlMessage } = extractBirthData(ttlString)
+    const batchValidationResults = await Promise.all(
+      batch.map(async row => {
+        const currentRow: ValidatedExcelRowDataWithoutDormitory = {
+          ...row,
+          __isValid: true,
+          __validationMessage: '',
+          __wilayahData: null,
+          __placeOfBirth: null,
+          __dateOfBirth: null,
+          __deepestWilayahLevel: 'notFound'
+        }
 
-//         if (isTtlValid) {
-//           currentRow.__placeOfBirth = placeOfBirth
-//           currentRow.__dateOfBirth = dateOfBirth
-//         } else {
-//           rowOverallValid = false
-//           validationMessages.push(`TTL: ${ttlMessage}`)
-//           currentRow.__placeOfBirth = null
-//           currentRow.__dateOfBirth = null
-//         }
+        const messages: string[] = []
+        let isValid = true
 
-//         // --- Validasi Wilayah (longgar) ---
-//         const provinceName = currentRow['PROVINSI']?.trim()
-//         const regencyLabel = currentRow['KABUPATEN/KOTA']?.trim()
-//         const districtName = currentRow['KECAMATAN']?.trim()
-//         const villageName = currentRow['ALAMAT RUMAH']?.trim()
+        // --- TTL ---
+        const {
+          placeOfBirth,
+          dateOfBirth,
+          isValid: isTtlValid,
+          message: ttlMessage
+        } = extractBirthData(currentRow.TTL || '')
 
-//         const wilayahData: any = {}
+        if (isTtlValid) {
+          currentRow.__placeOfBirth = placeOfBirth
+          currentRow.__dateOfBirth = dateOfBirth
+        } else {
+          isValid = false
+          messages.push(`TTL: ${ttlMessage}`)
+        }
 
-//         // PERUBAHAN: Tambahkan properti untuk melacak level terdalam
-//         currentRow.__deepestWilayahLevel = 'notFound'
+        // --- Wilayah + Fallback ---
+        const provinceName = currentRow['PROVINSI']?.trim()
+        const regencyLabel = currentRow['KABUPATEN/KOTA']?.trim()
+        const districtName = currentRow['KECAMATAN']?.trim()
+        const villageName = currentRow['ALAMAT RUMAH']?.trim()
 
-//         if (provinceName || regencyLabel || districtName || villageName) {
-//           const wilayahResult = await searchWilayahWithFallback(provinceName, regencyLabel, districtName, villageName)
+        const wilayahData: any = {}
 
-//           // Simpan semua level yang ditemukan
-//           if (wilayahResult.province) wilayahData.province = wilayahResult.province
-//           if (wilayahResult.regency) wilayahData.regency = wilayahResult.regency
-//           if (wilayahResult.district) wilayahData.district = wilayahResult.district
-//           if (wilayahResult.village) wilayahData.village = wilayahResult.village
+        currentRow.__deepestWilayahLevel = 'notFound'
 
-//           // PERUBAHAN LOGIKA PENGHITUNGAN:
-//           // Tentukan level terdalam yang berhasil ditemukan untuk baris ini
-//           if (wilayahResult.village) {
-//             currentRow.__deepestWilayahLevel = 'village'
-//           } else if (wilayahResult.district) {
-//             currentRow.__deepestWilayahLevel = 'district'
-//           } else if (wilayahResult.regency) {
-//             currentRow.__deepestWilayahLevel = 'regency'
-//           } else if (wilayahResult.province) {
-//             currentRow.__deepestWilayahLevel = 'province'
-//           }
+        if (provinceName || regencyLabel || districtName || villageName) {
+          const wilayahResult = await searchWilayahWithFallback(provinceName, regencyLabel, districtName, villageName)
 
-//           // Jika tidak ada, tetap 'notFound'
+          if (wilayahResult.province) wilayahData.province = wilayahResult.province
+          if (wilayahResult.regency) wilayahData.regency = wilayahResult.regency
+          if (wilayahResult.district) wilayahData.district = wilayahResult.district
+          if (wilayahResult.village) wilayahData.village = wilayahResult.village
 
-//           // Aturan validitas baris tetap sama: dianggap tidak valid jika desa tidak ditemukan
-//           if (!wilayahResult.village) {
-//             rowOverallValid = false
-//             validationMessages.push(`Wilayah: ${wilayahResult.message}`)
-//           }
-//         }
+          if (wilayahResult.village) currentRow.__deepestWilayahLevel = 'village'
+          else if (wilayahResult.district) currentRow.__deepestWilayahLevel = 'district'
+          else if (wilayahResult.regency) currentRow.__deepestWilayahLevel = 'regency'
+          else if (wilayahResult.province) currentRow.__deepestWilayahLevel = 'province'
 
-//         currentRow.__wilayahData = Object.keys(wilayahData).length > 0 ? wilayahData : null
-//         currentRow.__isValid = rowOverallValid
-//         currentRow.__validationMessage = validationMessages.length > 0 ? validationMessages.join('; ') : 'Data valid.'
+          // Aturan baru: tidak memaksa invalid, tapi beri pesan jika provinsi tidak ketemu
+          if (!wilayahResult.province) {
+            messages.push(`Wilayah: ${wilayahResult.message}`)
+          }
+        } else {
+          isValid = false
+          messages.push('Wilayah: Semua kolom wilayah (Provinsi, Kab/Kota, dll) kosong.')
+        }
 
-//         return currentRow
-//       })
-//     )
+        currentRow.__wilayahData = Object.keys(wilayahData).length ? wilayahData : null
+        currentRow.__isValid = isValid
+        currentRow.__validationMessage = messages.length ? messages.join('; ') : 'Data valid.'
 
-//     // PERUBAHAN: Lakukan penghitungan setelah batch selesai divalidasi
-//     // Ini menghindari race condition dan lebih rapi.
-//     for (const row of batchValidationResults) {
-//       switch (row.__deepestWilayahLevel) {
-//         case 'village':
-//           wilayahSummary.foundDownToVillage++
-//           break
-//         case 'district':
-//           wilayahSummary.foundDownToDistrict++
-//           break
-//         case 'regency':
-//           wilayahSummary.foundDownToRegency++
-//           break
-//         case 'province':
-//           wilayahSummary.foundDownToProvince++
-//           break
-//         default:
-//           wilayahSummary.notFound++
-//           break
-//       }
-//     }
+        return currentRow
+      })
+    )
 
-//     validatedRows.push(...batchValidationResults)
-//   }
+    // Ringkasan
+    for (const row of batchValidationResults) {
+      switch (row.__deepestWilayahLevel) {
+        case 'village':
+          wilayahSummary.foundDownToVillage++
+          break
+        case 'district':
+          wilayahSummary.foundDownToDistrict++
+          break
+        case 'regency':
+          wilayahSummary.foundDownToRegency++
+          break
+        case 'province':
+          wilayahSummary.foundDownToProvince++
+          break
+        default:
+          wilayahSummary.notFound++
+      }
+    }
 
-//   const invalidCount = validatedRows.filter(r => !r.__isValid).length
-//   const validCount = validatedRows.length - invalidCount
+    validatedRows.push(...batchValidationResults)
+  }
 
-//   // PERUBAHAN: Tampilkan ringkasan yang baru dan lebih informatif
-//   console.log('=============================================')
-//   console.log('=== Ringkasan Validasi Wilayah (per Baris) ===')
-//   console.log('=============================================')
-//   console.log(`Berhasil hingga Desa/Kel. : ${wilayahSummary.foundDownToVillage} baris`)
-//   console.log(`Berhasil hingga Kecamatan  : ${wilayahSummary.foundDownToDistrict} baris`)
-//   console.log(`Berhasil hingga Kab./Kota  : ${wilayahSummary.foundDownToRegency} baris`)
-//   console.log(`Berhasil hingga Provinsi   : ${wilayahSummary.foundDownToProvince} baris`)
-//   console.log(`Wilayah tidak ditemukan    : ${wilayahSummary.notFound} baris`)
-//   console.log('---------------------------------------------')
-//   console.log(`Total Baris Diproses       : ${validatedRows.length}`)
-//   console.log(`Total Baris Valid (Desa ditemukan) : ${validCount}`)
-//   console.log(`Total Baris Invalid        : ${invalidCount}`)
-//   console.log('=============================================')
+  const invalidCount = validatedRows.filter(r => !r.__isValid).length
+  const validCount = validatedRows.length - invalidCount
 
-//   return {
-//     validatedRows,
-//     totalInvalid: invalidCount,
-//     totalValid: validCount,
-//     message:
-//       invalidCount > 0
-//         ? `Validasi selesai. Ditemukan ${invalidCount} baris bermasalah.`
-//         : 'Validasi data berhasil! Semua baris valid.'
-//   }
-// }
+  console.log('=============================================')
+  console.log('=== Ringkasan Validasi Wilayah (per Baris) ===')
+  console.log('=============================================')
+  console.log(`Berhasil hingga Desa/Kel. : ${wilayahSummary.foundDownToVillage} baris`)
+  console.log(`Berhasil hingga Kecamatan  : ${wilayahSummary.foundDownToDistrict} baris`)
+  console.log(`Berhasil hingga Kab./Kota  : ${wilayahSummary.foundDownToRegency} baris`)
+  console.log(`Berhasil hingga Provinsi   : ${wilayahSummary.foundDownToProvince} baris`)
+  console.log(`Wilayah tidak ditemukan    : ${wilayahSummary.notFound} baris`)
+  console.log('---------------------------------------------')
+  console.log(`Total Baris Diproses       : ${validatedRows.length}`)
+  console.log(`Total Baris Valid (Provinsi ditemukan) : ${validCount}`)
+  console.log(`Total Baris Invalid        : ${invalidCount}`)
+  console.log('=============================================')
+
+  return {
+    validatedRows,
+    totalInvalid: invalidCount,
+    totalValid: validCount,
+    message:
+      invalidCount > 0
+        ? `Validasi selesai. Ditemukan ${invalidCount} baris bermasalah.`
+        : 'Validasi data berhasil! Semua baris valid.'
+  }
+}
