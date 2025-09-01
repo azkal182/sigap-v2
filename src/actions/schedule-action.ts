@@ -138,6 +138,7 @@ export const getScheduleAction = async (filter: ScheduleFilter): Promise<Schedul
 
     const schedule = await prisma.schedule.findMany({
       where: {
+        active: true,
         ...(classId && { classId }),
         ...(teacherId && { teacherId }),
         ...(userId && {

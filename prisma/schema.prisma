@@ -441,6 +441,7 @@ model History {
     updatedAt DateTime @updatedAt
 
     @@index([classId, status, studentId])
+    @@index([classId, startDate, endDate])
     @@index([studentId]) // <-- TAMBAHKAN INI
 }
 
@@ -474,12 +475,19 @@ model Schedule {
 
     absences Absence[]
 
+    active    Boolean   @default(true)
+    validFrom DateTime  @default(now())
+    validTo   DateTime?
+
     createdAt      DateTime         @default(now())
     updatedAt      DateTime         @updatedAt
     teacherAbsence TeacherAbsence[]
 
-    @@index([classId, dayOfWeek]) // <-- TAMBAHKAN
-    @@index([teacherId, dayOfWeek]) // <-- TAMBAHKAN
+    @@index([classId, dayOfWeek])
+    @@index([teacherId, dayOfWeek])
+    @@index([teacherId, dayOfWeek, scheduleSlotId, validFrom, validTo])
+    @@index([classId, dayOfWeek, scheduleSlotId, validFrom, validTo])
+    @@index([dayOfWeek, scheduleSlotId, active, validFrom, validTo])
 }
 
 // ABSENSI SANTRI

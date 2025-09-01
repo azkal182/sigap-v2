@@ -15,6 +15,7 @@ interface FormDialogProps {
   children: React.ReactNode
   submitButtonText?: string
   isSubmitDisabled?: boolean
+  additionalButton?: React.ReactNode
   width?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' // 🔥 Tambahan
 }
 
@@ -29,6 +30,7 @@ const FormDialog = ({
   children,
   submitButtonText = 'Kirim',
   isSubmitDisabled = false,
+  additionalButton,
   width = 'sm' // 🔥 Default width
 }: FormDialogProps) => {
   return (
@@ -43,6 +45,7 @@ const FormDialog = ({
       </DialogTitle>
       <DialogContent>{children}</DialogContent>
       <DialogActions className='flex justify-end space-x-2'>
+        {additionalButton}
         <Button onClick={onClose} variant='outlined'>
           Batal
         </Button>

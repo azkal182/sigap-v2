@@ -26,13 +26,15 @@ import {
   getSksOptionAction,
   updateClassAction,
   updateSubjectAction,
-  handleClassTransferAction
+  handleClassTransferAction,
+  moveTeacherScheduleAction
 } from './actions/dormitory.action'
 import type {
   ClassFormInput,
   CreateScheduleInput,
   CreateScheduleSlotInput,
   FilterDormitoryParams,
+  MoveTeacherScheduleInput,
   SksOptionParams,
   SubjectFormInput,
   TrackFormSchema
@@ -368,7 +370,11 @@ export const useCreateSchedule = () => {
 
       if (!result.success) {
         // throw new Error(result.error)
-        throw { message: result.error, conflict: result.conflict }
+        throw {
+          message: result.error,
+          conflict: result.conflict,
+          conflicScheduleId: result.data?.conflictWithScheduleId
+        }
       }
 
       return result
@@ -400,6 +406,28 @@ export const useUpdateSchedule = () => {
       // Lakukan revalidate query berdasarkan key dan classId
       queryClient.invalidateQueries({
         queryKey: ['schedule_class', variables.classId]
+      })
+    }
+  })
+}
+
+export const useMoveTeacherSchedule = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (payload: MoveTeacherScheduleInput) => {
+      const result = await moveTeacherScheduleAction(payload)
+
+      if (!result.success) {
+        throw new ActionError(result.error, result.issues)
+      }
+
+      return result
+    },
+    onSuccess: () => {
+      // Lakukan revalidate query berdasarkan key dan classId
+      queryClient.invalidateQueries({
+        queryKey: ['schedule_class']
       })
     }
   })

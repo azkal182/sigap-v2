@@ -24,7 +24,8 @@ import {
   getSksOption,
   getTrackOption,
   updateClass,
-  updateSubject
+  updateSubject,
+  moveTeacherSchedule
 } from './../dormitory.service'
 
 import {
@@ -35,6 +36,7 @@ import {
   CreateSksSchema,
   CreateSubjectSchema,
   filterDormitorySchema,
+  moveTeacherScheduleSchema,
   sksOptionSchema,
   subjectFormSchema,
   trackOptionSchema,
@@ -327,6 +329,10 @@ export async function createScheduleAction(input: unknown): Promise<CreateSchedu
 
 export async function updateScheduleAction(input: unknown): Promise<CreateScheduleResult> {
   return validateAndRun(createScheduleSchema, input, updateSchedule)
+}
+
+export async function moveTeacherScheduleAction(input: unknown) {
+  return validateAndRun(moveTeacherScheduleSchema, input, moveTeacherSchedule)
 }
 
 export const getSubjectOptionByTrackIdAction = async (trackId: string): Promise<SubjectOptionResponse> => {

@@ -310,10 +310,11 @@ import {
   useClassDetail,
   useCreateSchedule,
   useHandleClassTransfer,
+  useMoveTeacherSchedule,
   useSchedule,
   useUpdateSchedule
 } from './dormitory.query'
-import type { CreateScheduleInput } from './schemas/dormitory-schema'
+import type { CreateScheduleInput, MoveTeacherScheduleInput } from './schemas/dormitory-schema'
 import ScheduleFormDialog from './components/schedule-form-dialog'
 import ScheduleSubject from './schedule-subject'
 import { useTrackByDormIds } from '@/features/dormitory/dormitory-track/query'
@@ -343,11 +344,14 @@ const ClassDetailPageView = ({
   // ====== State & Data ======
   const [activeTab, setActiveTab] = useState('1')
   const [studentId, setStudentId] = useState<string | null>(null)
+  const [moveSchedule, setMoveSchedule] = useState<boolean>(false)
+  const [scheduleId, setScheduleId] = useState<string | undefined>()
 
   const { data } = useClassDetail(classId)
   const { mutate: assignStudentToClass } = useAssignStudentToClass()
   const { mutate: createSchedule } = useCreateSchedule()
   const { mutate: updateSchedule } = useUpdateSchedule()
+  const { mutate: moveTeacherSchedule } = useMoveTeacherSchedule()
   const { data: scheduleData } = useSchedule({ classId })
 
   // Track & Class queries
@@ -367,8 +371,11 @@ const ClassDetailPageView = ({
     data: any
   }>({ open: false, mode: 'create', data: {} })
 
-  const openScheduleDialog = (mode: 'create' | 'edit', data: Partial<CreateScheduleInput> | null = null) =>
+  const openScheduleDialog = (mode: 'create' | 'edit', data: Partial<CreateScheduleInput> | null = null) => {
     setScheduleDialog({ open: true, mode, data })
+    setMoveSchedule(false)
+    setScheduleId(undefined)
+  }
 
   const closeScheduleDialog = () => setScheduleDialog(prev => ({ ...prev, open: false, data: null }))
 
@@ -380,8 +387,12 @@ const ClassDetailPageView = ({
           closeScheduleDialog()
         },
         onError: (error: any) => {
-          if (error?.conflict === 'teacher') toast.error(error.message || 'Guru bentrok.')
-          else if (error?.conflict === 'class') toast.error(error.message || 'Kelas bentrok.')
+          if (error?.conflict === 'teacher') {
+            toast.error(error.message || 'Guru bentrok.')
+            setMoveSchedule(true)
+
+            setScheduleId(error?.conflicScheduleId)
+          } else if (error?.conflict === 'class') toast.error(error.message || 'Kelas bentrok.')
           else toast.error(error.message || 'Gagal membuat Jadwal.')
         }
       })
@@ -398,6 +409,22 @@ const ClassDetailPageView = ({
         }
       })
     }
+  }
+
+  const handleMoveSchedule = (form: MoveTeacherScheduleInput) => {
+    moveTeacherSchedule(form, {
+      onSuccess: () => {
+        toast.success('Jadwal berhasil dipindah!')
+        closeScheduleDialog()
+        setMoveSchedule(false)
+        setScheduleId(undefined)
+      },
+      onError: (error: any) => {
+        toast.error(error.message || 'Gagal memindah Jadwal.')
+      }
+    })
+
+    // console.log('handleMoveSchedule', form)
   }
 
   const handleChangeTab = (_: React.SyntheticEvent, newValue: string) => setActiveTab(newValue)
@@ -810,6 +837,9 @@ const ClassDetailPageView = ({
 
       {/* ====== Dialog Jadwal ====== */}
       <ScheduleFormDialog
+        fromScheduleId={scheduleId}
+        onMoveSchedule={handleMoveSchedule}
+        moveSchedule={moveSchedule}
         open={scheduleDialog.open}
         onClose={closeScheduleDialog}
         onSubmit={handleSubmitSchedule}

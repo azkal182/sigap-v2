@@ -1,15 +1,16 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 
 import type { z } from 'zod'
 
-import { MenuItem } from '@mui/material'
+import { Button, MenuItem } from '@mui/material'
 
 import FormDialog from '@/components/form-dialog'
+import type { MoveTeacherScheduleInput } from '../schemas/dormitory-schema'
 import { createScheduleSchema } from '../schemas/dormitory-schema'
 import TeacherAutocomplete from '@/components/TeacherAutocomplete'
 import SlotAutocomplete from '@/components/SlotAutoComplete'
@@ -22,11 +23,14 @@ interface ScheduleFormDialogProps {
   open: boolean
   onClose: () => void
   onSubmit: (params: CreateScheduleInput) => void
+  onMoveSchedule: (params: MoveTeacherScheduleInput) => void
   defaultValues?: Partial<CreateScheduleInput>
   isEditMode?: boolean
   classId: string
   dormitoryIds?: string[]
   trackId: string
+  moveSchedule?: boolean
+  fromScheduleId?: string
 }
 
 const dayLabels = ['Sabtu', 'Ahad', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat']
@@ -46,8 +50,13 @@ const ScheduleFormDialog: React.FC<ScheduleFormDialogProps> = ({
   isEditMode = false,
   classId,
   dormitoryIds = [],
-  trackId
+  trackId,
+  moveSchedule = false,
+  onMoveSchedule,
+  fromScheduleId
 }) => {
+  const [scheduleId, setScheduleId] = useState<string | undefined>()
+
   const {
     control,
     handleSubmit,
@@ -80,11 +89,41 @@ const ScheduleFormDialog: React.FC<ScheduleFormDialogProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
+  useEffect(() => {
+    if (moveSchedule) {
+      setScheduleId(fromScheduleId)
+    } else {
+      setScheduleId(undefined)
+    }
+  }, [moveSchedule, fromScheduleId])
+
   const dialogTitle = isEditMode ? 'Edit Jadwal' : 'Buat Jadwal Baru'
-  const submitButtonText = isEditMode ? 'Simpan Perubahan' : 'Buat Jadwal'
+  const submitButtonText = isEditMode ? 'Update' : 'Simpan'
 
   return (
     <FormDialog
+      additionalButton={
+        moveSchedule ? (
+          <Button
+            onClick={() => {
+              onMoveSchedule({
+                fromScheduleId: scheduleId!,
+                to: {
+                  classId,
+                  subjectId: control._formValues.subjectId,
+                  teacherId: control._formValues.teacherId,
+                  scheduleSlotId: control._formValues.scheduleSlotId,
+                  dayOfWeek: control._formValues.dayOfWeek
+                }
+              })
+            }}
+            variant='tonal'
+            color='warning'
+          >
+            Pindah
+          </Button>
+        ) : undefined
+      }
       width='sm'
       open={open}
       onClose={onClose}

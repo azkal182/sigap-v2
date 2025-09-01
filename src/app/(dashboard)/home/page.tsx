@@ -133,7 +133,13 @@ export default function Page() {
         return
       }
 
-      const data = await getStudentsFromTeacherSchedule(userId, dayOfWeek, searchHour, searchMinute)
+      const data = await getStudentsFromTeacherSchedule(
+        userId,
+        dayOfWeek,
+        searchHour,
+        searchMinute,
+        DateTime.now().toISODate()
+      )
 
       if (!data || !data.students || data.students.length === 0) {
         setStudents([])

@@ -5,7 +5,9 @@ import { generateDailyTeacherAbsences } from '@/lib/generateDailyTeacherAbsences
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function GET(req: NextRequest) {
   try {
-    const data = await generateDailyTeacherAbsences()
+    const searchParams = req.nextUrl.searchParams
+    const dateStr = searchParams.get('date')
+    const data = await generateDailyTeacherAbsences(dateStr || undefined)
 
     return NextResponse.json({
       success: true,

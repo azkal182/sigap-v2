@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 import { DateTime } from 'luxon'
 
-import { HistoryStatus, type AbsenceStatus } from '@/generated/prisma'
+import { type AbsenceStatus } from '@/generated/prisma'
 import prisma from '@/lib/prisma'
 
 interface AbsenceReportData {
@@ -20,81 +20,196 @@ interface AbsenceReportData {
 }
 
 // Tambahkan parameter `timeZone` ke fungsi
+// async function getMonthlyAttendanceReport(
+//   classId: string,
+//   year: number,
+//   month: number,
+//   timeZone: string
+// ): Promise<AbsenceReportData[]> {
+//   // Gunakan Luxon untuk membuat rentang tanggal bulanan yang peka zona waktu
+//   const startLuxon = DateTime.fromObject({ year, month, day: 1 }, { zone: timeZone }).startOf('month')
+//   const endLuxon = startLuxon.endOf('month')
+
+//   const startDate = startLuxon.toJSDate()
+//   const endDate = endLuxon.toJSDate()
+
+//   console.log(
+//     `Fetching data for classId: ${classId}, month: ${month}-${year}, from ${startLuxon.toISO()} to ${endLuxon.toISO()} in timezone ${timeZone}`
+//   )
+
+//   // Ambil semua siswa yang sedang berada di kelas yang diberikan
+//   const studentsInClass = await prisma.history.findMany({
+//     where: {
+//       classId: classId,s
+//       status: HistoryStatus.STUDYING
+//     },
+//     select: {
+//       student: {
+//         select: {
+//           id: true,
+//           name: true
+//         }
+//       }
+//     }
+//   })
+
+//   const students = studentsInClass.map(h => h.student)
+
+//   if (students.length === 0) {
+//     return []
+//   }
+
+//   // Ambil semua jadwal (schedule) yang terkait dengan kelas
+//   const schedules = await prisma.schedule.findMany({
+//     where: {
+//       classId: classId
+//     },
+//     select: {
+//       id: true,
+//       dayOfWeek: true,
+//       subject: {
+//         select: {
+//           name: true
+//         }
+//       },
+//       scheduleSlot: {
+//         select: {
+//           slot: true
+//         }
+//       }
+//     }
+//   })
+
+//   const scheduleIds = schedules.map(s => s.id)
+
+//   // Ambil semua data absensi untuk siswa dan jadwal di bulan yang bersangkutan
+//   const absences = await prisma.absence.findMany({
+//     where: {
+//       studentId: {
+//         in: students.map(s => s.id)
+//       },
+//       scheduleId: {
+//         in: scheduleIds
+//       },
+//       date: {
+//         gte: startDate,
+//         lte: endDate
+//       }
+//     },
+//     select: {
+//       studentId: true,
+//       date: true,
+//       status: true,
+//       schedule: {
+//         select: {
+//           subject: {
+//             select: {
+//               name: true
+//             }
+//           },
+//           scheduleSlot: {
+//             select: {
+//               slot: true
+//             }
+//           }
+//         }
+//       }
+//     },
+//     orderBy: {
+//       date: 'asc'
+//     }
+//   })
+
+//   // Proses data untuk format laporan
+//   const report: { [studentId: string]: AbsenceReportData } = {}
+
+//   // Inisialisasi laporan untuk setiap siswa
+//   students.forEach(student => {
+//     if (student) {
+//       report[student.id] = {
+//         studentName: student.name,
+//         studentId: student.id,
+//         absencesByDay: {}
+//       }
+//     }
+//   })
+
+//   // Isi data absensi
+//   absences.forEach(absence => {
+//     // Konversi tanggal dari database (UTC) ke string format lokal
+//     const localDate = DateTime.fromJSDate(absence.date, { zone: timeZone })
+//     const dateKey = localDate.toISODate() || ''
+
+//     if (report[absence.studentId]) {
+//       if (!report[absence.studentId].absencesByDay[dateKey]) {
+//         report[absence.studentId].absencesByDay[dateKey] = []
+//       }
+
+//       report[absence.studentId].absencesByDay[dateKey].push({
+//         slot: absence.schedule.scheduleSlot.slot,
+//         subjectName: absence.schedule.subject.name,
+//         status: absence.status
+//       })
+//     }
+//   })
+
+//   // Mengurutkan slot absensi
+//   Object.values(report).forEach(studentReport => {
+//     Object.values(studentReport.absencesByDay).forEach(dayAbsences => {
+//       dayAbsences.sort((a, b) => a.slot - b.slot)
+//     })
+//   })
+
+//   return Object.values(report)
+// }
+
 async function getMonthlyAttendanceReport(
   classId: string,
   year: number,
   month: number,
   timeZone: string
 ): Promise<AbsenceReportData[]> {
-  // Gunakan Luxon untuk membuat rentang tanggal bulanan yang peka zona waktu
+  // 1) Tentukan rentang bulan dalam zona waktu lokal UI
   const startLuxon = DateTime.fromObject({ year, month, day: 1 }, { zone: timeZone }).startOf('month')
   const endLuxon = startLuxon.endOf('month')
-
-  const startDate = startLuxon.toJSDate()
+  const startDate = startLuxon.toJSDate() // Prisma simpan UTC
   const endDate = endLuxon.toJSDate()
 
-  console.log(
-    `Fetching data for classId: ${classId}, month: ${month}-${year}, from ${startLuxon.toISO()} to ${endLuxon.toISO()} in timezone ${timeZone}`
-  )
-
-  // Ambil semua siswa yang sedang berada di kelas yang diberikan
-  const studentsInClass = await prisma.history.findMany({
-    where: {
-      classId: classId,
-      status: HistoryStatus.STUDYING
-    },
-    select: {
-      student: {
-        select: {
-          id: true,
-          name: true
-        }
-      }
-    }
-  })
-
-  const students = studentsInClass.map(h => h.student)
-
-  if (students.length === 0) {
-    return []
-  }
-
-  // Ambil semua jadwal (schedule) yang terkait dengan kelas
+  // 2) Ambil semua schedule milik kelas (untuk map slot & subject)
   const schedules = await prisma.schedule.findMany({
-    where: {
-      classId: classId
-    },
+    where: { classId },
     select: {
       id: true,
-      dayOfWeek: true,
-      subject: {
-        select: {
-          name: true
-        }
-      },
-      scheduleSlot: {
-        select: {
-          slot: true
-        }
-      }
+      subject: { select: { name: true } },
+      scheduleSlot: { select: { slot: true } }
     }
   })
 
   const scheduleIds = schedules.map(s => s.id)
 
-  // Ambil semua data absensi untuk siswa dan jadwal di bulan yang bersangkutan
+  // Jika tidak ada jadwal, kembalikan semua siswa overlap dengan absencesByDay kosong
+  if (scheduleIds.length === 0) {
+    const studentsOverlap = await getStudentsOverlapForClass(classId, startDate, endDate)
+
+    return studentsOverlap.map(s => ({
+      studentId: s.id,
+      studentName: s.name,
+      absencesByDay: {}
+    }))
+  }
+
+  // 3) Ambil daftar siswa overlap (pernah berada di kelas ini selama bulan tsb)
+  const studentsOverlap = await getStudentsOverlapForClass(classId, startDate, endDate)
+  const studentIds = studentsOverlap.map(s => s.id)
+
+  if (studentIds.length === 0) return []
+
+  // 4) Ambil absensi dalam rentang bulan untuk scheduleIds & studentIds
   const absences = await prisma.absence.findMany({
     where: {
-      studentId: {
-        in: students.map(s => s.id)
-      },
-      scheduleId: {
-        in: scheduleIds
-      },
-      date: {
-        gte: startDate,
-        lte: endDate
-      }
+      studentId: { in: studentIds },
+      scheduleId: { in: scheduleIds },
+      date: { gte: startDate, lte: endDate }
     },
     select: {
       studentId: true,
@@ -102,65 +217,85 @@ async function getMonthlyAttendanceReport(
       status: true,
       schedule: {
         select: {
-          subject: {
-            select: {
-              name: true
-            }
-          },
-          scheduleSlot: {
-            select: {
-              slot: true
-            }
-          }
+          subject: { select: { name: true } },
+          scheduleSlot: { select: { slot: true } }
         }
       }
     },
-    orderBy: {
-      date: 'asc'
-    }
+    orderBy: { date: 'asc' }
   })
 
-  // Proses data untuk format laporan
-  const report: { [studentId: string]: AbsenceReportData } = {}
+  // 5) Siapkan map report berisi SEMUA siswa overlap
+  const reportMap: Record<string, AbsenceReportData> = {}
 
-  // Inisialisasi laporan untuk setiap siswa
-  students.forEach(student => {
-    if (student) {
-      report[student.id] = {
-        studentName: student.name,
-        studentId: student.id,
-        absencesByDay: {}
-      }
+  for (const s of studentsOverlap) {
+    reportMap[s.id] = {
+      studentId: s.id,
+      studentName: s.name,
+      absencesByDay: {}
     }
-  })
+  }
 
-  // Isi data absensi
-  absences.forEach(absence => {
-    // Konversi tanggal dari database (UTC) ke string format lokal
-    const localDate = DateTime.fromJSDate(absence.date, { zone: timeZone })
-    const dateKey = localDate.toISODate() || ''
+  // 6) Isi data absensi ke struktur laporan
+  for (const a of absences) {
+    const student = reportMap[a.studentId]
 
-    if (report[absence.studentId]) {
-      if (!report[absence.studentId].absencesByDay[dateKey]) {
-        report[absence.studentId].absencesByDay[dateKey] = []
-      }
+    if (!student) continue
 
-      report[absence.studentId].absencesByDay[dateKey].push({
-        slot: absence.schedule.scheduleSlot.slot,
-        subjectName: absence.schedule.subject.name,
-        status: absence.status
-      })
+    const localDate = DateTime.fromJSDate(a.date, { zone: timeZone })
+    const dateKey = localDate.toISODate() || '' // 'YYYY-MM-DD'
+
+    if (!student.absencesByDay[dateKey]) {
+      student.absencesByDay[dateKey] = []
     }
-  })
 
-  // Mengurutkan slot absensi
-  Object.values(report).forEach(studentReport => {
-    Object.values(studentReport.absencesByDay).forEach(dayAbsences => {
-      dayAbsences.sort((a, b) => a.slot - b.slot)
+    student.absencesByDay[dateKey].push({
+      slot: a.schedule.scheduleSlot.slot,
+      subjectName: a.schedule.subject.name,
+      status: a.status
     })
+  }
+
+  // 7) Urutkan slot per hari (ascending)
+  for (const s of Object.values(reportMap)) {
+    for (const day of Object.values(s.absencesByDay)) {
+      day.sort((x, y) => x.slot - y.slot)
+    }
+  }
+
+  return Object.values(reportMap)
+}
+
+// =================== Helper ===================
+/**
+ * Ambil siswa yang PERNAH berada (overlap) di kelas tertentu pada rentang tanggal.
+ * Overlap rule:
+ *   startDate <= endRange && (endDate IS NULL || endDate >= startRange)
+ */
+async function getStudentsOverlapForClass(
+  classId: string,
+  rangeStart: Date,
+  rangeEnd: Date
+): Promise<Array<{ id: string; name: string }>> {
+  const histories = await prisma.history.findMany({
+    where: {
+      classId,
+      startDate: { lte: rangeEnd },
+      OR: [{ endDate: null }, { endDate: { gte: rangeStart } }]
+    },
+    select: {
+      student: { select: { id: true, name: true } }
+    }
   })
 
-  return Object.values(report)
+  // Dedup by studentId (jika siswa punya beberapa riwayat di kelas tsb)
+  const map = new Map<string, { id: string; name: string }>()
+
+  for (const h of histories) {
+    if (h.student) map.set(h.student.id, h.student)
+  }
+
+  return Array.from(map.values())
 }
 
 export async function GET(req: NextRequest) {

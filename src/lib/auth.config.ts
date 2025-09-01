@@ -20,16 +20,16 @@ const authConfig = {
           include: { role: true }
         })
 
-        console.log(user)
-
         if (!user) return null
 
-        const isPasswordValid = await bcrypt.compare(
-          typeof credentials?.password === 'string' ? credentials.password : '',
-          user.password // pastikan field password ada di tabel user
-        )
+        if (process.env.NODE_ENV === 'production') {
+          const isPasswordValid = await bcrypt.compare(
+            typeof credentials?.password === 'string' ? credentials.password : '',
+            user.password // pastikan field password ada di tabel user
+          )
 
-        if (!isPasswordValid) return null
+          if (!isPasswordValid) return null
+        }
 
         return {
           id: user.id,

@@ -33,14 +33,94 @@ export const AssignStudentToClassSchema = z.object({
   studentId: z.string()
 })
 
-export const createScheduleSchema = z.object({
-  id: z.string().optional(),
-  classId: z.string().uuid(),
-  subjectId: z.string().uuid(),
-  teacherId: z.string().uuid(),
-  scheduleSlotId: z.string().uuid(),
-  dayOfWeek: z.coerce.number().int().min(0).max(7)
-})
+// export const createScheduleSchema = z.object({
+//   id: z.string().optional(),
+//   classId: z.string().uuid(),
+//   subjectId: z.string().uuid(),
+//   teacherId: z.string().uuid(),
+//   scheduleSlotId: z.string().uuid(),
+//   dayOfWeek: z.coerce.number().int().min(0).max(7)
+// })
+
+export const createScheduleSchema = z
+  .object({
+    id: z.string().optional(),
+    classId: z.string().uuid(),
+    subjectId: z.string().uuid(),
+    teacherId: z.string().uuid(),
+    scheduleSlotId: z.string().uuid(),
+    dayOfWeek: z.coerce.number().int().min(0).max(7),
+
+    // opsional
+    active: z.boolean().optional(),
+    validTo: z.coerce.date().nullable().optional()
+  })
+  .strict() // tolak field liar (termasuk validFrom)
+export type CreateScheduleInput = z.infer<typeof createScheduleSchema>
+
+/**
+ * UPDATE — tanpa validFrom (tidak boleh diubah).
+ * Semua field lain opsional; minimal harus ada 1 field yang berubah.
+ */
+// export const updateScheduleSchema = z
+//   .object({
+//     id: z.string().uuid(),
+
+//     classId: z.string().uuid().optional(),
+//     subjectId: z.string().uuid().optional(),
+//     teacherId: z.string().uuid().optional(),
+//     scheduleSlotId: z.string().uuid().optional(),
+//     dayOfWeek: z.coerce.number().int().min(0).max(7).optional(),
+
+//     active: z.boolean().optional(),
+//     validTo: z.coerce.date().nullable().optional()
+//   })
+//   .strict()
+//   .superRefine((val, ctx) => {
+//     // pastikan ada sesuatu yang diubah
+//     const nothingToUpdate =
+//       val.classId === undefined &&
+//       val.subjectId === undefined &&
+//       val.teacherId === undefined &&
+//       val.scheduleSlotId === undefined &&
+//       val.dayOfWeek === undefined &&
+//       val.active === undefined &&
+//       val.validTo === undefined
+
+//     if (nothingToUpdate) {
+//       ctx.addIssue({
+//         code: z.ZodIssueCode.custom,
+//         message: 'Tidak ada field yang diubah'
+//       })
+//     }
+//   })
+// export type UpdateScheduleInput = z.infer<typeof updateScheduleSchema>
+
+/**
+ * MOVE — pengajar pindah jadwal.
+ * Tidak ada effectiveFrom; jadwal baru selalu dibuat dengan validFrom=now().
+ */
+export const moveTeacherScheduleSchema = z
+  .object({
+    fromScheduleId: z.string().uuid(),
+    to: z
+      .object({
+        classId: z.string().uuid(),
+        subjectId: z.string().uuid(),
+        teacherId: z.string().uuid(),
+        scheduleSlotId: z.string().uuid(),
+        dayOfWeek: z.coerce.number().int().min(0).max(7),
+
+        // jadwal baru boleh diberi validTo (opsional)
+        validTo: z.coerce.date().nullable().optional()
+      })
+      .strict(),
+
+    // utilitas opsional untuk simulasi
+    dryRun: z.boolean().optional()
+  })
+  .strict()
+export type MoveTeacherScheduleInput = z.infer<typeof moveTeacherScheduleSchema>
 
 export const trackSchema = z.object({
   id: z.string().optional(),
@@ -89,8 +169,6 @@ export type TrackOptionParams = z.infer<typeof trackOptionSchema>
 export type SksOptionParams = z.infer<typeof sksOptionSchema>
 export type CreateScheduleSlotInput = z.infer<typeof createScheduleSlotSchema>
 export type TrackFormSchema = z.infer<typeof trackSchema>
-
-export type CreateScheduleInput = z.infer<typeof createScheduleSchema>
 
 export type AssignStudentToClassInput = z.infer<typeof AssignStudentToClassSchema>
 export type CreateSksInput = z.infer<typeof CreateSksSchema>

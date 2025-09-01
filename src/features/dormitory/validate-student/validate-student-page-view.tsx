@@ -116,6 +116,7 @@ const ValidateStudentPageView = () => {
 
       setAbsenceData(mapped)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data?.students])
 
   return (

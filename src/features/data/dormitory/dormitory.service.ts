@@ -6,6 +6,7 @@ import type {
   CreateScheduleInput,
   CreateScheduleSlotInput,
   FilterDormitoryParams,
+  MoveTeacherScheduleInput,
   SksOptionParams,
   SubjectFormInput,
   TrackFormSchema,
@@ -78,20 +79,25 @@ export type SksResponse = APIResult<SksItem[]>
 
 export type CreateScheduleSuccess = {
   success: true
-  data: {
-    id: string
-    classId: string
-    subjectId: string
-    teacherId: string
-    scheduleSlotId: string
-    dayOfWeek: number
-    createdAt: Date
-    updatedAt: Date
-  }
+  data:
+    | {
+        id: string
+        classId: string
+        subjectId: string
+        teacherId: string
+        scheduleSlotId: string
+        dayOfWeek: number
+        createdAt: Date
+        updatedAt: Date
+      }
+    | { wouldCloseFrom: Date; wouldCreateFrom: Date }
 }
 
 export type CreateScheduleError = APIError & {
   conflict?: 'teacher' | 'class' | 'subject_in_day' | 'max_per_day' | 'duplicate_subject_teacher'
+  data?: {
+    conflictWithScheduleId: string
+  }
 }
 
 export type CreateScheduleResult = CreateScheduleSuccess | CreateScheduleError
@@ -832,26 +838,232 @@ export async function assignStudentToClass({
   }
 }
 
-async function getTeacherConflictInfo(
+// async function getTeacherConflictInfo(
+//   teacherId: string,
+//   dayOfWeek: number,
+//   scheduleSlotId: string,
+//   excludeScheduleId?: string
+// ) {
+//   // 1. Ambil data slot target
+//   const targetSlot = await db.scheduleSlot.findUnique({
+//     where: { id: scheduleSlotId },
+//     select: { startTime: true, endTime: true }
+//   })
+
+//   if (!targetSlot) throw new Error('Schedule slot tidak ditemukan')
+
+//   // 2. Cari jadwal guru yang bentrok di hari yang sama
+//   const conflict = await db.schedule.findFirst({
+//     where: {
+//       teacherId,
+//       dayOfWeek,
+//       ...(excludeScheduleId && { id: { not: excludeScheduleId } }),
+//       scheduleSlot: {
+//         startTime: { lt: targetSlot.endTime },
+//         endTime: { gt: targetSlot.startTime }
+//       }
+//     },
+//     include: {
+//       teacher: true,
+//       scheduleSlot: {
+//         include: {
+//           dormitory: true
+//         }
+//       },
+//       subject: true,
+//       class: true
+//     }
+//   })
+
+//   if (!conflict) return null
+
+//   // 3. Buat pesan yang informatif
+//   const message = `Pengajar ${conflict.teacher.name} sudah mengajar di ${conflict.scheduleSlot.dormitory.name} pada Jam ke-${conflict.scheduleSlot.slot} (${conflict.scheduleSlot.startTime}–${conflict.scheduleSlot.endTime}) untuk pelajaran ${conflict.subject.name} di kelas ${conflict.class.name}.`
+
+//   return { conflict, message }
+// }
+
+// export const createSchedule = async (input: CreateScheduleInput): Promise<CreateScheduleResult> => {
+//   const { classId, subjectId, teacherId, scheduleSlotId, dayOfWeek } = input
+
+//   const teacherConflict = await getTeacherConflictInfo(teacherId, dayOfWeek, scheduleSlotId)
+
+//   if (teacherConflict) {
+//     return {
+//       success: false,
+//       error: teacherConflict.message,
+//       conflict: 'teacher'
+//     }
+//   }
+
+//   // 2. Cek konflik kelas di hari & slot yang sama
+//   const classConflict = await db.schedule.findFirst({
+//     where: { classId, dayOfWeek, scheduleSlotId }
+//   })
+
+//   if (classConflict) {
+//     return {
+//       success: false,
+//       error: 'Kelas sudah memiliki pelajaran di waktu tersebut.',
+//       conflict: 'class'
+//     }
+//   }
+
+//   // 4. Opsional: batasi jumlah pelajaran per hari untuk kelas
+//   const dailyScheduleCount = await db.schedule.count({
+//     where: {
+//       classId,
+//       dayOfWeek
+//     }
+//   })
+
+//   const MAX_SCHEDULE_PER_DAY = 6 // bisa diubah sesuai aturan
+
+//   if (dailyScheduleCount >= MAX_SCHEDULE_PER_DAY) {
+//     return {
+//       success: false,
+//       error: `Kelas sudah mencapai batas maksimal ${MAX_SCHEDULE_PER_DAY} pelajaran untuk hari tersebut.`,
+//       conflict: 'max_per_day'
+//     }
+//   }
+
+//   // 6. Buat jadwal jika semua validasi lolos
+//   const schedule = await db.schedule.create({
+//     data: { classId, subjectId, teacherId, scheduleSlotId, dayOfWeek }
+//   })
+
+//   return {
+//     success: true,
+//     data: schedule
+//   }
+// }
+
+// export const updateSchedule = async (input: CreateScheduleInput): Promise<CreateScheduleResult> => {
+//   const { classId, subjectId, teacherId, scheduleSlotId, dayOfWeek, id } = input
+
+//   if (!input.id) {
+//     return {
+//       success: false,
+//       error: 'invalid parameter'
+//     }
+//   }
+
+//   // 1. Cek konflik guru di hari & slot yang sama (abaikan jadwal ini sendiri)
+//   const teacherConflict = await getTeacherConflictInfo(teacherId, dayOfWeek, scheduleSlotId, id)
+
+//   if (teacherConflict) {
+//     return {
+//       success: false,
+//       error: teacherConflict.message,
+//       conflict: 'teacher'
+//     }
+//   }
+
+//   // 2. Cek konflik kelas di hari & slot yang sama (abaikan jadwal ini sendiri)
+//   const classConflict = await db.schedule.findFirst({
+//     where: {
+//       id: { not: id },
+//       classId,
+//       dayOfWeek,
+//       scheduleSlotId
+//     }
+//   })
+
+//   if (classConflict) {
+//     return {
+//       success: false,
+//       error: 'Kelas sudah memiliki pelajaran di waktu tersebut.',
+//       conflict: 'class'
+//     }
+//   }
+
+//   // 3. Opsional: batasi jumlah pelajaran per hari untuk kelas
+//   const dailyScheduleCount = await db.schedule.count({
+//     where: {
+//       id: { not: id },
+//       classId,
+//       dayOfWeek
+//     }
+//   })
+
+//   const MAX_SCHEDULE_PER_DAY = 6
+
+//   if (dailyScheduleCount >= MAX_SCHEDULE_PER_DAY) {
+//     return {
+//       success: false,
+//       error: `Kelas sudah mencapai batas maksimal ${MAX_SCHEDULE_PER_DAY} pelajaran untuk hari tersebut.`,
+//       conflict: 'max_per_day'
+//     }
+//   }
+
+//   // 4. Update jadwal
+//   const schedule = await db.schedule.update({
+//     where: { id },
+//     data: { classId, subjectId, teacherId, scheduleSlotId, dayOfWeek }
+//   })
+
+//   return {
+//     success: true,
+//     data: schedule
+//   }
+// }
+
+// Helper Prisma "overlap" antara jadwal existing vs rentang target
+
+// utils/range.ts
+// ------------------------------------------------------------------
+// Overlap rentang tanggal: (existing.validTo is null OR >= targetFrom)
+//                         AND existing.validFrom <= targetTo
+function rangeOverlapFilter(targetFrom: Date, targetTo?: Date) {
+  return {
+    AND: [{ OR: [{ validTo: null }, { validTo: { gte: targetFrom } }] }, { validFrom: { lte: targetTo ?? FAR_FUTURE } }]
+  }
+}
+
+const FAR_FUTURE = new Date('9999-12-31T23:59:59.999Z')
+
+// Satu detik sebelum t (untuk set validTo jadwal lama)
+function oneSecondBefore(t: Date) {
+  return new Date(t.getTime() - 1000)
+}
+
+// Gunakan "now" sekali agar konsisten dalam satu request
+function nowUtc(): Date {
+  return new Date()
+}
+
+// schedule/service.ts
+// ------------------------------------------------------------------
+// asumsi: `db` = Prisma client
+// asumsi: tipe CreateScheduleInput / UpdateScheduleInput / MoveTeacherScheduleInput & CreateScheduleResult sudah ada
+
+/**
+ * Cek konflik pengajar pada hari/slot tertentu dengan mempertimbangkan overlap rentang tanggal.
+ * `effectiveFrom/To` dipakai hanya untuk pengecekan konflik; pembuatan jadwal selalu set validFrom = nowUtc()
+ */
+export async function getTeacherConflictInfo(
   teacherId: string,
   dayOfWeek: number,
   scheduleSlotId: string,
-  excludeScheduleId?: string
+  excludeScheduleId?: string,
+  effectiveFrom: Date = nowUtc(),
+  effectiveTo?: Date
 ) {
-  // 1. Ambil data slot target
+  // 1) Slot target
   const targetSlot = await db.scheduleSlot.findUnique({
     where: { id: scheduleSlotId },
-    select: { startTime: true, endTime: true }
+    select: { startTime: true, endTime: true, slot: true, dormitory: { select: { name: true } } }
   })
 
   if (!targetSlot) throw new Error('Schedule slot tidak ditemukan')
 
-  // 2. Cari jadwal guru yang bentrok di hari yang sama
+  // 2) Jadwal bentrok: guru sama, hari sama, slot waktu overlap, rentang tanggal overlap
   const conflict = await db.schedule.findFirst({
     where: {
       teacherId,
       dayOfWeek,
       ...(excludeScheduleId && { id: { not: excludeScheduleId } }),
+      ...rangeOverlapFilter(effectiveFrom, effectiveTo),
       scheduleSlot: {
         startTime: { lt: targetSlot.endTime },
         endTime: { gt: targetSlot.startTime }
@@ -859,11 +1071,7 @@ async function getTeacherConflictInfo(
     },
     include: {
       teacher: true,
-      scheduleSlot: {
-        include: {
-          dormitory: true
-        }
-      },
+      scheduleSlot: { include: { dormitory: true } },
       subject: true,
       class: true
     }
@@ -871,116 +1079,65 @@ async function getTeacherConflictInfo(
 
   if (!conflict) return null
 
-  // 3. Buat pesan yang informatif
-  const message = `Pengajar ${conflict.teacher.name} sudah mengajar di ${conflict.scheduleSlot.dormitory.name} pada Jam ke-${conflict.scheduleSlot.slot} (${conflict.scheduleSlot.startTime}–${conflict.scheduleSlot.endTime}) untuk pelajaran ${conflict.subject.name} di kelas ${conflict.class.name}.`
+  const msg =
+    `Pengajar ${conflict.teacher.name} sudah mengajar di ${conflict.scheduleSlot.dormitory.name} ` +
+    `pada Jam ke-${conflict.scheduleSlot.slot} (${conflict.scheduleSlot.startTime}–${conflict.scheduleSlot.endTime}) ` +
+    `untuk mata pelajaran ${conflict.subject.name} di kelas ${conflict.class.name}.`
 
-  return { conflict, message }
+  return { conflict, message: msg, scheduleId: conflict.id }
 }
 
+/**
+ * CREATE — validFrom SELALU diisi otomatis (nowUtc), abaikan input validFrom jika ada.
+ */
 export const createSchedule = async (input: CreateScheduleInput): Promise<CreateScheduleResult> => {
   const { classId, subjectId, teacherId, scheduleSlotId, dayOfWeek } = input
 
-  const teacherConflict = await getTeacherConflictInfo(teacherId, dayOfWeek, scheduleSlotId)
+  const effFrom = nowUtc() // <-- OTOMATIS
+  const effTo = (input as any).validTo ?? undefined // boleh ada/opsional
+
+  // 1) Konflik guru (range-aware)
+  const teacherConflict = await getTeacherConflictInfo(teacherId, dayOfWeek, scheduleSlotId, undefined, effFrom, effTo)
 
   if (teacherConflict) {
     return {
       success: false,
       error: teacherConflict.message,
-      conflict: 'teacher'
+      conflict: 'teacher',
+      data: { conflictWithScheduleId: teacherConflict.scheduleId }
     }
   }
 
-  // 2. Cek konflik kelas di hari & slot yang sama
-  const classConflict = await db.schedule.findFirst({
-    where: { classId, dayOfWeek, scheduleSlotId }
+  // 2) Konflik kelas (slot overlap + rentang overlap)
+  const targetSlot = await db.scheduleSlot.findUnique({
+    where: { id: scheduleSlotId },
+    select: { startTime: true, endTime: true }
   })
 
-  if (classConflict) {
-    return {
-      success: false,
-      error: 'Kelas sudah memiliki pelajaran di waktu tersebut.',
-      conflict: 'class'
-    }
-  }
+  if (!targetSlot) return { success: false, error: 'Schedule slot tidak ditemukan.' }
 
-  // 4. Opsional: batasi jumlah pelajaran per hari untuk kelas
-  const dailyScheduleCount = await db.schedule.count({
-    where: {
-      classId,
-      dayOfWeek
-    }
-  })
-
-  const MAX_SCHEDULE_PER_DAY = 6 // bisa diubah sesuai aturan
-
-  if (dailyScheduleCount >= MAX_SCHEDULE_PER_DAY) {
-    return {
-      success: false,
-      error: `Kelas sudah mencapai batas maksimal ${MAX_SCHEDULE_PER_DAY} pelajaran untuk hari tersebut.`,
-      conflict: 'max_per_day'
-    }
-  }
-
-  // 6. Buat jadwal jika semua validasi lolos
-  const schedule = await db.schedule.create({
-    data: { classId, subjectId, teacherId, scheduleSlotId, dayOfWeek }
-  })
-
-  return {
-    success: true,
-    data: schedule
-  }
-}
-
-export const updateSchedule = async (input: CreateScheduleInput): Promise<CreateScheduleResult> => {
-  const { classId, subjectId, teacherId, scheduleSlotId, dayOfWeek, id } = input
-
-  if (!input.id) {
-    return {
-      success: false,
-      error: 'invalid parameter'
-    }
-  }
-
-  // 1. Cek konflik guru di hari & slot yang sama (abaikan jadwal ini sendiri)
-  const teacherConflict = await getTeacherConflictInfo(teacherId, dayOfWeek, scheduleSlotId, id)
-
-  if (teacherConflict) {
-    return {
-      success: false,
-      error: teacherConflict.message,
-      conflict: 'teacher'
-    }
-  }
-
-  // 2. Cek konflik kelas di hari & slot yang sama (abaikan jadwal ini sendiri)
   const classConflict = await db.schedule.findFirst({
     where: {
-      id: { not: id },
       classId,
       dayOfWeek,
-      scheduleSlotId
+      ...rangeOverlapFilter(effFrom, effTo),
+      scheduleSlot: {
+        startTime: { lt: targetSlot.endTime },
+        endTime: { gt: targetSlot.startTime }
+      }
     }
   })
 
   if (classConflict) {
-    return {
-      success: false,
-      error: 'Kelas sudah memiliki pelajaran di waktu tersebut.',
-      conflict: 'class'
-    }
+    return { success: false, error: 'Kelas sudah memiliki pelajaran di waktu tersebut.', conflict: 'class' }
   }
 
-  // 3. Opsional: batasi jumlah pelajaran per hari untuk kelas
-  const dailyScheduleCount = await db.schedule.count({
-    where: {
-      id: { not: id },
-      classId,
-      dayOfWeek
-    }
-  })
-
+  // 3) (Opsional) batas jumlah pelajaran/hari (hitung yang overlap di rentang baru)
   const MAX_SCHEDULE_PER_DAY = 6
+
+  const dailyScheduleCount = await db.schedule.count({
+    where: { classId, dayOfWeek, ...rangeOverlapFilter(effFrom, effTo) }
+  })
 
   if (dailyScheduleCount >= MAX_SCHEDULE_PER_DAY) {
     return {
@@ -990,16 +1147,206 @@ export const updateSchedule = async (input: CreateScheduleInput): Promise<Create
     }
   }
 
-  // 4. Update jadwal
-  const schedule = await db.schedule.update({
-    where: { id },
-    data: { classId, subjectId, teacherId, scheduleSlotId, dayOfWeek }
+  // 4) Create — validFrom dipaksa nowUtc()
+  const schedule = await db.schedule.create({
+    data: {
+      classId,
+      subjectId,
+      teacherId,
+      scheduleSlotId,
+      dayOfWeek,
+      validFrom: effFrom,
+      validTo: effTo ?? null,
+      active: true
+    }
   })
 
-  return {
-    success: true,
-    data: schedule
+  return { success: true, data: schedule }
+}
+
+/**
+ * UPDATE — jika perubahan "material", end-date jadwal lama & create jadwal baru
+ * Jadwal baru akan punya validFrom = nowUtc() (otomatis). Perubahan ringan (mis. toggle active / set validTo) tetap update in-place.
+ */
+export const updateSchedule = async (input: CreateScheduleInput): Promise<CreateScheduleResult> => {
+  const { id } = input
+
+  if (!id) return { success: false, error: 'invalid parameter' }
+
+  const current = await db.schedule.findUnique({ where: { id } })
+
+  if (!current) return { success: false, error: 'Jadwal tidak ditemukan.' }
+
+  // Larang mengubah validFrom secara eksplisit
+  if ((input as any).validFrom !== undefined) {
+    return { success: false, error: 'validFrom ditentukan otomatis saat pembuatan jadwal dan tidak bisa diubah.' }
   }
+
+  // Target nilai (pakai yang baru jika ada, selain validFrom)
+  const classId = input.classId ?? current.classId
+  const subjectId = input.subjectId ?? current.subjectId
+  const teacherId = input.teacherId ?? current.teacherId
+  const scheduleSlotId = input.scheduleSlotId ?? current.scheduleSlotId
+  const dayOfWeek = input.dayOfWeek ?? current.dayOfWeek
+  const newValidTo = (input as any).validTo ?? current.validTo // boleh null/undefined
+
+  const keyChanged =
+    current.classId !== classId ||
+    current.subjectId !== subjectId ||
+    current.teacherId !== teacherId ||
+    current.scheduleSlotId !== scheduleSlotId ||
+    current.dayOfWeek !== dayOfWeek
+
+  // Jika kunci berubah → "pecah" jadwal: end-date lama (validTo = now-1s) + create baru (validFrom = now)
+  if (keyChanged) {
+    const effFrom = nowUtc() // <-- OTOMATIS kapan jadwal baru berlaku
+    const effTo = newValidTo ?? undefined
+
+    // Validasi konflik utk jadwal BARU
+    const tConflict = await getTeacherConflictInfo(teacherId, dayOfWeek, scheduleSlotId, id, effFrom, effTo)
+
+    if (tConflict) return { success: false, error: tConflict.message, conflict: 'teacher' }
+
+    const targetSlot = await db.scheduleSlot.findUnique({
+      where: { id: scheduleSlotId },
+      select: { startTime: true, endTime: true }
+    })
+
+    if (!targetSlot) return { success: false, error: 'Schedule slot tidak ditemukan.' }
+
+    const classConflict = await db.schedule.findFirst({
+      where: {
+        id: { not: id },
+        classId,
+        dayOfWeek,
+        ...rangeOverlapFilter(effFrom, effTo),
+        scheduleSlot: {
+          startTime: { lt: targetSlot.endTime },
+          endTime: { gt: targetSlot.startTime }
+        }
+      }
+    })
+
+    if (classConflict) {
+      return { success: false, error: 'Kelas sudah memiliki pelajaran di waktu tersebut.', conflict: 'class' }
+    }
+
+    const created = await db.$transaction(async tx => {
+      await tx.schedule.update({
+        where: { id },
+        data: { validTo: oneSecondBefore(effFrom), active: false }
+      })
+
+      const newSchedule = await tx.schedule.create({
+        data: {
+          classId,
+          subjectId,
+          teacherId,
+          scheduleSlotId,
+          dayOfWeek,
+          validFrom: effFrom,
+          validTo: effTo ?? null,
+          active: true
+        }
+      })
+
+      return newSchedule
+    })
+
+    return { success: true, data: created }
+  }
+
+  // Perubahan NON-material:
+  // - active (toggle)
+  // - validTo (menutup jadwal lama) — diperbolehkan in-place
+  const updated = await db.schedule.update({
+    where: { id },
+    data: {
+      ...(input.active !== undefined ? { active: input.active } : {}),
+      ...((input as any).validTo !== undefined ? { validTo: newValidTo } : {})
+    }
+  })
+
+  return { success: true, data: updated }
+}
+
+/**
+ * MOVE — skenario pengajar pindah jadwal.
+ * End-date jadwal lama pada (now - 1s) dan buat jadwal baru dengan validFrom = nowUtc() otomatis.
+ * Fungsi ini tidak menerima `effectiveFrom` lagi.
+ */
+
+export async function moveTeacherSchedule(input: MoveTeacherScheduleInput): Promise<CreateScheduleResult> {
+  const { fromScheduleId, to, dryRun } = input
+  const from = await db.schedule.findUnique({ where: { id: fromScheduleId } })
+
+  if (!from) return { success: false, error: 'Jadwal asal tidak ditemukan.' }
+
+  const effFrom = nowUtc() // <-- OTOMATIS mulai jadwal baru
+  const effTo = to.validTo ?? undefined
+
+  // Cek konflik utk jadwal baru
+  const tConflict = await getTeacherConflictInfo(
+    to.teacherId,
+    to.dayOfWeek,
+    to.scheduleSlotId,
+    fromScheduleId,
+    effFrom,
+    effTo
+  )
+
+  if (tConflict) return { success: false, error: tConflict.message, conflict: 'teacher' }
+
+  const targetSlot = await db.scheduleSlot.findUnique({
+    where: { id: to.scheduleSlotId },
+    select: { startTime: true, endTime: true }
+  })
+
+  if (!targetSlot) return { success: false, error: 'Schedule slot tidak ditemukan.' }
+
+  const classConflict = await db.schedule.findFirst({
+    where: {
+      classId: to.classId,
+      dayOfWeek: to.dayOfWeek,
+      ...rangeOverlapFilter(effFrom, effTo),
+      scheduleSlot: {
+        startTime: { lt: targetSlot.endTime },
+        endTime: { gt: targetSlot.startTime }
+      }
+    }
+  })
+
+  if (classConflict)
+    return { success: false, error: 'Kelas sudah memiliki pelajaran di waktu tersebut.', conflict: 'class' }
+
+  if (dryRun) {
+    return { success: true, data: { wouldCloseFrom: oneSecondBefore(effFrom), wouldCreateFrom: effFrom } }
+  }
+
+  // Transaksi: end-date lama + create baru (validFrom otomatis)
+  const created = await db.$transaction(async tx => {
+    await tx.schedule.update({
+      where: { id: fromScheduleId },
+      data: { validTo: oneSecondBefore(effFrom), active: false }
+    })
+
+    const newSchedule = await tx.schedule.create({
+      data: {
+        classId: to.classId,
+        subjectId: to.subjectId,
+        teacherId: to.teacherId,
+        scheduleSlotId: to.scheduleSlotId,
+        dayOfWeek: to.dayOfWeek,
+        validFrom: effFrom, // <-- otomatis
+        validTo: effTo ?? null,
+        active: true
+      }
+    })
+
+    return newSchedule
+  })
+
+  return { success: true, data: created }
 }
 
 export const getSubjectOptionByTrackId = async (trackId: string): Promise<SubjectOptionResponse> => {

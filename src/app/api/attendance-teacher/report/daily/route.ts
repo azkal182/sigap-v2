@@ -131,13 +131,6 @@ async function getTeacherAbsencesByDormitoryTracks(dormitoryId: string, jakartaD
   return cleanedTracks
 }
 
-const STATUS_CODE: Record<string, 'H' | 'A' | 'I' | 'S'> = {
-  PRESENT: 'H',
-  ABSENT: 'A',
-  PERMIT: 'I',
-  SICK: 'S'
-}
-
 // const DOW_LABEL: Record<number, string> = {
 //   1: 'Senin',
 //   2: 'Selasa',
@@ -147,7 +140,6 @@ const STATUS_CODE: Record<string, 'H' | 'A' | 'I' | 'S'> = {
 //   6: 'Sabtu',
 //   7: 'Ahad'
 // }
-
 type WeekBlock = {
   index: number
   days: Array<{
@@ -161,22 +153,38 @@ type WeekBlock = {
   headers: string[] // ["Nama Pengajar", ...6 hari..., "Total Hadir", "Total Tidak Hadir", "Total Jadwal"]
 }
 
-// Pastikan label DOW sesuai DB (0=Ahad)
+/**
+ * ==========================
+ *  DOW: DB 1=Senin..7=Ahad
+ * ==========================
+ */
 const DOW_LABEL: Record<number, string> = {
-  0: 'Ahad',
   1: 'Senin',
   2: 'Selasa',
   3: 'Rabu',
   4: 'Kamis',
   5: 'Jumat',
-  6: 'Sabtu'
+  6: 'Sabtu',
+  7: 'Ahad'
 }
 
-// Konversi Luxon weekday (1..7) -> DB DOW (0..6; 0=Ahad)
-const luxonToDbDow = (weekday: number) => weekday % 7
+// Luxon weekday sudah 1..7 (1=Senin..7=Minggu/Ahad), cocok dengan DB
+const luxonToDbDow = (weekday: number) => weekday // 1..7
 
-// Urutan hari yang dipakai: Sabtu→Kamis (sesuai DB DOW)
-const DOW_ORDER_DB = [6, 0, 1, 2, 3, 4] as const
+// Urutan tampilan: Sabtu→Kamis (6 hari) dalam DB DOW
+const DOW_ORDER_DB = [6, 7, 1, 2, 3, 4] as const
+
+// Helper overlap tanggal harian dengan rentang valid schedule
+const isDayWithin = (dayUtc: Date, validFrom: Date, validTo: Date | null) =>
+  validFrom <= dayUtc && (!validTo || dayUtc <= validTo)
+
+// Kode status (contoh)
+const STATUS_CODE: Record<string, 'H' | 'A' | 'S' | 'P'> = {
+  PRESENT: 'H',
+  ABSENT: 'A',
+  SICK: 'S',
+  PERMIT: 'P'
+}
 
 async function getTeacherWeeklyAttendanceByDormitoryWithSlot(dormitoryId: string, jakartaDate: string) {
   // 1) PARSE & RANGE BULAN (zona Jakarta)
@@ -186,43 +194,37 @@ async function getTeacherWeeklyAttendanceByDormitoryWithSlot(dormitoryId: string
   const monthEnd = ref.endOf('month')
 
   // Titik awal = Sabtu pada/mendahului awal bulan
-  const monthStartWeekSat = monthStart.set({ weekday: 6 }).startOf('day') // Luxon: 6=Sabtu
+  const monthStartWeekSat = monthStart.set({ weekday: 6 }).startOf('day') // 6=Sabtu
   const startJakarta = monthStartWeekSat <= monthStart ? monthStartWeekSat : monthStartWeekSat.minus({ weeks: 1 })
 
   // Titik akhir = Kamis pada/mengikuti akhir bulan
-  const monthEndWeekThu = monthEnd.set({ weekday: 4 }).endOf('day') // Luxon: 4=Kamis
+  const monthEndWeekThu = monthEnd.set({ weekday: 4 }).endOf('day') // 4=Kamis
   const endJakarta = monthEndWeekThu >= monthEnd ? monthEndWeekThu : monthEndWeekThu.plus({ weeks: 1 })
 
   const overallStartUTC = startJakarta.toUTC().toJSDate()
   const overallEndUTC = endJakarta.toUTC().toJSDate()
 
-  console.log('=== PARAMETER BULAN ===')
-  console.log('dormitoryId:', dormitoryId)
-  console.log('jakartaDate:', jakartaDate)
-  console.log('monthStartJKT:', monthStart.toISO())
-  console.log('monthEndJKT  :', monthEnd.toISO())
-  console.log('rangeStartJKT:', startJakarta.toISO(), 'rangeEndJKT:', endJakarta.toISO())
-  console.log('overallStartUTC:', overallStartUTC, 'overallEndUTC:', overallEndUTC)
-
-  // 2) SLOT ASRAMA (kolom slot tetap)
+  // 2) SLOT ASRAMA
   const slots = await prisma.scheduleSlot.findMany({
     where: { dormitoryId },
     orderBy: { slot: 'asc' },
     select: { id: true, slot: true, startTime: true, endTime: true }
   })
 
-  console.log('=== SLOTS ===', slots)
-
-  // 3) AMBIL SEMUA SCHEDULE RELEVAN (Sabtu→Kamis = [6,0,1,2,3,4]) untuk rentang keseluruhan
+  // 3) AMBIL SEMUA SCHEDULE RELEVAN (Sabtu→Kamis) + overlap tanggal
+  //    Penting: TIDAK mem-filter { active: true } agar histori tetap terbaca.
   const schedules = await prisma.schedule.findMany({
     where: {
-      dayOfWeek: { in: DOW_ORDER_DB as unknown as number[] }, // DB: 0=Ahad
+      dayOfWeek: { in: DOW_ORDER_DB as unknown as number[] },
       class: { dormitoryId },
-      teacher: { teacherDormitories: { some: { dormitoryId } } }
+      teacher: { teacherDormitories: { some: { dormitoryId } } },
+      AND: [{ OR: [{ validTo: null }, { validTo: { gte: overallStartUTC } }] }, { validFrom: { lte: overallEndUTC } }]
     },
     select: {
       id: true,
-      dayOfWeek: true, // DB DOW
+      dayOfWeek: true,
+      validFrom: true,
+      validTo: true,
       teacher: { select: { id: true, name: true } },
       scheduleSlot: { select: { id: true, slot: true } },
       teacherAbsence: {
@@ -233,22 +235,17 @@ async function getTeacherWeeklyAttendanceByDormitoryWithSlot(dormitoryId: string
     orderBy: [{ teacher: { name: 'asc' } }, { dayOfWeek: 'asc' }, { scheduleSlot: { slot: 'asc' } }]
   })
 
-  console.log('=== SCHEDULES FOUND (monthly span) ===', schedules.length)
-
   // 4) GURU UNIK
   const teachers = Array.from(new Map(schedules.map(sc => [sc.teacher.id, sc.teacher])).values())
 
-  console.log('=== TEACHERS ===', teachers)
-
-  // 5) BANGUN BLOK MINGGU: Sabtu→Kamis (6 hari) dari startJakarta..endJakarta
+  // 5) BANGUN BLOK MINGGU: Sabtu→Kamis (6 hari)
   const weekBlocks: WeekBlock[] = []
   let cursor = startJakarta
   let weekIndex = 1
 
   while (cursor <= endJakarta) {
-    // Jamin cursor selalu Sabtu (Luxon weekday=6)
     if (cursor.weekday !== 6) {
-      console.warn('[WARN] cursor bukan Sabtu, koreksi otomatis -> set ke Sabtu pekan berjalan.')
+      // pastikan Sabtu
       cursor = cursor.set({ weekday: 6 }).startOf('day')
     }
 
@@ -256,14 +253,12 @@ async function getTeacherWeeklyAttendanceByDormitoryWithSlot(dormitoryId: string
 
     for (let i = 0; i < 6; i++) {
       const d = cursor.plus({ days: i })
-
-      // Konversi ke DOW DB (0=Ahad)
-      const dbDow = luxonToDbDow(d.weekday)
+      const dbDow = luxonToDbDow(d.weekday) // 1..7
       const label = DOW_LABEL[dbDow]
       const shortLabel = `${label}`
 
       days.push({
-        dow: dbDow, // ← simpan DOW versi DB, bukan Luxon
+        dow: dbDow,
         label,
         dateJktISO: d.toISO() as string,
         startUTC: d.startOf('day').toUTC().toJSDate(),
@@ -281,9 +276,8 @@ async function getTeacherWeeklyAttendanceByDormitoryWithSlot(dormitoryId: string
     ]
 
     weekBlocks.push({ index: weekIndex, days, headers })
-
     weekIndex += 1
-    cursor = cursor.plus({ days: 7 }) // lompat ke Sabtu berikutnya
+    cursor = cursor.plus({ days: 7 })
   }
 
   // 6) HELPER STATUS PER SLOT-HARI
@@ -295,7 +289,7 @@ async function getTeacherWeeklyAttendanceByDormitoryWithSlot(dormitoryId: string
     return STATUS_CODE[abs.status] ?? '-'
   }
 
-  // 7) SUSUN TABEL PER MINGGU
+  // 7) SUSUN TABEL PER MINGGU (perhatikan validFrom/validTo)
   const weekTables = weekBlocks.map(block => {
     const rows = teachers.map(t => {
       let totalHadir = 0
@@ -308,8 +302,13 @@ async function getTeacherWeeklyAttendanceByDormitoryWithSlot(dormitoryId: string
         const symbols: string[] = []
 
         for (const slot of slots) {
+          // Cari schedule yang cocok guru–hari–slot dan VALID pada tanggal tsb
           const sc = schedules.find(
-            s => s.teacher.id === t.id && s.dayOfWeek === day.dow && s.scheduleSlot.slot === slot.slot
+            s =>
+              s.teacher.id === t.id &&
+              s.dayOfWeek === day.dow &&
+              s.scheduleSlot.slot === slot.slot &&
+              isDayWithin(day.startUTC, s.validFrom as unknown as Date, s.validTo as unknown as Date | null)
           )
 
           if (sc) {
@@ -318,9 +317,9 @@ async function getTeacherWeeklyAttendanceByDormitoryWithSlot(dormitoryId: string
             symbols.push(sym)
             totalJadwal++
             if (sym === 'H') totalHadir++
-            if (sym === 'A') totalTidakHadir++ // hanya ABSENT yang dihitung tidak hadir
+            if (sym === 'A') totalTidakHadir++ // hanya ABSENT dihitung tidak hadir
           } else {
-            symbols.push('-') // tidak ada jadwal
+            symbols.push('-') // tidak ada jadwal berlaku hari itu
           }
         }
 
@@ -337,25 +336,14 @@ async function getTeacherWeeklyAttendanceByDormitoryWithSlot(dormitoryId: string
       }
     })
 
-    // Label minggu: contoh “Minggu ke-1 (31 Aug – 05 Sep)”
     const first = DateTime.fromISO(block.days[0].dateJktISO)
     const last = DateTime.fromISO(block.days[block.days.length - 1].dateJktISO)
     const weekLabel = `Minggu ke-${block.index} (${first.toFormat('dd LLL')} – ${last.toFormat('dd LLL')})`
 
-    console.log(`=== WEEK ${block.index}: ${weekLabel} ===`)
-    console.log(
-      'Days:',
-      block.days.map(d => `${d.shortLabel} [UTC ${d.startUTC.toISOString()}..${d.endUTC.toISOString()}]`)
-    )
-
-    return {
-      label: weekLabel,
-      headers: block.headers,
-      rows
-    }
+    return { label: weekLabel, headers: block.headers, rows }
   })
 
-  // 8) RANGKUMAN ATAS (opsional): daftar minggu & rentang bulan
+  // 8) RANGKUMAN
   return {
     meta: {
       monthLabel: ref.toFormat('LLLL yyyy'),
