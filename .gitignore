@@ -42,4 +42,4 @@ next-env.d.ts
 
 /src/generated/prisma
 
-scripts/
+scripts/update-valid-from-2025-08-28.ts
