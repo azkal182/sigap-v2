@@ -147,6 +147,8 @@ jobs:
           exit 1
 
       - name: Build Next.js app
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
         run: pnpm build
 
       # --- Mengelola Artefak ---
