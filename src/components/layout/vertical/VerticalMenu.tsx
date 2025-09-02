@@ -151,7 +151,7 @@ export const menuItems: MenuConfigSection[] = [
         title: 'Pengajar',
         href: '/data/teacher',
         icon: 'tabler-brand-tether',
-        permissions: ['student:view']
+        permissions: ['teacher:view']
       },
 
       //   {
@@ -163,7 +163,7 @@ export const menuItems: MenuConfigSection[] = [
       {
         title: 'Kepengurusan',
         icon: 'tabler-report',
-        permissions: ['student:view'],
+        permissions: ['leadership:view'],
         subMenuItems: [
           {
             title: 'Periode Kepengurusan',

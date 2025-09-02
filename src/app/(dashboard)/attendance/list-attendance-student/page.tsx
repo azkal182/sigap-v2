@@ -266,7 +266,7 @@ export default function AbsensiPage() {
 
   // khusus illiyyin
   if (allowedDormitoryIds[0] === 'b2c3d4e5-f6a7-8901-2345-abcdef012345') {
-    startDayOfWeek = 2
+    startDayOfWeek = 3
   }
 
   useEffect(() => {
@@ -275,14 +275,21 @@ export default function AbsensiPage() {
         setIsLoading(true)
 
         // const data = await getMonthlyAttendanceReport(classId, today, timezone)
-        const res = await axios(`/api/attendance/report/monthly?classId=${classId}&date=${today}&tz=${timezone}`)
+        const res = await axios(
+          `/api/attendance/report/monthly?classId=${classId}&date=${today}&tz=${timezone}&${`start_week_day=${startDayOfWeek}`}`
+        )
 
-        console.log(res)
+        // console.log(res)
 
         const data = res.data
 
-        const uniqueDates = getUniqueDates(data, year, month)
+        const uniqueDates = getUniqueDates(data, year, month, startDayOfWeek)
+
+        // console.log(uniqueDates)
+
         const weeklyData = groupDatesByWeek(uniqueDates, startDayOfWeek)
+
+        // console.log(weeklyData)
 
         setAttendanceData(data)
         setWeeklyReport(weeklyData)

@@ -127,8 +127,13 @@ const PermitPageView = () => {
                     <TableCell>{item.createdBy.name}</TableCell>
                     {user.role === 'KEAMANAN' && (
                       <TableCell>
-                        <Button onClick={() => onReturn(item.id, item.student.name)} size='small' variant='contained'>
-                          Kembali
+                        <Button
+                          disabled={item.endDate !== null}
+                          onClick={() => onReturn(item.id, item.student.name)}
+                          size='small'
+                          variant='contained'
+                        >
+                          Cabut Izin
                         </Button>
                       </TableCell>
                     )}

@@ -41,3 +41,5 @@ next-env.d.ts
 # src/assets/iconify-icons/generated-icons.css
 
 /src/generated/prisma
+
+scripts/
