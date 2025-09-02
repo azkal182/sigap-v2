@@ -22,6 +22,7 @@ type RechartsPieChartProps = {
   title?: string
   subheader?: string
   data: PieChartDatum[]
+  forPrint?: boolean
 }
 
 const RADIAN = Math.PI / 180
@@ -52,7 +53,7 @@ const renderCustomizedLabel = ({
   )
 }
 
-export default function RechartsPieChart({ title = 'Chart', subheader = '', data }: RechartsPieChartProps) {
+export default function RechartsPieChart({ title = 'Chart', subheader = '', data, forPrint }: RechartsPieChartProps) {
   return (
     <Card>
       <CardHeader title={title} subheader={subheader} />
@@ -62,6 +63,7 @@ export default function RechartsPieChart({ title = 'Chart', subheader = '', data
             <ResponsiveContainer>
               <PieChart height={350} style={{ direction: 'ltr' }}>
                 <Pie
+                  isAnimationActive={!forPrint}
                   data={data}
                   innerRadius={80}
                   dataKey='value'

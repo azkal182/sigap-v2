@@ -6,8 +6,6 @@ export async function GET() {
   try {
     const isOn = await redis.get('maintenance:enabled')
 
-    console.log('Maintenance mode:', isOn)
-
     // Cache di edge 5 detik biar nggak kena hit tiap request
     return NextResponse.json(
       { on: isOn === '1' },
