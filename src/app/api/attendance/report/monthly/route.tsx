@@ -177,7 +177,7 @@ function endOfCustomWeek(dt: DateTime, startWeekDay: number): DateTime {
   return dt.plus({ days: diff }).endOf('day')
 }
 
-export async function getMonthlyAttendanceReport(
+async function getMonthlyAttendanceReport(
   classId: string,
   year: number,
   month: number,

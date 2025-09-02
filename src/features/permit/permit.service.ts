@@ -204,9 +204,13 @@ export async function getPermitsService(params: GetPermitsParams): Promise<APIRe
           some: { dormitoryId: { in: dormIds } }
         }
       }
-    } else if (user.role.name === 'KEAMANAN') {
-      permitFilter.createdBy = { role: { name: 'KEAMANAN' } }
+    } else if (['KEAMANAN', 'KESEHATAN'].includes(user.role.name)) {
+      permitFilter.createdBy = { role: { name: user.role.name } }
     }
+
+    // } else if (user.role.name === 'KEAMANAN') {
+    //   permitFilter.createdBy = { role: { name: 'KEAMANAN' } }
+    // }
 
     console.log(JSON.stringify(permitFilter))
 
