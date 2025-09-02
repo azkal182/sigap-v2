@@ -66,25 +66,25 @@ export default auth(async function middleware(req) {
   const pathname = nextUrl.pathname
 
   // 1) Bypass untuk halaman maintenance sendiri agar tidak loop
-  if (pathname === '/maintenance') {
-    return NextResponse.next()
-  }
+  //   if (pathname === '/maintenance') {
+  //     return NextResponse.next()
+  //   }
 
-  // 2) Cek maintenance (via API Node runtime)
-  if (!pathname.startsWith('/api/maintenance')) {
-    try {
-      const res = await fetch(new URL('/api/maintenance', req.url), { cache: 'no-store' })
-      const { on } = (await res.json().catch(() => ({ on: false }))) as { on: boolean }
+  //   // 2) Cek maintenance (via API Node runtime)
+  //   if (!pathname.startsWith('/api/maintenance')) {
+  //     try {
+  //       const res = await fetch(new URL('/api/maintenance', req.url), { cache: 'no-store' })
+  //       const { on } = (await res.json().catch(() => ({ on: false }))) as { on: boolean }
 
-      // Kalau ON, rewrite semua ke halaman maintenance (kecuali halamannya sendiri)
-      if (on) {
-        return NextResponse.rewrite(new URL('/maintenance', req.url))
-      }
-    } catch (e) {
-      // gagal cek = biarkan lanjut normal
-      console.warn('maintenance check failed:', e)
-    }
-  }
+  //       // Kalau ON, rewrite semua ke halaman maintenance (kecuali halamannya sendiri)
+  //       if (on) {
+  //         return NextResponse.rewrite(new URL('/maintenance', req.url))
+  //       }
+  //     } catch (e) {
+  //       // gagal cek = biarkan lanjut normal
+  //       console.warn('maintenance check failed:', e)
+  //     }
+  //   }
 
   // 3) Auth logic seperti biasa
   const isLoggedIn = !!req.auth
