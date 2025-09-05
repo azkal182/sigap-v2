@@ -7,6 +7,8 @@ export const GET = withAuth(async (req, user) => {
   try {
     const data = await getScheduleAction({ userId: user.id })
 
+    console.log(JSON.stringify(data, null, 2))
+
     return NextResponse.json(data)
   } catch (error) {}
 })

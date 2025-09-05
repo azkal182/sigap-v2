@@ -155,6 +155,15 @@ export const getScheduleAction = async (filter: ScheduleFilter): Promise<Schedul
             name: true
           }
         },
+        class: {
+          select: {
+            dormitory: {
+              select: {
+                name: true
+              }
+            }
+          }
+        },
         teacher: {
           select: {
             name: true
@@ -188,7 +197,8 @@ export const getScheduleAction = async (filter: ScheduleFilter): Promise<Schedul
           subjectId: item.subjectId,
           teacherId: item.teacherId,
           scheduleSlotId: item.scheduleSlotId,
-          dayOfWeek: item.dayOfWeek
+          dayOfWeek: item.dayOfWeek,
+          dormitoryName: item.class.dormitory.name
         }
       }
     })
