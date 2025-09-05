@@ -154,12 +154,12 @@ export const menuItems: MenuConfigSection[] = [
         permissions: ['teacher:view']
       },
 
-      //   {
-      //     title: 'Kelas',
-      //     href: '/data/class',
-      //     icon: 'tabler-brand-tether',
-      //     permissions: ['student:view']
-      //   },
+      {
+        title: 'Kependudukan',
+        href: '/data/penduduk',
+        icon: 'tabler-world-plus',
+        permissions: ['leadership:view']
+      },
       {
         title: 'Kepengurusan',
         icon: 'tabler-report',

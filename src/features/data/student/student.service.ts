@@ -519,6 +519,7 @@ export async function getStudentOption(dormitoryIds?: string[]): Promise<
 
     const students = await db.student.findMany({
       where: whereClause,
+      take: 50,
       include: {
         regency: true,
         province: true,
