@@ -231,6 +231,8 @@ model Teacher {
     absence            Absence[]
     teacherDormitories TeacherDormitory[]
 
+    phoneWhatsapp String? @unique
+
     userId String @unique
     user   User   @relation(fields: [userId], references: [id])
 
