@@ -14,17 +14,18 @@ datasource db {
 }
 
 model User {
-    id                    String           @id @default(uuid()) @map("id")
-    name                  String           @map("name")
-    username              String           @unique @map("username")
-    password              String           @map("password")
+    id                    String                 @id @default(uuid()) @map("id")
+    name                  String                 @map("name")
+    username              String                 @unique @map("username")
+    password              String                 @map("password")
     roleId                String
-    role                  Role             @relation(fields: [roleId], references: [id])
+    role                  Role                   @relation(fields: [roleId], references: [id])
     teacher               Teacher?
-    mustChangeCredentials Boolean          @default(false)
+    mustChangeCredentials Boolean                @default(false)
     userPermissions       UserPermission[]
     userDormitories       UserDormitory[]
     permit                Permit[]
+    ScheduleSubstitution  ScheduleSubstitution[]
 
     @@index([roleId])
 }
@@ -233,8 +234,9 @@ model Teacher {
 
     phoneWhatsapp String? @unique
 
-    userId String @unique
-    user   User   @relation(fields: [userId], references: [id])
+    userId               String                 @unique
+    user                 User                   @relation(fields: [userId], references: [id])
+    substitutedSchedules ScheduleSubstitution[] @relation("SubstituteTeacher")
 
     @@index([name])
 }
@@ -462,8 +464,49 @@ model ScheduleSlot {
     dormitory   Dormitory  @relation(fields: [dormitoryId], references: [id])
     schedules   Schedule[]
 
+    createdAt            DateTime               @default(now())
+    updatedAt            DateTime               @updatedAt
+    ScheduleSubstitution ScheduleSubstitution[]
+}
+
+model ScheduleSubstitution {
+    id String @id @default(uuid())
+
+    // kunci override
+    scheduleId String
+    schedule   Schedule @relation(fields: [scheduleId], references: [id])
+
+    // slot yang dipakai pada hari itu (buat filter cepat & konsisten)
+    scheduleSlotId String
+    scheduleSlot   ScheduleSlot @relation(fields: [scheduleSlotId], references: [id])
+
+    // tanggal pelaksanaan override
+    date    DateTime // simpan 00:00:00 Asia/Jakarta
+    dateKey String   @db.VarChar(10) // "YYYY-MM-DD" utk query/index harian
+
+    // guru pengganti
+    substituteId String
+    substitute   Teacher @relation("SubstituteTeacher", fields: [substituteId], references: [id])
+
+    // metadata opsional
+    reason      String?
+    createdById String?
+    createdBy   User?   @relation(fields: [createdById], references: [id])
+
+    // snapshot slot (histori tetap benar bila jam slot berubah di masa depan)
+    slotNumber    Int?
+    slotStartTime String? // "HH:mm"
+    slotEndTime   String? // "HH:mm"
+
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
+
+    // 1 schedule hanya boleh punya 1 pengganti pada tanggal tsb
+    @@unique([scheduleId, dateKey])
+    // index untuk pola login: per tanggal + per slot + guru pengganti
+    @@index([dateKey])
+    @@index([dateKey, scheduleSlotId])
+    @@index([substituteId, dateKey, scheduleSlotId])
 }
 
 model Schedule {
@@ -488,6 +531,8 @@ model Schedule {
     createdAt      DateTime         @default(now())
     updatedAt      DateTime         @updatedAt
     teacherAbsence TeacherAbsence[]
+
+    substitutions ScheduleSubstitution[]
 
     @@index([classId, dayOfWeek])
     @@index([teacherId, dayOfWeek])
@@ -546,6 +591,7 @@ model TeacherAbsence {
     teacherId  String
     scheduleId String
     date       DateTime
+    dateKey    String        @db.VarChar(10)
     status     AbsenceStatus
     note       String?
 
@@ -555,6 +601,7 @@ model TeacherAbsence {
     updatedAt DateTime @updatedAt
 
     @@unique([teacherId, scheduleId, date])
+    @@unique([teacherId, scheduleId, dateKey])
     @@index([teacherId, date])
     @@index(teacherId)
     @@index([scheduleId])

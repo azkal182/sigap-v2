@@ -68,10 +68,14 @@ export async function generateDailyTeacherAbsences(date?: string) {
     targetDate = DateTime.now().setZone('Asia/Jakarta').startOf('day')
   }
 
+  // Format dateKey untuk penyimpanan
+  const dateKey = targetDate.toFormat('yyyy-MM-dd')
+
   console.log('=== START generateDailyTeacherAbsences ===')
   console.log(`Tanggal parameter: ${date ?? '(tidak ada, gunakan hari ini)'}`)
   console.log(`Target Jakarta: ${targetDate.toISO()} | UTC: ${targetDate.toUTC().toISO()}`)
   console.log(`Day of week Jakarta: ${targetDate.weekday % 7} (0=Mon ... 6=Sun)`)
+  console.log(`dateKey (Asia/Jakarta): ${dateKey}`)
 
   const dayOfWeekJakarta = targetDate.weekday % 7
 
@@ -105,6 +109,7 @@ export async function generateDailyTeacherAbsences(date?: string) {
           teacherId: schedule.teacherId,
           scheduleId: schedule.id,
           date: targetDate.toJSDate(),
+          dateKey: dateKey,
           status: 'ABSENT'
         }
       })
