@@ -25,7 +25,8 @@ import {
   getTrackOption,
   updateClass,
   updateSubject,
-  moveTeacherSchedule
+  moveTeacherSchedule,
+  moveDormitory
 } from './../dormitory.service'
 
 import {
@@ -36,6 +37,7 @@ import {
   CreateSksSchema,
   CreateSubjectSchema,
   filterDormitorySchema,
+  moveDormitorySchema,
   moveTeacherScheduleSchema,
   sksOptionSchema,
   subjectFormSchema,
@@ -50,6 +52,7 @@ import type {
   CreateSksInput,
   CreateSubjectInput,
   FilterDormitoryParams,
+  MoveDormitoryInput,
   SubjectFormInput,
   TrackFormSchema
 } from '../schemas/dormitory-schema'
@@ -446,4 +449,8 @@ export async function handleClassTransferAction(input: ClassTransferInput) {
     // <-- di sini pakai PromoteAcrossTrackSchema (bukan ClassTransferSchema)
     return validateAndRun(PromoteAcrossTrackSchema, parsed.data, promoteStudentsToTrack)
   }
+}
+
+export async function moveDormitoyAction(input: MoveDormitoryInput) {
+  return validateAndRun(moveDormitorySchema, input, moveDormitory)
 }

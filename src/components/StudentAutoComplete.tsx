@@ -292,6 +292,7 @@ type Props = {
 
   /** 'wrap' = dropdown selebar input & teks bisa ganti baris; 'autoWidth' = dropdown melebar mengikuti konten */
   dropdownMode?: 'wrap' | 'autoWidth'
+  endAction?: React.ReactNode
 }
 
 export default function StudentAutocomplete({
@@ -305,7 +306,8 @@ export default function StudentAutocomplete({
   allowDisable = false,
   dormitoryIds = [],
   placeholder,
-  dropdownMode = 'wrap'
+  dropdownMode = 'wrap',
+  endAction
 }: Props) {
   const theme = useTheme()
   const { data, isLoading } = useStudentOption(dormitoryIds)
@@ -400,6 +402,9 @@ export default function StudentAutocomplete({
             ...params.InputProps,
             endAdornment: (
               <>
+                {endAction ? (
+                  <Box sx={{ ml: 1, mr: 0.5, display: 'flex', alignItems: 'center' }}>{endAction}</Box>
+                ) : null}
                 {isLoading ? <CircularProgress size={18} /> : null}
                 {params.InputProps.endAdornment}
               </>

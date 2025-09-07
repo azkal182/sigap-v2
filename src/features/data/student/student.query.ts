@@ -32,7 +32,7 @@ export function useStudents(params: FilterStudentParams, isValid: boolean) {
 
 export function useStudentOption(dormitoryIds?: string[]) {
   return useQuery({
-    queryKey: ['student_options'],
+    queryKey: ['student_options', { dormitoryIds }],
     queryFn: async () => {
       const res = await getStudentOptionAction(dormitoryIds)
 

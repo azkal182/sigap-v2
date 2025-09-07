@@ -387,6 +387,7 @@ import type { z } from 'zod' // Import Zod
 import TablePaginationComponent from './TablePaginationComponent'
 import CustomTextField from '@/@core/components/mui/TextField'
 import type { UseCustomSearchParamsReturn } from '@/hooks/useCustomSearchParams'
+import { useDebounce } from '@/hooks/useDebounce'
 
 // Perbaikan di sini: TParams harus extends z.ZodSchema
 interface DataTableWithParamsProps<TData, TValue, TParams extends z.ZodSchema> {
@@ -432,30 +433,68 @@ export function DataTableWithParams<TData, TValue, TParams extends z.ZodSchema>(
 
   // Perhatikan bahwa searchParams.params sudah divalidasi oleh Zod
   const [localSearch, setLocalSearch] = React.useState(searchParams.params.search || '')
+  const [isTyping, setIsTyping] = React.useState(false) // true saat user aktif mengetik
+  const [isComposing, setIsComposing] = React.useState(false) // IME guard
+  const debouncedSearch = useDebounce(localSearch, 500)
+  const lastPushedRef = React.useRef<string | null>(null)
 
   const handleClick = (event: MouseEvent<HTMLButtonElement>) => {
     setShowColumnPanel(event.currentTarget)
   }
 
-  // Sync local search with URL params
   useEffect(() => {
-    // console.log('URL -> localSearch', searchParams.params.search)
-    setLocalSearch(searchParams.params.search || '')
-  }, [searchParams.params.search])
+    if (isComposing) return
+    const currentUrlValue = searchParams.params.search || ''
 
-  // Handle search with debounce (contoh yang di-komentar)
+    if (debouncedSearch === currentUrlValue) {
+      // kalau sama, tandai selesai mengetik supaya pull bisa jalan lagi
+      setIsTyping(false)
+
+      return
+    }
+
+    if (lastPushedRef.current === debouncedSearch) return
+
+    searchParams.updateParams({
+      search: debouncedSearch as any,
+      page: 1
+    } as Partial<z.infer<TParams>>)
+
+    lastPushedRef.current = debouncedSearch
+    setIsTyping(false) // selesai satu siklus ketik → push
+    // penting: depend hanya pada debounced & URL search agar stabil
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch, searchParams.params.search])
+
   useEffect(() => {
-    const timer = setTimeout(() => {
-      // Pastikan 'search' adalah kunci yang valid di skema Zod Anda
-      // dan tipe 'localSearch' sesuai dengan tipe 'search' di skema
-      if (localSearch !== (searchParams.params as any).search) {
-        // Casting to any for flexibility, but better to ensure type safety
-        searchParams.updateParam('search' as keyof z.infer<TParams>, localSearch)
-      }
-    }, 500)
+    if (isTyping || isComposing) return
+    const urlSearch = searchParams.params.search || ''
 
-    return () => clearTimeout(timer)
-  }, [localSearch, searchParams.params.search, searchParams])
+    if (urlSearch !== localSearch) {
+      setLocalSearch(urlSearch)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams.params.search]) // sengaja tidak masukkan localSearch agar tak sering trigger
+
+  //   // Sync local search with URL params
+  //   useEffect(() => {
+  //     // console.log('URL -> localSearch', searchParams.params.search)
+  //     setLocalSearch(searchParams.params.search || '')
+  //   }, [searchParams.params.search])
+
+  //   // Handle search with debounce (contoh yang di-komentar)
+  //   useEffect(() => {
+  //     const timer = setTimeout(() => {
+  //       // Pastikan 'search' adalah kunci yang valid di skema Zod Anda
+  //       // dan tipe 'localSearch' sesuai dengan tipe 'search' di skema
+  //       if (localSearch !== (searchParams.params as any).search) {
+  //         // Casting to any for flexibility, but better to ensure type safety
+  //         searchParams.updateParam('search' as keyof z.infer<TParams>, localSearch)
+  //       }
+  //     }, 500)
+
+  //     return () => clearTimeout(timer)
+  //   }, [localSearch, searchParams.params.search, searchParams])
 
   // Pagination state
   const pagination: PaginationState = {
@@ -513,8 +552,10 @@ export function DataTableWithParams<TData, TValue, TParams extends z.ZodSchema>(
   })
 
   const clearSearch = () => {
-    searchParams.updateParam('search' as keyof z.infer<TParams>, '') // Gunakan z.infer<TParams>
+    setIsTyping(false)
+    lastPushedRef.current = ''
     setLocalSearch('')
+    searchParams.updateParams({ search: '' as any, page: 1 } as Partial<z.infer<TParams>>)
   }
 
   const hasActiveFilters = () => {
@@ -529,34 +570,25 @@ export function DataTableWithParams<TData, TValue, TParams extends z.ZodSchema>(
 
   return (
     <Card className={`w-full space-y-4 p-4 ${className}`}>
-      {/* Validation Errors (Jika Anda menambahkan validasi di hook useCustomSearchParams) */}
-      {/* Anda perlu menambahkan properti isValid dan errors ke UseCustomSearchParamsReturn jika ingin menampilkannya */}
-      {/* {!searchParams.isValid && searchParams.errors && (
-        <div className='bg-red-50 border border-red-200 rounded-md p-4'>
-          <div className='flex'>
-            <div className='ml-3'>
-              <h3 className='text-sm font-medium text-red-800'>Parameter tidak valid</h3>
-              <div className='mt-2 text-sm text-red-700'>
-                <ul className='list-disc pl-5 space-y-1'>
-                  {Object.entries(searchParams.errors).map(([field, errors]) => (
-                    <li key={field}>
-                      <strong>{field}:</strong> {errors.join(', ')}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
-      )} */}
       {/* Header dengan Search, Filters, dan Column Toggle */}
-      <div className='flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between'>
+      {/* <div className='flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between'>
         <div className='flex flex-col sm:flex-row sm:items-end gap-2 flex-1'>
           {searchable && (
             <CustomTextField
               placeholder={searchPlaceholder}
               value={localSearch}
-              onChange={e => setLocalSearch(e.target.value)}
+              onChange={e => {
+                if (!isComposing) {
+                  setIsTyping(true)
+                  setLocalSearch(e.target.value)
+                }
+              }}
+              onCompositionStart={() => setIsComposing(true)}
+              onCompositionEnd={e => {
+                setIsComposing(false)
+                setIsTyping(true)
+                setLocalSearch((e.target as HTMLInputElement).value)
+              }}
               size='small'
               label='Pencarian'
               sx={{
@@ -589,77 +621,7 @@ export function DataTableWithParams<TData, TValue, TParams extends z.ZodSchema>(
           )}
         </div>
 
-        {/* <div className='flex gap-2'>
-          {onRefresh && (
-            <button
-              onClick={onRefresh}
-              disabled={isLoading}
-              className='px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50'
-            >
-              Refresh
-            </button>
-          )}
-          {addButton}
-          {showColumnToggle && (
-            <div className='relative'>
-              <Button
-                startIcon={<i className='tabler-settings h-4 w-4 ' />}
-                endIcon={<i className='tabler-chevron-down h-4 w-4 ' />}
-                variant='contained'
-                onClick={handleClick}
-                className='flex items-center gap-2 '
-              >
-                Kolom
-              </Button>
-
-              <Menu
-                keepMounted
-                id='basic-menu'
-                anchorEl={showColumnPanel}
-                onClose={() => setShowColumnPanel(null)}
-                open={Boolean(showColumnPanel)}
-                anchorOrigin={{
-                  vertical: 'bottom', // anchor menu dari bawah
-                  horizontal: 'right' // anchor menu dari kanan
-                }}
-                transformOrigin={{
-                  vertical: 'top', // menu akan mengarah ke atas (top) dari posisi anchor
-                  horizontal: 'right' // menu akan muncul dari kanan
-                }}
-              >
-                {table
-                  .getAllColumns()
-                  .filter(column => column.getCanHide())
-                  .map(column => (
-                    <MenuItem key={column.id} style={{ padding: '4px 8px' }}>
-                      <FormControlLabel
-                        label={
-                          <span className='text-sm capitalize '>
-                            {typeof column.columnDef.header === 'string' ? column.columnDef.header : column.id}
-                            {column.getIsVisible() ? (
-                              <i className='tabler-eye h-4 w-4 text-green-500 absolute right-0 top-1/2 transform -translate-y-1/2' />
-                            ) : (
-                              <i className='tabler-eye-off h-4 w-4 text-gray-400 absolute right-0 top-1/2 transform -translate-y-1/2' />
-                            )}
-                          </span>
-                        }
-                        control={
-                          <Checkbox
-                            size='small'
-                            checked={column.getIsVisible()}
-                            onChange={e => column.toggleVisibility(e.target.checked)}
-                            name='controlled'
-                          />
-                        }
-                      />
-                    </MenuItem>
-                  ))}
-              </Menu>
-            </div>
-          )}
-        </div> */}
         <div className='flex flex-col sm:flex-row sm:items-center gap-2'>
-          {/* tombol refresh */}
           {onRefresh && (
             <button
               onClick={onRefresh}
@@ -670,10 +632,8 @@ export function DataTableWithParams<TData, TValue, TParams extends z.ZodSchema>(
             </button>
           )}
 
-          {/* tombol add */}
           {addButton}
 
-          {/* toggle kolom */}
           {showColumnToggle && (
             <div className='relative'>
               <Button
@@ -732,7 +692,131 @@ export function DataTableWithParams<TData, TValue, TParams extends z.ZodSchema>(
             </div>
           )}
         </div>
+      </div> */}
+      {/* Header dengan Search, Filters, dan Column Toggle (RESPONSIVE) */}
+      <div className='flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4'>
+        {/* Kiri: search + filter */}
+        <div className='flex flex-col sm:flex-row sm:items-end gap-2 flex-1 w-full'>
+          {searchable && (
+            <CustomTextField
+              placeholder={searchPlaceholder}
+              value={localSearch}
+              onChange={e => {
+                if (!isComposing) {
+                  setIsTyping(true)
+                  setLocalSearch(e.target.value)
+                }
+              }}
+              onCompositionStart={() => setIsComposing(true)}
+              onCompositionEnd={e => {
+                setIsComposing(false)
+                setIsTyping(true)
+                setLocalSearch((e.target as HTMLInputElement).value)
+              }}
+              size='small'
+              label='Pencarian'
+              fullWidth
+              sx={{
+                width: { xs: '100%', sm: 300 },
+                minWidth: { sm: 250 },
+                maxWidth: { sm: 300 }
+              }}
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position='start'>
+                      <i className='tabler-search' />
+                    </InputAdornment>
+                  ),
+                  endAdornment: localSearch ? (
+                    <InputAdornment position='end'>
+                      <IconButton onClick={clearSearch} size='small' edge='end' aria-label='clear search'>
+                        <i className='tabler-x h-4 w-4 ' />
+                      </IconButton>
+                    </InputAdornment>
+                  ) : null
+                }
+              }}
+            />
+          )}
+
+          <div className='w-full sm:w-auto'>{customFilters}</div>
+
+          {hasActiveFilters() && (
+            <Button onClick={searchParams.resetParams} variant='contained' className='w-full sm:w-auto'>
+              Reset Filter
+            </Button>
+          )}
+        </div>
+
+        {/* Kanan: actions (refresh / add / kolom) */}
+        <div className='w-full grid grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center'>
+          {onRefresh && (
+            <button
+              onClick={onRefresh}
+              disabled={isLoading}
+              className='w-full px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50'
+            >
+              Refresh
+            </button>
+          )}
+
+          <div className='w-full sm:w-auto'>{addButton}</div>
+
+          {showColumnToggle && (
+            <div className='relative w-full sm:w-auto'>
+              <Button
+                startIcon={<i className='tabler-settings h-4 w-4 ' />}
+                endIcon={<i className='tabler-chevron-down h-4 w-4 ' />}
+                variant='contained'
+                onClick={handleClick}
+                className='w-full sm:w-auto'
+              >
+                Kolom
+              </Button>
+
+              <Menu
+                keepMounted
+                id='basic-menu'
+                anchorEl={showColumnPanel}
+                onClose={() => setShowColumnPanel(null)}
+                open={Boolean(showColumnPanel)}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+              >
+                {table
+                  .getAllColumns()
+                  .filter(column => column.getCanHide())
+                  .map(column => (
+                    <MenuItem key={column.id} style={{ padding: '4px 8px' }}>
+                      <FormControlLabel
+                        label={
+                          <span className='text-sm capitalize '>
+                            {typeof column.columnDef.header === 'string' ? column.columnDef.header : column.id}
+                            {column.getIsVisible() ? (
+                              <i className='tabler-eye h-4 w-4 text-green-500 absolute right-0 top-1/2 transform -translate-y-1/2' />
+                            ) : (
+                              <i className='tabler-eye-off h-4 w-4 text-gray-400 absolute right-0 top-1/2 transform -translate-y-1/2' />
+                            )}
+                          </span>
+                        }
+                        control={
+                          <Checkbox
+                            size='small'
+                            checked={column.getIsVisible()}
+                            onChange={e => column.toggleVisibility(e.target.checked)}
+                            name='controlled'
+                          />
+                        }
+                      />
+                    </MenuItem>
+                  ))}
+              </Menu>
+            </div>
+          )}
+        </div>
       </div>
+
       {/* Loading indicator */}
       {/* {isLoading && (
         <div className='flex justify-center py-4'>

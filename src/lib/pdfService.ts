@@ -231,6 +231,175 @@ export const generateAndSendReport = async (data: Dormitory[], telegramId: strin
   }
 }
 
+const buildCaption = (data: Dormitory[], date?: Date) => {
+  const formattedDate = formatDate(date || new Date())
+
+  const alfaSummary = data
+    .map(
+      dormitory =>
+        `*${dormitory.dormitoryName}* : ${dormitory.totalAbsences.total} (Pengurus: ${dormitory.totalAbsences.committee}, Santri: ${dormitory.totalAbsences.students})`
+    )
+    .join('\n')
+
+  return `Laporan Absensi KBM\n${formattedDate}\n\nJumlah Alfa per Asrama:\n${alfaSummary}`
+}
+
+// ======================================================================
+// FUNGSI 2b: HANYA MENGIRIM PDF KE WHATSAPP (mirip Telegram)
+// ======================================================================
+type SendWAOptions = {
+  endpoint?: string // default ke endpoint-mu
+  apiKey?: string // default ambil dari env
+  filename?: string // default 'Laporan_Absensi_<tgl>.pdf'
+  mediaType?: 'document' | 'image' | 'audio' | 'video' // default 'document'
+}
+
+export const sendPdfToWhatsApp = async (
+  pdfBuffer: Buffer,
+  caption: string,
+  whatsappJids: string[],
+  opts: SendWAOptions = {}
+) => {
+  const {
+    endpoint = process.env.WA_ENDPOINT || 'http://165.22.106.176:3030/wa_azkal/messages/send/media-buffer',
+    apiKey = process.env.WA_API_KEY || process.env.WHATSAPP_API_KEY,
+    filename = `Laporan_Absensi_${format(new Date(), 'dd-MM-yyyy', { locale: id })}.pdf`,
+    mediaType = 'document'
+  } = opts
+
+  if (!apiKey) throw new Error('WA API key tidak ditemukan. Set WA_API_KEY/WHATSAPP_API_KEY di env.')
+
+  const pdfBlob = new Blob([pdfBuffer], { type: 'application/pdf' })
+
+  // Worker untuk kirim WA ke satu JID (punya retry/backoff)
+  const sendToJid = async (jid: string) => {
+    let attempt = 0
+    const maxRetries = 3
+
+    while (attempt < maxRetries) {
+      try {
+        const formData = new FormData()
+
+        formData.append('jid', jid)
+        formData.append('type', 'number')
+        formData.append('mediaType', mediaType)
+        formData.append('caption', caption)
+        formData.append('file', pdfBlob, filename)
+
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'x-api-key': apiKey },
+          body: formData
+        })
+
+        const result = await res.json().catch(() => ({}))
+
+        if (!res.ok) {
+          throw new Error(`WA API error untuk ${jid}: ${JSON.stringify(result)}`)
+        }
+
+        console.log(`✅ WA: Berhasil kirim ke ${jid}`)
+        break
+      } catch (err) {
+        attempt++
+        console.error(`❌ WA gagal kirim ke ${jid} (percobaan ${attempt}):`, err)
+
+        if (attempt >= maxRetries) {
+          console.error(`WA gagal total ke ${jid} setelah ${maxRetries} percobaan.`)
+        } else {
+          const delay = Math.pow(2, attempt) * 1000
+
+          await new Promise(r => setTimeout(r, delay))
+        }
+      }
+    }
+  }
+
+  // Kalau lebih dari 1 → jadwalkan dengan random delay (1–5 menit misalnya)
+  whatsappJids.forEach(jid => {
+    const delayMinutes = whatsappJids.length > 1 ? Math.floor(Math.random() * 5) + 1 : 0
+    const delayMs = delayMinutes * 60 * 1000
+
+    setTimeout(() => {
+      sendToJid(jid).catch(err => {
+        console.error(`❌ WA fatal error kirim ke ${jid}:`, err)
+      })
+    }, delayMs)
+
+    console.log(`⏱️ WA ke ${jid} dijadwalkan dalam ${delayMinutes} menit${delayMinutes === 0 ? ' (langsung)' : ''}`)
+  })
+
+  // langsung return, tidak menunggu semua
+  return { message: 'Pengiriman WA dijadwalkan, proses berjalan di background.' }
+}
+
+// ======================================================================
+// FUNGSI 3b: ORKESTRASI KEDUANYA (Telegram + WhatsApp)
+// ======================================================================
+export const generateAndSendReportBoth = async (
+  data: Dormitory[],
+  receivers: {
+    telegramIds?: string[]
+    whatsappJids?: string[]
+  },
+  date?: Date,
+  waOpts?: SendWAOptions
+) => {
+  try {
+    // 1. Generate PDF sekali saja
+    const pdfBuffer = await generatePdfBuffer(data, date)
+
+    // 2. Caption sekali, reuse
+    const caption = buildCaption(data, date)
+
+    // 3. Kirim paralel sesuai opsi yang diisi
+    const tasks: Promise<any>[] = []
+
+    if (receivers.telegramIds?.length) {
+      tasks.push(sendPdfToTelegram(pdfBuffer, caption, receivers.telegramIds))
+    }
+
+    if (receivers.whatsappJids?.length) {
+      tasks.push(sendPdfToWhatsApp(pdfBuffer, caption, receivers.whatsappJids, waOpts))
+    }
+
+    if (!tasks.length) {
+      return { message: 'Tidak ada penerima. Isi minimal salah satu: telegramIds atau whatsappJids.' }
+    }
+
+    await Promise.all(tasks)
+
+    return { message: 'Proses pengiriman laporan selesai (Telegram/WhatsApp).' }
+  } catch (error) {
+    console.error('Gagal membuat atau mengirim laporan (both):', error)
+
+    return { error: 'Gagal memproses laporan (both).' }
+  }
+}
+
+// ======================================================================
+// (Opsional) Versi khusus WA saja, biar sejajar dengan generateAndSendReport
+// ======================================================================
+export const generateAndSendReportToWhatsApp = async (
+  data: Dormitory[],
+  whatsappJids: string[],
+  date?: Date,
+  waOpts?: SendWAOptions
+) => {
+  try {
+    const pdfBuffer = await generatePdfBuffer(data, date)
+    const caption = buildCaption(data, date)
+
+    await sendPdfToWhatsApp(pdfBuffer, caption, whatsappJids, waOpts)
+
+    return { message: 'Proses pengiriman laporan selesai (WhatsApp).' }
+  } catch (error) {
+    console.error('Gagal membuat atau mengirim laporan (WA):', error)
+
+    return { error: 'Gagal memproses laporan (WA).' }
+  }
+}
+
 // import { format } from 'date-fns'
 // import { id } from 'date-fns/locale'
 // import PDFDocument from 'pdfkit'

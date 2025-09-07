@@ -155,6 +155,10 @@ const DormitoryPageView = () => {
       },
 
       {
+        accessorKey: 'level',
+        header: 'Level'
+      },
+      {
         id: 'actions',
         header: 'Aksi',
         enableHiding: false,

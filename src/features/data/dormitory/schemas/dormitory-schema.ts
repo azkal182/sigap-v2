@@ -6,7 +6,7 @@ import { basePaginationSchema } from '@/schemas/base-pagination-schema'
 // Student schema
 export const filterDormitorySchema = basePaginationSchema.extend({
   dormitoryId: z.string().optional().default(''),
-  sortBy: z.enum(['name', 'gender']).default('name'),
+  sortBy: z.enum(['name', 'gender', 'level']).default('level'),
   dormitoryIds: z
     .union([
       z.string().array(), // Bisa array string
@@ -126,10 +126,9 @@ export const trackSchema = z.object({
   id: z.string().optional(),
   dormitoryId: z.string(),
   name: z.string().min(1, 'Nama wajib diisi'),
-  targetDays: z.coerce
-    .number({ invalid_type_error: 'Target hari harus berupa angka' })
-    .min(1, 'Target hari minimal 1')
-    .nullable(),
+  targetDays: z.coerce.number({ invalid_type_error: 'Target hari harus berupa angka' }).min(1, 'Target hari minimal 1'),
+
+  // .nullable(),
   level: z.coerce.number({ invalid_type_error: 'Level harus berupa angka' }).min(1, 'Level minimal 1').nullable()
 })
 
@@ -160,6 +159,22 @@ export const subjectFormSchema = z.object({
   name: z.string().min(1, 'Nama kelas wajib diisi'),
   trackId: z.string().min(1, 'Fan kelas wajib diisi')
 })
+
+export const moveDormitorySchema = z
+  .object({
+    studentIds: z
+      .array(z.string())
+      .nonempty()
+      .transform(ids => Array.from(new Set(ids))), // dedupe
+    toDormitory: z.string(),
+    fromDormitory: z.string(),
+    effectiveAt: z.coerce.date().optional()
+  })
+  .refine(d => d.fromDormitory !== d.toDormitory, {
+    message: 'Asrama tujuan tidak boleh sama dengan asrama asal.'
+  })
+
+export type MoveDormitoryInput = z.infer<typeof moveDormitorySchema>
 
 export type SubjectFormInput = z.infer<typeof subjectFormSchema>
 

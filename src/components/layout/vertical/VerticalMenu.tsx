@@ -161,6 +161,12 @@ export const menuItems: MenuConfigSection[] = [
         permissions: ['leadership:view']
       },
       {
+        title: 'Pindah Asrama',
+        href: '/data/move-dormitory',
+        icon: 'tabler-replace',
+        permissions: ['leadership:view']
+      },
+      {
         title: 'Kepengurusan',
         icon: 'tabler-report',
         permissions: ['leadership:view'],

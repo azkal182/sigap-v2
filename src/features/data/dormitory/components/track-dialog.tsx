@@ -34,7 +34,7 @@ const TrackFormDialog: React.FC<TrackFormDialogProps> = ({
     defaultValues: {
       id: initialData?.id,
       name: initialData?.name ?? '',
-      targetDays: initialData?.targetDays ?? null,
+      targetDays: initialData?.targetDays ?? 0,
       level: initialData?.level ?? null,
       dormitoryId: initialData?.dormitoryId ?? ''
     }
@@ -46,7 +46,7 @@ const TrackFormDialog: React.FC<TrackFormDialogProps> = ({
       reset({
         id: initialData?.id,
         name: initialData?.name ?? '',
-        targetDays: initialData?.targetDays ?? null,
+        targetDays: initialData?.targetDays ?? 0,
         level: initialData?.level ?? null,
         dormitoryId: initialData?.dormitoryId ?? ''
       })

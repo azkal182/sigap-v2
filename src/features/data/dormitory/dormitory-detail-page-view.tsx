@@ -161,7 +161,8 @@ const DormitoryDetailPageView: React.FC<DormitoryDetailPageViewProps> = ({ id })
           id: editingTrack.id,
           name: form.name,
           targetDays: form.targetDays,
-          level: form.level
+          level: form.level,
+          dormitoryId: id
         },
         {
           onSuccess: () => {

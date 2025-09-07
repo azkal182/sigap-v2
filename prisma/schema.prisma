@@ -281,6 +281,7 @@ model DormitoryHistory {
 
     @@index([studentId]) // <-- TAMBAHKAN INI
     @@index([dormitoryId]) // <-- TAMBAHKAN INI
+    @@index([studentId, endDate])
 }
 
 // AKADEMIK
@@ -374,8 +375,10 @@ model DormitoryTrack {
     dormitoryId String
     trackId     String
 
+    level     Int       @default(0)
     dormitory Dormitory @relation(fields: [dormitoryId], references: [id])
     track     Track     @relation(fields: [trackId], references: [id])
+    // @@unique([dormitoryId, level])
 
     @@id([dormitoryId, trackId])
 }
@@ -443,6 +446,7 @@ model History {
     @@index([classId, status, studentId])
     @@index([classId, startDate, endDate])
     @@index([studentId]) // <-- TAMBAHKAN INI
+    @@index([studentId, status, endDate])
 }
 
 // JADWAL

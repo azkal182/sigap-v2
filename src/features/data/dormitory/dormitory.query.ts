@@ -27,13 +27,15 @@ import {
   updateClassAction,
   updateSubjectAction,
   handleClassTransferAction,
-  moveTeacherScheduleAction
+  moveTeacherScheduleAction,
+  moveDormitoyAction
 } from './actions/dormitory.action'
 import type {
   ClassFormInput,
   CreateScheduleInput,
   CreateScheduleSlotInput,
   FilterDormitoryParams,
+  MoveDormitoryInput,
   MoveTeacherScheduleInput,
   SksOptionParams,
   SubjectFormInput,
@@ -615,6 +617,25 @@ export const useHandleClassTransfer = () => {
       queryClient.invalidateQueries({ queryKey: ['student_options'], exact: false, refetchType: 'all' })
       queryClient.invalidateQueries({ queryKey: ['students'], exact: false, refetchType: 'all' })
       queryClient.invalidateQueries({ queryKey: ['class'], exact: false, refetchType: 'all' })
+      queryClient.invalidateQueries({ queryKey: ['classDetail'], exact: false, refetchType: 'all' })
+    }
+  })
+}
+
+export const useHandleMoveDormitory = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    // Menerima objek data Partial<TrackFormSchema>
+    mutationFn: async (data: MoveDormitoryInput) => {
+      const res = await moveDormitoyAction(data)
+
+      if (!res.success) throw new ActionError(res.error, res.issues)
+
+      return res
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['student_options'], exact: false, refetchType: 'all' })
       queryClient.invalidateQueries({ queryKey: ['classDetail'], exact: false, refetchType: 'all' })
     }
   })

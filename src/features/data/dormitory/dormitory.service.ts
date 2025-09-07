@@ -1,16 +1,21 @@
 'use server'
+import { DateTime } from 'luxon'
+
 import db from '@/lib/prisma'
+
 import { $Enums, HistoryStatus, Prisma } from '@/generated/prisma'
-import type {
-  ClassFormInput,
-  CreateScheduleInput,
-  CreateScheduleSlotInput,
-  FilterDormitoryParams,
-  MoveTeacherScheduleInput,
-  SksOptionParams,
-  SubjectFormInput,
-  TrackFormSchema,
-  TrackOptionParams
+import {
+  moveDormitorySchema,
+  type ClassFormInput,
+  type CreateScheduleInput,
+  type CreateScheduleSlotInput,
+  type FilterDormitoryParams,
+  type MoveDormitoryInput,
+  type MoveTeacherScheduleInput,
+  type SksOptionParams,
+  type SubjectFormInput,
+  type TrackFormSchema,
+  type TrackOptionParams
 } from './schemas/dormitory-schema'
 import type { APIError, APIPaginatedResult, APIResult } from '@/types/api-types'
 
@@ -20,6 +25,7 @@ export type DormitoryItem = {
   id: string
   name: string
   gender: GenderType | null
+  level: number | null | undefined
 }
 
 export type DormitoryResponse = APIPaginatedResult<DormitoryItem[]>
@@ -149,7 +155,7 @@ export async function getDormitoriesFilter(
     } = options
 
     const skip = (page - 1) * limit
-    const allowedSortFields = ['name', 'gender'] as const
+    const allowedSortFields = ['name', 'gender', 'level'] as const
     const safeSortBy = allowedSortFields.includes(sortBy) ? sortBy : 'name'
 
     // const whereCondition: Prisma.DormitoryWhereInput = {
@@ -190,7 +196,7 @@ export async function getDormitoriesFilter(
       take: limit,
       where: whereCondition,
       orderBy,
-      select: { id: true, name: true, gender: true }
+      select: { id: true, name: true, gender: true, level: true }
     })
 
     return {
@@ -227,9 +233,11 @@ export async function getDormitoryDetail(dormitoryId: string): Promise<Dormitory
       select: {
         id: true,
         name: true,
+        level: true,
         gender: true,
         dormitoryTracks: {
           select: {
+            level: true,
             track: {
               select: {
                 id: true,
@@ -263,13 +271,14 @@ export async function getDormitoryDetail(dormitoryId: string): Promise<Dormitory
       data: {
         id: dormitory.id,
         name: dormitory.name,
+        level: dormitory.level,
         gender: dormitory.gender,
         tracks: dormitory.dormitoryTracks
           .map(dt => ({
             id: dt.track.id,
             name: dt.track.name,
             targetDays: dt.track.targetDays,
-            level: dt.track.level,
+            level: dt.level,
             classes: dt.track.classes
           }))
           .sort((a, b) => (a.level ?? 0) - (b.level ?? 0))
@@ -321,159 +330,168 @@ export async function createNewTrackForDormitory(
   try {
     const { name, targetDays, level, dormitoryId } = data
 
-    if (level) {
-      await db.track.updateMany({
-        where: {
-          level: {
-            gte: level
-          }
-        },
-        data: {
-          level: {
-            increment: 1
-          }
-        }
+    const result = await db.$transaction(async tx => {
+      // 0) NORMALIZE: reindex 1..n agar tidak ada gap/duplikat
+      const rows = await tx.dormitoryTrack.findMany({
+        where: { dormitoryId },
+        orderBy: { level: 'asc' },
+        select: { trackId: true, level: true }
       })
-    }
 
-    // Buat track baru
-    const track = await db.track.create({
-      data: {
-        name: name,
-        targetDays: targetDays!, // Gunakan non-null assertion karena sudah divalidasi
-        level: level!
+      for (let i = 0; i < rows.length; i++) {
+        const shouldBe = i + 1
+
+        if (rows[i].level !== shouldBe) {
+          await tx.dormitoryTrack.update({
+            where: { dormitoryId_trackId: { dormitoryId, trackId: rows[i].trackId } },
+            data: { level: shouldBe }
+          })
+        }
       }
+
+      // Hitung count setelah normalisasi
+      const count = rows.length // setelah normalize, level valid = 1..count
+
+      // 1) Buat Track baru (hindari null untuk int)
+      const track = await tx.track.create({
+        data: { name, targetDays: targetDays ?? 0 }
+      })
+
+      // 2) Tentukan finalLevel (1-based):
+      //    - Jika level tak dikirim -> append di ujung = count + 1
+      //    - Jika dikirim -> clamp ke [1..count+1]
+      let finalLevel: number
+
+      if (level === null || level === undefined) {
+        finalLevel = count + 1
+      } else {
+        const desired = Math.max(1, level) // minimal 1
+
+        finalLevel = Math.min(desired, count + 1) // maksimal append
+      }
+
+      // 3) Jika insert di tengah (finalLevel <= count), shift semua >= finalLevel ke atas (+1)
+      if (finalLevel <= count) {
+        await tx.dormitoryTrack.updateMany({
+          where: { dormitoryId, level: { gte: finalLevel } },
+          data: { level: { increment: 1 } }
+        })
+      }
+
+      // 4) Buat pivot dengan level final
+      await tx.dormitoryTrack.create({
+        data: { dormitoryId, trackId: track.id, level: finalLevel }
+      })
+
+      return track
     })
 
-    // Hubungkan track dengan dormitory
-    await db.dormitoryTrack.create({
-      data: {
-        trackId: track.id,
-        dormitoryId
-      }
-    })
-
-    return {
-      success: true,
-      data: track
-    }
+    return { success: true, data: { id: result.id, name: result.name } }
   } catch (error: unknown) {
     console.error('Error in createNewTrackForDormitory:', error)
 
-    return {
-      success: false,
-      error: 'Failed to create and assign track.'
-    }
+    return { success: false, error: 'Failed to create and assign track.' }
   }
 }
 
 export async function updateTrack(
   data: Partial<TrackFormSchema>
 ): Promise<SimpleResponse<{ id: string; name: string }>> {
+  const { id: trackId, dormitoryId, level: newLevelRaw, name, targetDays } = data
+
   try {
-    // 1. Validasi input
-    if (!data.id) {
-      return {
-        success: false,
-        error: 'Track ID is required.'
+    if (!trackId) return { success: false, error: 'Track ID is required.' }
+    if (!dormitoryId) return { success: false, error: 'Dormitory ID is required.' }
+
+    const result = await db.$transaction(async tx => {
+      // --- 0) NORMALIZE: reindex ke 1..n (bukan 0..n-1) ---
+      const rows = await tx.dormitoryTrack.findMany({
+        where: { dormitoryId },
+        orderBy: { level: 'asc' },
+        select: { trackId: true, level: true }
+      })
+
+      // Jika ada level 0 atau gap/duplikat, reindex ke 1..n
+      for (let i = 0; i < rows.length; i++) {
+        const shouldBe = i + 1
+
+        if (rows[i].level !== shouldBe) {
+          await tx.dormitoryTrack.update({
+            where: { dormitoryId_trackId: { dormitoryId, trackId: rows[i].trackId } },
+            data: { level: shouldBe }
+          })
+        }
       }
-    }
 
-    // Asumsikan `data.level` adalah level yang baru. Kita pastikan nilainya bukan null/undefined.
-    if (data.level === undefined || data.level === null) {
-      return {
-        success: false,
-        error: 'New level is required for this operation.'
-      }
-    }
+      // --- 1) Ambil oldLevel setelah normalisasi 1-based ---
+      const pivot = await tx.dormitoryTrack.findUnique({
+        where: { dormitoryId_trackId: { dormitoryId, trackId } },
+        select: { level: true }
+      })
 
-    // 2. Ambil track yang sudah ada dan pastikan level-nya tidak null
-    const existingTrack = await db.track.findUnique({
-      where: { id: data.id },
-      select: { level: true }
-    })
+      if (!pivot) throw new Error('Track belum terhubung dengan dormitory tersebut.')
+      const oldLevel = pivot.level // 1-based
 
-    if (!existingTrack) {
-      return {
-        success: false,
-        error: 'Track not found.'
-      }
-    }
+      // --- 2) Reorder bila newLevel dikirim & berbeda ---
+      if (newLevelRaw !== undefined && newLevelRaw !== null && newLevelRaw !== oldLevel) {
+        if (newLevelRaw < 1) throw new Error('Level baru minimal 1.')
 
-    // Jika level lama tidak ada, kita tidak bisa melakukan pergeseran.
-    if (existingTrack.level === null) {
-      // Di sini Anda bisa memilih untuk mengembalikan error atau
-      // langsung memperbarui level tanpa pergeseran.
-      // Saya merekomendasikan mengembalikan error untuk konsistensi.
-      return {
-        success: false,
-        error: 'Existing track level is null, cannot perform position shift.'
-      }
-    }
+        // hitung count (setelah normalize) dan clamp ke [1..count]
+        const count = rows.length
+        const clamped = Math.min(Math.max(newLevelRaw, 1), Math.max(1, count)) // 1..count
+        const newLevel = clamped
 
-    const oldLevel = existingTrack.level as number
-    const newLevel = data.level as number
+        if (newLevel < oldLevel) {
+          // geser [newLevel .. oldLevel-1] naik (+1)
+          await tx.dormitoryTrack.updateMany({
+            where: { dormitoryId, level: { gte: newLevel, lt: oldLevel } },
+            data: { level: { increment: 1 } }
+          })
+        } else if (newLevel > oldLevel) {
+          // geser [oldLevel+1 .. newLevel] turun (-1)
+          await tx.dormitoryTrack.updateMany({
+            where: { dormitoryId, level: { gt: oldLevel, lte: newLevel } },
+            data: { level: { decrement: 1 } }
+          })
+        }
 
-    // 3. Logika pergeseran posisi (level)
-    if (oldLevel !== newLevel) {
-      if (newLevel < oldLevel) {
-        // Jika level baru lebih kecil, geser semua track antara newLevel dan oldLevel ke bawah (increment)
-        await db.track.updateMany({
-          where: {
-            level: {
-              gte: newLevel,
-              lt: oldLevel
-            }
-          },
-          data: {
-            level: {
-              increment: 1
-            }
-          }
-        })
-      } else {
-        // newLevel > oldLevel
-        // Jika level baru lebih besar, geser semua track antara oldLevel dan newLevel ke atas (decrement)
-        await db.track.updateMany({
-          where: {
-            level: {
-              gt: oldLevel,
-              lte: newLevel
-            }
-          },
-          data: {
-            level: {
-              decrement: 1
-            }
-          }
+        // set level baru untuk pasangan ini
+        await tx.dormitoryTrack.update({
+          where: { dormitoryId_trackId: { dormitoryId, trackId } },
+          data: { level: newLevel }
         })
       }
-    }
 
-    // 4. Perbarui track utama
-    const updated = await db.track.update({
-      where: { id: data.id },
-      data: {
-        name: data.name,
-        targetDays: data.targetDays ?? 0,
-        level: newLevel
+      // --- 3) Update field global Track (opsional; hindari null di Int) ---
+      if (name !== undefined || typeof targetDays === 'number') {
+        const updated = await tx.track.update({
+          where: { id: trackId },
+          data: {
+            ...(name !== undefined ? { name } : {}),
+            ...(typeof targetDays === 'number' ? { targetDays } : {})
+          },
+          select: { id: true, name: true }
+        })
+
+        return updated
       }
+
+      // --- 4) Return minimal info ---
+      const t = await tx.track.findUnique({
+        where: { id: trackId },
+        select: { id: true, name: true }
+      })
+
+      if (!t) throw new Error('Track tidak ditemukan setelah update.')
+
+      return t
     })
 
-    return {
-      success: true,
-      data: {
-        id: updated.id,
-        name: updated.name
-      }
-    }
-  } catch (error: unknown) {
+    return { success: true, data: result }
+  } catch (error) {
     console.error('Error in updateTrack:', error)
 
-    return {
-      success: false,
-      error: 'Failed to update track. Please try again.'
-    }
+    return { success: false, error: 'Failed to update track. Please try again.' }
   }
 }
 
@@ -1726,7 +1744,7 @@ export async function updateSubject(
       }
     }
 
-    console.log(JSON.stringify(data, null, 2))
+    // console.log(JSON.stringify(data, null, 2))
 
     const subjectInstance = await db.subject.update({
       where: {
@@ -1753,4 +1771,325 @@ export async function updateSubject(
       error: 'Gagal update kelas '
     }
   }
+}
+
+/**
+ * Menutup History akademik aktif (STUDYING) jika ada.
+ * - 0 aktif  -> lanjut (no-op)
+ * - 1 aktif  -> update: status=GRADUATED, endDate=effectiveDate
+ * - >1 aktif -> error
+ * Return: { closed: boolean, updatedId?: string }
+ */
+// export async function closeActiveAcademicHistoryInTx(
+//   tx: Prisma.TransactionClient,
+//   studentId: string,
+//   effectiveDate: Date
+// ): Promise<{ closed: boolean; updatedId?: string }> {
+//   const actives = await tx.history.findMany({
+//     where: { studentId, status: 'STUDYING', endDate: null },
+//     select: { id: true }
+//   })
+
+//   if (actives.length === 0) {
+//     // Tidak ada history akademik aktif → lanjut tanpa gagal
+//     return { closed: false }
+//   }
+
+//   if (actives.length > 1) {
+//     // Data kotor: lebih dari satu STUDYING
+//     throw new Error('Lebih dari satu History akademik aktif (STUDYING). Harap rapikan data.')
+//   }
+
+//   const updated = await tx.history.update({
+//     where: { id: actives[0].id },
+//     data: {
+//       status: 'GRADUATED' as HistoryStatus, // ubah ke 'TRANSFERRED' bila itu kebijakanmu
+//       endDate: effectiveDate
+//     },
+//     select: { id: true }
+//   })
+
+//   return { closed: true, updatedId: updated.id }
+// }
+
+// // =====================
+// // Helper: pindahkan 1 siswa (di DALAM transaksi)
+// // =====================
+// async function moveOneDormitoryInTx(
+//   tx: Prisma.TransactionClient,
+//   params: {
+//     studentId: string
+//     fromDormitory: string
+//     toDormitory: string
+//     effectiveDate: Date
+//   }
+// ): Promise<{ historyId: string; skipped: boolean }> {
+//   const { studentId, fromDormitory, toDormitory, effectiveDate } = params
+
+//   // Pastikan siswa & asrama tujuan ada
+//   const [student, toDorm] = await Promise.all([
+//     tx.student.findUnique({ where: { id: studentId }, select: { id: true, dormitoryId: true } }),
+//     tx.dormitory.findUnique({ where: { id: toDormitory }, select: { id: true, name: true } })
+//   ])
+
+//   if (!student) throw new Error('Siswa tidak ditemukan.')
+//   if (!toDorm) throw new Error('Asrama tujuan tidak ditemukan.')
+
+//   // Ambil riwayat asrama aktif
+//   const currentActive = await tx.dormitoryHistory.findFirst({
+//     where: { studentId, endDate: null },
+//     orderBy: { startDate: 'desc' },
+//     select: { id: true, dormitoryId: true, startDate: true }
+//   })
+
+//   if (!currentActive) throw new Error('Tidak ada DormitoryHistory aktif untuk siswa.')
+
+//   // Validasi fromDormitory harus cocok
+//   if (currentActive.dormitoryId !== fromDormitory) {
+//     throw new Error('Asrama asal tidak sesuai dengan DormitoryHistory aktif.')
+//   }
+
+//   // Jika sudah di tujuan → anggap sukses (no-op), tapi tetap pastikan History akademik ditutup dulu
+//   const alreadyAtTarget = currentActive.dormitoryId === toDormitory
+
+//   // 1) Tutup History akademik aktif (STUDYING) -> GRADUATED + endDate
+//   await closeActiveAcademicHistoryInTx(tx, studentId, effectiveDate)
+
+//   if (alreadyAtTarget) {
+//     // Tidak perlu memodifikasi DormitoryHistory; return id aktif lama (sebagai marker)
+//     return { historyId: currentActive.id, skipped: true }
+//   }
+
+//   // 2) Pastikan tidak ada riwayat aktif lain
+//   const otherActive = await tx.dormitoryHistory.findFirst({
+//     where: { studentId, endDate: null, NOT: { id: currentActive.id } },
+//     select: { id: true }
+//   })
+
+//   if (otherActive) {
+//     throw new Error('Data kotor: ditemukan lebih dari satu DormitoryHistory aktif.')
+//   }
+
+//   // 3) Validasi tanggal efektif
+//   if (effectiveDate < currentActive.startDate) {
+//     throw new Error('effectiveAt lebih awal daripada start DormitoryHistory aktif.')
+//   }
+
+//   // 4) Tutup riwayat asrama lama
+//   await tx.dormitoryHistory.update({
+//     where: { id: currentActive.id },
+//     data: {
+//       endDate: effectiveDate,
+//       status: 'TRANSFERRED' satisfies DormitoryStatus
+//     }
+//   })
+
+//   // 5) Buat riwayat asrama baru
+//   const newHistory = await tx.dormitoryHistory.create({
+//     data: {
+//       studentId,
+//       dormitoryId: toDormitory,
+//       startDate: effectiveDate,
+//       endDate: null,
+//       status: 'ACTIVE',
+//       dormNameAtThatTime: toDorm.name
+//     },
+//     select: { id: true }
+//   })
+
+//   // 6) Update pointer asrama di Student (bila ada)
+//   await tx.student.update({
+//     where: { id: studentId },
+//     data: { dormitoryId: toDormitory }
+//   })
+
+//   return { historyId: newHistory.id, skipped: false }
+// }
+
+// export async function moveDormitoy(input: MoveDormitoryInput): Promise<
+//   APIResult<{
+//     historyIds: Record<string, string> // studentId -> historyId baru (atau aktif lama bila skipped)
+//     summary: { total: number; moved: number; skipped: number }
+//   }>
+// > {
+//   const parsed = moveDormitorySchema.safeParse(input)
+
+//   if (!parsed.success) {
+//     return { success: false, error: parsed.error.issues.map(i => i.message).join('; ') }
+//   }
+
+//   const { studentIds, fromDormitory, toDormitory, effectiveAt } = parsed.data
+//   const effectiveDate = DateTime.fromJSDate(effectiveAt ?? new Date(), { zone: 'Asia/Jakarta' }).toJSDate()
+
+//   // Validasi asrama (read-only) sebelum transaksi besar
+//   const [fromDorm, toDorm] = await Promise.all([
+//     db.dormitory.findUnique({ where: { id: fromDormitory }, select: { id: true } }),
+//     db.dormitory.findUnique({ where: { id: toDormitory }, select: { id: true } })
+//   ])
+
+//   if (!fromDorm) return { success: false, error: 'Asrama asal tidak ditemukan.' }
+//   if (!toDorm) return { success: false, error: 'Asrama tujuan tidak ditemukan.' }
+
+//   const historyIds: Record<string, string> = {}
+//   let moved = 0
+//   let skipped = 0
+
+//   try {
+//     await db.$transaction(async tx => {
+//       for (const sid of studentIds) {
+//         const r = await moveOneDormitoryInTx(tx, { studentId: sid, fromDormitory, toDormitory, effectiveDate })
+
+//         historyIds[sid] = r.historyId
+//         if (r.skipped) skipped += 1
+//         else moved += 1
+//       }
+//     })
+//   } catch (e: any) {
+//     return { success: false, error: e?.message || 'Gagal memindahkan siswa (atomic).' }
+//   }
+
+//   return {
+//     success: true,
+//     data: {
+//       historyIds,
+//       summary: { total: studentIds.length, moved, skipped }
+//     }
+//   }
+// }
+
+// ===== Schema input (1 set param, banyak siswa) =====
+
+export async function moveDormitory(input: MoveDormitoryInput): Promise<APIResult<{ total: number; moved: number }>> {
+  const parsed = moveDormitorySchema.safeParse(input)
+
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues.map(i => i.message).join('; ') }
+  }
+
+  const { studentIds, fromDormitory, toDormitory, effectiveAt } = parsed.data
+  const effectiveDate = DateTime.fromJSDate(effectiveAt ?? new Date(), { zone: 'Asia/Jakarta' }).toJSDate()
+
+  try {
+    await db.$transaction(
+      async tx => {
+        // 0) Ambil info asrama tujuan sekali
+        const toDorm = await tx.dormitory.findUnique({
+          where: { id: toDormitory },
+          select: { id: true, name: true }
+        })
+
+        if (!toDorm) throw new Error('Asrama tujuan tidak ditemukan.')
+
+        // 1) Ambil DormitoryHistory aktif SEMUA siswa sekali
+        const activeDorms = await tx.dormitoryHistory.findMany({
+          where: { studentId: { in: studentIds }, endDate: null },
+          select: { id: true, studentId: true, dormitoryId: true, startDate: true }
+        })
+
+        const counts = new Map<string, number>()
+
+        for (const h of activeDorms) counts.set(h.studentId, (counts.get(h.studentId) ?? 0) + 1)
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const dup = [...counts.entries()].filter(([_, c]) => c > 1).map(([sid]) => sid)
+
+        if (dup.length) {
+          throw new Error(
+            `Ada siswa dengan >1 DormitoryHistory aktif: ${dup.slice(0, 3).join(', ')}${dup.length > 3 ? ` (+${dup.length - 3} lagi)` : ''}`
+          )
+        }
+
+        // Validasi: harus persis 1 aktif per siswa
+        if (activeDorms.length !== studentIds.length) {
+          const haveActive = new Set(activeDorms.map(x => x.studentId))
+          const missing = studentIds.filter(id => !haveActive.has(id))
+
+          if (missing.length) {
+            throw new Error(
+              `Beberapa siswa tidak punya DormitoryHistory aktif: ${missing.slice(0, 3).join(', ')}${missing.length > 3 ? ` (+${missing.length - 3} lagi)` : ''}`
+            )
+          }
+        }
+
+        // Validasi: semua aktif harus di fromDormitory
+        const mismatched = activeDorms.filter(h => h.dormitoryId !== fromDormitory)
+
+        if (mismatched.length) {
+          const ids = mismatched.map(m => m.studentId)
+
+          throw new Error(
+            `Asrama asal tidak sesuai untuk siswa: ${ids.slice(0, 3).join(', ')}${ids.length > 3 ? ` (+${ids.length - 3} lagi)` : ''}`
+          )
+        }
+
+        // Validasi waktu: effective >= startDate
+        const badDate = activeDorms.find(h => effectiveDate < h.startDate)
+
+        if (badDate)
+          throw new Error('effectiveAt lebih awal daripada start DormitoryHistory aktif (minimal satu siswa).')
+
+        // 2) Cek History akademik aktif (STUDYING) untuk semua siswa
+        const academicActives = await tx.history.findMany({
+          where: { studentId: { in: studentIds }, status: 'STUDYING', endDate: null },
+          select: { id: true, studentId: true }
+        })
+
+        // Cek duplikat STUDYING per siswa
+        {
+          const count = new Map<string, number>()
+
+          for (const h of academicActives) count.set(h.studentId, (count.get(h.studentId) ?? 0) + 1)
+
+          const dupes = Array.from(count.entries())
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            .filter(([_, c]) => c > 1)
+            .map(([sid]) => sid)
+
+          if (dupes.length) {
+            throw new Error(
+              `Ada siswa dengan >1 History akademik aktif: ${dupes.slice(0, 3).join(', ')}${dupes.length > 3 ? ` (+${dupes.length - 3} lagi)` : ''}`
+            )
+          }
+        }
+
+        // 3) Tutup History akademik aktif (bulk, no-op kalau 0)
+        await tx.history.updateMany({
+          where: { studentId: { in: studentIds }, status: 'STUDYING', endDate: null },
+          data: { status: 'GRADUATED', endDate: effectiveDate }
+        })
+
+        // 4) Tutup DormitoryHistory aktif (bulk)
+        const activeIds = activeDorms.map(h => h.id)
+
+        await tx.dormitoryHistory.updateMany({
+          where: { id: { in: activeIds } },
+          data: { endDate: effectiveDate, status: 'TRANSFERRED' }
+        })
+
+        // 5) Buat DormitoryHistory baru (bulk)
+        await tx.dormitoryHistory.createMany({
+          data: activeDorms.map(h => ({
+            studentId: h.studentId,
+            dormitoryId: toDormitory,
+            startDate: effectiveDate,
+            endDate: null,
+            status: 'ACTIVE',
+            dormNameAtThatTime: toDorm.name
+          }))
+        })
+
+        // 6) Update pointer asrama di Student (bulk)
+        await tx.student.updateMany({
+          where: { id: { in: studentIds } },
+          data: { dormitoryId: toDormitory }
+        })
+
+        // Selesai: semua langkah di satu transaksi
+      },
+      { timeout: 30_000, maxWait: 5_000 }
+    ) // <-- NAIKKAN TIMEOUT
+  } catch (e: any) {
+    return { success: false, error: e?.message || 'Gagal memindahkan siswa (atomic).' }
+  }
+
+  return { success: true, data: { total: studentIds.length, moved: studentIds.length } }
 }

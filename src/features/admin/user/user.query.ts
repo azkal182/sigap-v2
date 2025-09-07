@@ -1,7 +1,9 @@
 'use client'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 
-import { updateCredentialsAction } from './user.action'
+import { getUsersFilterAction, updateCredentialsAction } from './user.action'
+import type { FilterUserParams } from './schemas/user-schema'
+import { ActionError } from '@/utils/action-error'
 
 // export function useChangeCredentials() {
 //   return useMutation({
@@ -28,5 +30,24 @@ export const useChangeCredentials = () => {
 
       return res.data
     }
+  })
+}
+
+export const useUsers = (params: FilterUserParams, isValid: boolean) => {
+  return useQuery({
+    queryKey: ['students', { ...params }],
+    queryFn: async () => {
+      const res = await getUsersFilterAction(params)
+
+      if (!res.success) {
+        throw new ActionError(res.error, res.issues)
+      }
+
+      return {
+        data: res.data,
+        pagination: res.pagination
+      }
+    },
+    enabled: isValid
   })
 }

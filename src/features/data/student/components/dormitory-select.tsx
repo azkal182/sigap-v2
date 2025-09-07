@@ -55,7 +55,8 @@ export default function DormitorySelect() {
         id='dormitory'
         value={selectedDormitory}
         onChange={handleChange}
-        className='border px-2 rounded  w-[200px]'
+        fullWidth
+        sx={{ width: { xs: '100%', sm: 200 } }} // mobile full, ≥sm 200px
       >
         {dormitories.map(d => (
           <MenuItem key={d.id} value={d.id}>

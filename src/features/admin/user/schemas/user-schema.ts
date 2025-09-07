@@ -1,5 +1,12 @@
 import { z } from 'zod'
 
+import { basePaginationSchema } from '@/schemas/base-pagination-schema'
+
+// Student schema
+export const filterUserSchema = basePaginationSchema.extend({
+  dormitoryId: z.string().optional().default(''),
+  sortBy: z.enum(['name']).default('name')
+})
 export const createUserSchema = z.object({
   name: z.string().min(1),
   username: z.string().min(1),
@@ -23,3 +30,4 @@ export const updateUserSchema = createUserSchema
 
 export type createUserFormInput = z.infer<typeof createUserSchema>
 export type updateUserFormInput = z.infer<typeof updateUserSchema>
+export type FilterUserParams = z.infer<typeof filterUserSchema>

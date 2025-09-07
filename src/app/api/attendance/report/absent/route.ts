@@ -243,6 +243,8 @@ export async function GET(req: NextRequest) {
     if (sendReport) {
       const result = await generateAndSendReport(data, ['404000198'])
 
+      //   await generateAndSendReportToWhatsApp(data, ['6287833372003@s.whatsapp.net']) // Ganti dengan nomor WhatsApp yang valid
+
       return NextResponse.json({ data: result })
     }
 

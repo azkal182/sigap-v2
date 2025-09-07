@@ -17,12 +17,15 @@ import { DataTableWithParams } from '@/components/DataTableWithParams'
 import TeacherFormDialog from './components/teacher-dialog'
 import type { TeacherItem } from './teacher.service'
 import { usePermissionStore } from '@/store/permission'
+import { useConfirm } from '@/hooks/useConfirm'
+import { ActionError } from '@/utils/action-error'
 
 const TeacherPageView = () => {
   // 1. Change the state variable name for clarity and consistency
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedTeacher, setSelectedTeacher] = useState<Partial<CreateTeacherInput> | null>(null)
   const [dialogMode, setDialogMode] = useState<'create' | 'edit'>('create')
+  const confirm = useConfirm()
 
   const { allowedDormitoryIds: dormitoryId } = usePermissionStore()
 
@@ -74,6 +77,9 @@ const TeacherPageView = () => {
 
           return (
             <div className='flex gap-2'>
+              <IconButton size='small' onClick={() => handleOpenConfirmDialog(dorm.name, dorm.id)}>
+                <i className='tabler-lock text-yellow-400' />
+              </IconButton>
               <IconButton size='small' onClick={() => handleOpenEditDialog(dorm)}>
                 <i className='tabler-edit text-green-400' />
               </IconButton>
@@ -129,6 +135,44 @@ const TeacherPageView = () => {
     setDialogOpen(true)
   }, [])
 
+  const handleOpenConfirmDialog = useCallback(async (name: string, id: string) => {
+    const ok = await confirm({
+      title: 'Reset password?',
+      description: `apakah anda yakin akan melakukan reset password ${name}?, password akan direset ke default`,
+      confirmText: 'Reset',
+      confirmColor: 'warning',
+
+      // onConfirm opsional kalau mau ada pre-logic sebelum resolve:
+      onConfirm: async () => {
+        try {
+          //   const res = await closePermit({ permitId: id })
+
+          toast.success(`Password ${name} berhasil direset`)
+        } catch (err: any) {
+          if (err instanceof ActionError) {
+            // kalau kamu menyertakan issues dari server
+            // bisa tampilkan detail tertentu
+            toast.error(err.message || 'Gagal memperbaharui data!')
+          } else {
+            toast.error('Terjadi kesalahan tak terduga')
+          }
+
+          console.log(id)
+
+          // kalau kamu ingin modal TIDAK “resolve true” saat gagal,
+          // boleh throw lagi biar ConfirmProvider menutup sebagai cancel:
+          // throw err
+        }
+      }
+    })
+
+    if (ok) {
+      // lanjutkan hapus
+      console.log('Deleted!')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const handleOpenEditDialog = useCallback((item: TeacherItem) => {
     setDialogMode('edit')
     setSelectedTeacher({
@@ -182,19 +226,26 @@ const TeacherPageView = () => {
         isLoading={queryLoading || !searchParams.isReady}
         searchPlaceholder='Cari Pengajar...'
         addButton={
-          <>
-            <Link
-              href={{
-                pathname: '/api/export/teachers',
-                query: { dormitoryId }
-              }}
+          <div className='w-full grid grid-cols-1 gap-2 sm:auto-cols-max sm:grid-flow-col'>
+            {/* Hindari <Link><Button/></Link>; gunakan Button as <a> */}
+            <Button
+              component={Link}
+              href={`/api/export/teachers?${dormitoryId.map(id => `dormitoryId=${id}`).join('&')}`}
+              variant='outlined'
+              className='w-full sm:w-auto'
             >
-              <Button variant='outlined'>Export</Button>
-            </Link>
-            <Button variant='contained' startIcon={<i className='tabler-plus' />} onClick={handleOpenCreateDialog}>
-              Tambah Pengajar
+              Export
             </Button>
-          </>
+
+            <Button
+              variant='contained'
+              startIcon={<i className='tabler-plus' />}
+              onClick={handleOpenCreateDialog}
+              className='w-full sm:w-auto'
+            >
+              Tambah
+            </Button>
+          </div>
         }
       />
     </div>

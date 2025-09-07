@@ -28,7 +28,7 @@ export default function ScheduleSubject({
             slotMinTime='05:00:00'
             slotMaxTime='22:00:00'
             slotDuration='00:25:00'
-            hiddenDays={[5]} // Sembunyikan Jumat
+            hiddenDays={[]} // Sembunyikan Jumat 5
             firstDay={6} // Mulai dari Sabtu
             events={events}
             headerToolbar={false}

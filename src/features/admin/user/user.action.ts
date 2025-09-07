@@ -3,10 +3,12 @@ import { hash } from 'bcryptjs'
 
 import { z } from 'zod'
 
-import { getUsers, updateCredentials } from './user.service'
+import { getUsers, getUsersFilter, updateCredentials } from './user.service'
 import { requirePermission } from '@/utils/require-permission'
 import prisma from '@/lib/prisma'
 import { redis } from '@/lib/redis'
+import { filterUserSchema, type FilterUserParams } from './schemas/user-schema'
+import { validateAndRun } from '@/utils/validate-and-run'
 
 export const getUsersAction = async () => {
   try {
@@ -81,12 +83,12 @@ export async function createUser(data: {
   dormitoryIds?: string[]
   permissionOverrides?: { permissionId: string; allow: boolean }[]
 }) {
-  const hashed = await hash(data.password, 10)
+  const hashed = await hash(data.password.trim(), 10)
 
   return prisma.user.create({
     data: {
       name: data.name,
-      username: data.username,
+      username: data.username.trim(),
       password: hashed,
       roleId: data.roleId,
       userDormitories: {
@@ -113,8 +115,8 @@ export async function updateUser(
   const updates: any = {}
 
   if (data.name) updates.name = data.name
-  if (data.username) updates.username = data.username
-  if (data.password) updates.password = await hash(data.password, 10)
+  if (data.username) updates.username = data.username.trim()
+  if (data.password) updates.password = await hash(data.password.trim(), 10)
   if (data.roleId) updates.roleId = data.roleId
 
   const tx = await prisma.$transaction(async tx => {
@@ -239,4 +241,8 @@ export async function updateCredentialsAction(input: z.infer<typeof updateSchema
 
     return { success: false, message: 'Gagal memperbarui kredensial' }
   }
+}
+
+export async function getUsersFilterAction(filter: FilterUserParams) {
+  return validateAndRun(filterUserSchema, filter, getUsersFilter)
 }
