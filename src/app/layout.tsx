@@ -1,3 +1,5 @@
+import Head from 'next/head'
+
 // MUI Imports
 import InitColorSchemeScript from '@mui/material/InitColorSchemeScript'
 
@@ -18,8 +20,6 @@ import '@assets/iconify-icons/generated-icons.css'
 import NextAuthProviders from '@/components/providers/next-auth-providers'
 import { auth } from '@/lib/auth'
 import ReactQueryProviders from './react-query-provider'
-
-import Head from 'next/head'
 
 export const metadata = {
   title: 'Sigap - PPDF',
