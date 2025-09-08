@@ -19,6 +19,8 @@ import NextAuthProviders from '@/components/providers/next-auth-providers'
 import { auth } from '@/lib/auth'
 import ReactQueryProviders from './react-query-provider'
 
+import Head from 'next/head'
+
 export const metadata = {
   title: 'Sigap - PPDF',
   description: 'Sigap - PPDF'
@@ -35,7 +37,10 @@ const RootLayout = async (props: ChildrenType) => {
   const session = await auth()
 
   return (
-    <html id='__next' lang='en' dir={direction} suppressHydrationWarning>
+    <html id='__next' lang='id' translate='no' dir={direction} suppressHydrationWarning>
+      <Head>
+        <meta name='google' content='notranslate' />
+      </Head>
       <body className='flex is-full min-bs-full flex-auto flex-col'>
         <InitColorSchemeScript attribute='data' defaultMode={systemMode} />
         <NextAuthProviders session={session}>
