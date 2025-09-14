@@ -138,7 +138,7 @@ function toWhatsAppJid(phone?: string | null): string | null {
   return `${digits}@s.whatsapp.net`
 }
 
-export async function sendReportToOneRecipient(recipientId: string, data: Dormitory[], date?: Date) {
+export async function sendReportToOneRecipient(recipientId: string, data: Dormitory[], date: Date) {
   const r = await prisma.recipient.findUnique({
     where: { id: recipientId },
     select: {

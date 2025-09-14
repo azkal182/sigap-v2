@@ -210,7 +210,7 @@ import { NextResponse } from 'next/server'
 import { DateTime } from 'luxon'
 
 import { getDailyReportByDormAndClass } from '@/lib/get-report-daily-by-dormitory-and-class'
-import { generateAndSendReport, generatePdfBuffer } from '@/lib/pdfService'
+import { generateAndSendReport, generatePdfBuffer, generatePdfBufferPdfkit } from '@/lib/pdfService'
 import { parseBoolean } from '@/lib/parseBoolean'
 
 // --- Endpoint GET untuk Laporan Harian berdasarkan Asrama & Kelas ---
@@ -238,10 +238,16 @@ export async function GET(req: NextRequest) {
     const month = luxonDate.month
     const day = luxonDate.day
 
+    console.log({ year, month, day })
+
     const data = await getDailyReportByDormAndClass(year, month, day, timeZone)
 
+    if (data.length === 0) {
+      return NextResponse.json({ error: 'laporan tidak ditemukan' }, { status: 404 })
+    }
+
     if (sendReport) {
-      const result = await generateAndSendReport(data, ['404000198'])
+      const result = await generateAndSendReport(data, ['404000198'], luxonDate.toJSDate())
 
       //   await generateAndSendReportToWhatsApp(data, ['6287833372003@s.whatsapp.net']) // Ganti dengan nomor WhatsApp yang valid
 
@@ -249,10 +255,11 @@ export async function GET(req: NextRequest) {
     }
 
     // 2. Panggil fungsi yang hanya membuat buffer
-    const pdfBuffer = await generatePdfBuffer(data)
+    // const pdfBuffer = await generatePdfBuffer(data)
+    const pdfBuffer = await generatePdfBufferPdfkit(data, luxonDate.toJSDate())
 
     // 3. Buat nama file
-    const fileName = `Laporan_Absensi.pdf`
+    const fileName = `Laporan_Absensi_santri_${luxonDate}.pdf`
 
     // 4. Kembalikan sebagai response untuk download
     return new NextResponse(pdfBuffer, {
