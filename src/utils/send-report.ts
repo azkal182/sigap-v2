@@ -62,7 +62,7 @@ export async function getActiveWhatsAppJids() {
  * Kirim laporan ke SEMUA penerima Telegram aktif.
  * Tetap memakai fungsi kamu: generateAndSendReport(data, telegramId[], date?)
  */
-export async function sendReportToAllTelegram(data: Dormitory[], date?: Date) {
+export async function sendReportToAllTelegram(data: Dormitory[], date: Date) {
   const telegramIds = await getActiveTelegramChatIds()
 
   if (telegramIds.length === 0) {
@@ -76,7 +76,7 @@ export async function sendReportToAllTelegram(data: Dormitory[], date?: Date) {
  * Kirim laporan ke SEMUA penerima WhatsApp aktif.
  * WA tetap pakai random delay + langsung return (lihat implementasi sendPdfToWhatsApp).
  */
-export async function sendReportToAllWhatsApp(data: Dormitory[], date?: Date) {
+export async function sendReportToAllWhatsApp(data: Dormitory[], date: Date) {
   const whatsappJids = await getActiveWhatsAppJids()
 
   if (whatsappJids.length === 0) {
@@ -90,7 +90,7 @@ export async function sendReportToAllWhatsApp(data: Dormitory[], date?: Date) {
 /**
  * Kirim laporan ke SEMUA penerima aktif (Telegram + WhatsApp).
  */
-export async function sendReportToAllRecipients(data: Dormitory[], date?: Date) {
+export async function sendReportToAllRecipients(data: Dormitory[], date: Date) {
   const [telegramIds, whatsappJids] = await Promise.all([getActiveTelegramChatIds(), getActiveWhatsAppJids()])
 
   if (telegramIds.length === 0 && whatsappJids.length === 0) {

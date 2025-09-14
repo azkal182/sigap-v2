@@ -210,7 +210,7 @@ import { NextResponse } from 'next/server'
 import { DateTime } from 'luxon'
 
 import { getDailyReportByDormAndClass } from '@/lib/get-report-daily-by-dormitory-and-class'
-import { generateAndSendReport, generatePdfBuffer, generatePdfBufferPdfkit } from '@/lib/pdfService'
+import { generateAndSendReport, generatePdfBufferPdfkit } from '@/lib/pdfService'
 import { parseBoolean } from '@/lib/parseBoolean'
 
 // --- Endpoint GET untuk Laporan Harian berdasarkan Asrama & Kelas ---
@@ -262,6 +262,7 @@ export async function GET(req: NextRequest) {
     const fileName = `Laporan_Absensi_santri_${luxonDate}.pdf`
 
     // 4. Kembalikan sebagai response untuk download
+    //   @ts-ignore
     return new NextResponse(pdfBuffer, {
       status: 200,
       headers: {

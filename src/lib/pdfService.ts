@@ -343,7 +343,8 @@ function drawStudentTable(doc: PDFKit.PDFDocument, students: Student[]) {
     style: { textColor: string; fillColor?: string; bold?: boolean }
   ) {
     const padV = 4
-    const startY = doc.y
+
+    // const startY = doc.y
 
     // Hitung tinggi baris berdasar konten panjang
     const heights = texts.map((t, i) =>
@@ -571,6 +572,7 @@ export const generatePdfBuffer = async (data: Dormitory[], date?: Date): Promise
 // FUNGSI 2: HANYA MENGIRIM PDF KE TELEGRAM
 // ======================================================================
 export const sendPdfToTelegram = async (pdfBuffer: Buffer, caption: string, telegramId: string[], date: Date) => {
+  //   @ts-ignore
   const pdfBlob = new Blob([pdfBuffer], { type: 'application/pdf' })
   const fileName = `Laporan_Absensi_${format(date, 'dd-MM-yyyy', { locale: id })}.pdf`
 
@@ -690,6 +692,7 @@ export const sendPdfToWhatsApp = async (
 
   if (!apiKey) throw new Error('WA API key tidak ditemukan. Set WA_API_KEY/WHATSAPP_API_KEY di env.')
 
+  //   @ts-ignore
   const pdfBlob = new Blob([pdfBuffer], { type: 'application/pdf' })
 
   // Worker untuk kirim WA ke satu JID (punya retry/backoff)

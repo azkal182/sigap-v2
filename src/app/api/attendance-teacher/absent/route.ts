@@ -19,7 +19,7 @@ type TeacherEntry = {
   absences: TeacherAbsenceItem[]
 }
 
-export type DormitoryDailyTeacherReportData = {
+type DormitoryDailyTeacherReportData = {
   dormitoryName: string
   totalAbsences: { total: number; committee: number; teachers: number }
   teachers: TeacherEntry[]
@@ -137,6 +137,7 @@ export async function GET(req: NextRequest) {
         data
       })
 
+      //   @ts-ignore
       return new NextResponse(pdfBuffer, {
         status: 200,
         headers: {
@@ -179,28 +180,28 @@ export async function GET(req: NextRequest) {
 }
 
 // ==== TYPES (pakai yang kamu berikan) ====
-export type PDFInput = {
+type PDFInput = {
   tanggal: string
   data: Datum[]
 }
 
-export type Datum = {
+type Datum = {
   dormitoryName: string
   totalAbsences: TotalAbsences
   teachers: Teacher[]
 }
 
-export type Teacher = {
+type Teacher = {
   teacherName: string
   absences: Absence[]
 }
 
-export type Absence = {
+type Absence = {
   slot: number
   subjectName: string
 }
 
-export type TotalAbsences = {
+type TotalAbsences = {
   total: number
   committee: number
   teachers: number
@@ -211,7 +212,7 @@ export type TotalAbsences = {
 // import { DateTime } from 'luxon'
 
 // ==== MAIN ====
-export async function createTeacherAbsenceReportPDF(input: PDFInput): Promise<Buffer> {
+async function createTeacherAbsenceReportPDF(input: PDFInput): Promise<Buffer> {
   const doc = new PDFDocument({
     margin: 50,
     size: 'A4',
