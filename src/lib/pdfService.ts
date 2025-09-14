@@ -574,7 +574,8 @@ export const generatePdfBuffer = async (data: Dormitory[], date?: Date): Promise
 export const sendPdfToTelegram = async (pdfBuffer: Buffer, caption: string, telegramId: string[], date: Date) => {
   //   @ts-ignore
   const pdfBlob = new Blob([pdfBuffer], { type: 'application/pdf' })
-  const fileName = `Laporan_Absensi_${format(date, 'dd-MM-yyyy', { locale: id })}.pdf`
+  const luxonDate = DateTime.fromJSDate(date, { zone: 'Asia/Jakarta' })
+  const fileName = `Laporan_Absensi_${luxonDate.toFormat('dd-MM-yyyy')}.pdf`
 
   for (const chatId of telegramId) {
     const formData = new FormData()
