@@ -1,5 +1,606 @@
+// 'use client'
+
+// import { useEffect, useMemo, useState } from 'react'
+
+// import {
+//   Container,
+//   Paper,
+//   Typography,
+//   Button,
+//   Box,
+//   Card,
+//   CardContent,
+//   Alert,
+//   Stepper,
+//   Step,
+//   StepLabel,
+//   Grid,
+//   Divider,
+//   Chip,
+//   CircularProgress,
+//   Rating,
+//   Slider,
+//   Tooltip,
+//   Stack,
+//   AlertTitle,
+//   TextField
+// } from '@mui/material'
+
+// import { useActivePeriod, useFindStudentByNIS, useSubmitResponse, usePeriodStats } from '@/hooks/useSurvey'
+
+// type FormState = Record<string, any>
+
+// const r5Label = (v: number) =>
+//   (({ 1: 'Sangat Buruk', 2: 'Buruk', 3: 'Cukup', 4: 'Baik', 5: 'Sangat Baik' }) as any)[v] ?? ''
+
+// export default function SurveyWizardPage() {
+//   // 0 Identitas, 1 Survey, 2 Upload? (conditional), 3 Konfirmasi
+//   const { data: period } = useActivePeriod()
+//   const [activeStep, setActiveStep] = useState(0)
+
+//   // NIS wajib:
+//   const [nis, setNis] = useState('')
+//   const [hasSearched, setHasSearched] = useState(false)
+//   const { data: student, isFetching: searching, error: studentErr } = useFindStudentByNIS(nis, hasSearched)
+//   const submit = useSubmitResponse(period?.id ?? '')
+//   const { data: stats } = usePeriodStats(period?.id)
+
+//   const [form, setForm] = useState<FormState>({})
+//   const [uploadMap, setUploadMap] = useState<Record<string, { name: string; url: string; type: string } | null>>({})
+//   const [err, setErr] = useState('')
+
+//   const enableUploads = !!period?.template.meta.enableUploads
+
+//   const steps = enableUploads
+//     ? ['Identifikasi Siswa', 'Survey Pondok', 'Upload Dokumen', 'Konfirmasi']
+//     : ['Identifikasi Siswa', 'Survey Pondok', 'Konfirmasi']
+
+//   const uploadStepIndex = enableUploads ? 2 : -1
+//   const confirmStepIndex = enableUploads ? 3 : 2
+
+//   useEffect(() => {
+//     if (!period) return
+//     const init: FormState = {}
+
+//     period.template.fields.forEach(f => {
+//       init[f.key] = undefined
+//       if (f.type === 'rating_5' && f.comment?.enabled && f.comment.key) init[f.comment.key] = ''
+//     })
+//     setForm(init)
+
+//     const upInit: Record<string, any> = {}
+
+//     period.template.meta.uploadFields.forEach(u => (upInit[u.key] = null))
+//     setUploadMap(upInit)
+//   }, [period])
+
+//   const handleNextFromIdentitas = () => {
+//     setErr('')
+
+//     if (!nis.trim()) {
+//       setErr('NIS wajib diisi.')
+
+//       return
+//     }
+
+//     // trigger search
+//     setHasSearched(true)
+//   }
+
+//   // setelah dapat student → lanjut otomatis
+//   useEffect(() => {
+//     if (hasSearched) {
+//       if (student) setActiveStep(1)
+//       else if (studentErr) setErr('Data siswa tidak ditemukan.')
+//     }
+//   }, [hasSearched, student, studentErr])
+
+//   const handleChange = (k: string, v: any) => setForm(prev => ({ ...prev, [k]: v }))
+
+//   // validasi step Survey
+//   const surveyRequiredOk = useMemo(() => {
+//     if (!period) return false
+
+//     for (const f of period.template.fields) {
+//       const v = form[f.key]
+
+//       if (f.required) {
+//         if (f.type === 'rating_5' && !(typeof v === 'number' && v >= 1 && v <= 5)) return false
+//         if (f.type === 'nps_11' && !(typeof v === 'number' && v >= 0 && v <= 10)) return false
+//         if (f.type === 'text_long' && (!v || String(v).trim().length === 0)) return false
+//         if (f.type === 'file' && (!v || !v.url)) return false
+//       }
+
+//       if (f.type === 'rating_5' && f.comment?.enabled && f.comment.required && f.comment.key) {
+//         const note = form[f.comment.key]
+
+//         if (!note || String(note).trim().length === 0) return false
+//       }
+//     }
+
+//     return true
+//   }, [form, period])
+
+//   // validasi step Upload (jika aktif)
+//   const uploadOk = useMemo(() => {
+//     if (!enableUploads || !period) return true
+
+//     for (const u of period.template.meta.uploadFields) {
+//       const val = uploadMap[u.key]
+
+//       if (u.required && (!val || !val.url)) return false
+//     }
+
+//     return true
+//   }, [enableUploads, period, uploadMap])
+
+//   const liveAvg = useMemo(() => {
+//     if (!period) return 0
+
+//     const vals = period.template.fields
+//       .filter(f => f.type === 'rating_5')
+//       .map(f => Number(form[f.key] ?? 0))
+//       .filter(v => v >= 1 && v <= 5)
+
+//     if (!vals.length) return 0
+
+//     return Number((vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2))
+//   }, [form, period])
+
+//   const goNext = () => setActiveStep(s => s + 1)
+//   const goBack = () => setActiveStep(s => Math.max(0, s - 1))
+
+//   const onSubmit = async () => {
+//     if (!period || !student) return
+//     setErr('')
+
+//     // gabungkan upload ke answers (kuncinya gunakan key uploadFields)
+//     const answers = { ...form, ...uploadMap }
+
+//     try {
+//       await submit.mutateAsync({ studentId: student.id, answers })
+//       setActiveStep(confirmStepIndex + 1) // “success view”
+//     } catch (e: any) {
+//       setErr('Gagal mengirim data.')
+//     }
+//   }
+
+//   // Sukses page
+//   if (activeStep === confirmStepIndex + 1) {
+//     return (
+//       <Container maxWidth='md' sx={{ py: 8 }}>
+//         <Paper elevation={3} sx={{ p: 6, textAlign: 'center' }}>
+//           <i className='tabler-circle-check' />
+//           <Typography variant='h4' sx={{ fontWeight: 700, mb: 1, color: 'green' }}>
+//             Berhasil!
+//           </Typography>
+//           <Typography>Terima kasih. Jawaban Anda telah terkirim.</Typography>
+//           <Button sx={{ mt: 3 }} variant='contained' onClick={() => location.reload()}>
+//             Kembali ke Awal
+//           </Button>
+//         </Paper>
+//       </Container>
+//     )
+//   }
+
+//   return (
+//     <Container maxWidth='lg' sx={{ py: 6 }}>
+//       <Paper elevation={3} sx={{ p: 4 }}>
+//         <Box textAlign='center' mb={4}>
+//           <Typography variant='h4' fontWeight={700}>
+//             {period?.template.title ?? 'Survey'}
+//           </Typography>
+//           <Typography variant='subtitle1' color='text.secondary'>
+//             {period?.name}
+//           </Typography>
+//         </Box>
+
+//         <Box mb={4}>
+//           <Stepper activeStep={activeStep} alternativeLabel>
+//             {steps.map(label => (
+//               <Step key={label}>
+//                 <StepLabel>{label}</StepLabel>
+//               </Step>
+//             ))}
+//           </Stepper>
+//         </Box>
+
+//         {!!err && (
+//           <Alert severity='error' sx={{ mb: 2 }}>
+//             {err}
+//           </Alert>
+//         )}
+
+//         {/* Step 0: Identitas (NIS wajib) */}
+//         {activeStep === 0 && (
+//           <Card sx={{ mb: 3 }}>
+//             <CardContent sx={{ p: 4 }}>
+//               <Typography variant='h5' fontWeight={600} mb={2}>
+//                 Identifikasi Siswa
+//               </Typography>
+//               <Stack spacing={2}>
+//                 <TextField
+//                   label='Nomor Induk Siswa (NIS) *'
+//                   value={nis}
+//                   onChange={e => setNis(e.target.value)}
+//                   placeholder='Masukkan NIS siswa'
+//                 />
+//                 <Button
+//                   variant='contained'
+//                   onClick={handleNextFromIdentitas}
+//                   disabled={searching}
+//                   startIcon={searching ? <CircularProgress size={18} /> : undefined}
+//                 >
+//                   {searching ? 'Mencari...' : 'Cari Data'}
+//                 </Button>
+//               </Stack>
+
+//               {student && (
+//                 <Box mt={3} p={2} border='1px solid #e5e7eb' borderRadius={2}>
+//                   <Typography variant='h6' fontWeight={600} mb={1}>
+//                     Data Siswa Ditemukan
+//                   </Typography>
+//                   <Grid container spacing={1}>
+//                     <Grid item xs={12} sm={6}>
+//                       <b>NIS:</b> {student.nis}
+//                     </Grid>
+//                     <Grid item xs={12} sm={6}>
+//                       <b>Nama:</b> {student.name}
+//                     </Grid>
+//                     <Grid item xs={12} sm={6}>
+//                       <b>Kelas:</b> {student.class ?? '-'}
+//                     </Grid>
+//                     <Grid item xs={12} sm={6}>
+//                       <b>Sekolah:</b> {student.school ?? '-'}
+//                     </Grid>
+//                     <Grid item xs={12}>
+//                       <b>Alamat:</b> {student.address ?? '-'}
+//                     </Grid>
+//                   </Grid>
+//                   <Box mt={2} display='flex' justifyContent='flex-end'>
+//                     <Button variant='contained' onClick={goNext}>
+//                       Lanjutkan
+//                     </Button>
+//                   </Box>
+//                 </Box>
+//               )}
+//             </CardContent>
+//           </Card>
+//         )}
+
+//         {/* Step 1: Survey Pondok */}
+//         {activeStep === 1 && period && (
+//           <Card sx={{ mb: 3 }}>
+//             <CardContent sx={{ p: 4 }}>
+//               <Box display='flex' justifyContent='space-between' alignItems='center' mb={1}>
+//                 <Typography variant='h5' fontWeight={600}>
+//                   Survey Pondok
+//                 </Typography>
+//                 <Chip
+//                   label={`Rata-rata: ${liveAvg || '-'}`}
+//                   color={liveAvg >= 4 ? 'success' : liveAvg >= 3 ? 'warning' : 'default'}
+//                   variant='outlined'
+//                 />
+//               </Box>
+//               <Typography variant='body2' color='text.secondary' mb={2}>
+//                 Beri penilaian 1 (Sangat Buruk) s/d 5 (Sangat Baik).
+//               </Typography>
+
+//               <Grid container spacing={2}>
+//                 {period.template.fields.map(f => {
+//                   if (f.type === 'rating_5') {
+//                     const val = Number(form[f.key] ?? 0)
+
+//                     const showNote =
+//                       f.comment?.enabled &&
+//                       (f.comment.required ||
+//                         (f.comment.showWhenRatingLTE && val > 0 && val <= f.comment.showWhenRatingLTE))
+
+//                     return (
+//                       <Grid item xs={12} md={6} key={f.key}>
+//                         <Box p={2} border='1px solid #e5e7eb' borderRadius={2}>
+//                           <Box display='flex' justifyContent='space-between' alignItems='center' mb={0.5}>
+//                             <Typography variant='subtitle1' fontWeight={600}>
+//                               {f.label}
+//                               {f.required ? ' *' : ''}
+//                             </Typography>
+//                             <Typography variant='caption' color='text.secondary'>
+//                               {val ? r5Label(val) : 'Belum dinilai'}
+//                             </Typography>
+//                           </Box>
+//                           <Rating value={val || 0} onChange={(_, v) => handleChange(f.key, v ?? 0)} size='large' />
+//                           {f.comment?.enabled && f.comment.key && showNote && (
+//                             <Box mt={1.5}>
+//                               <TextField
+//                                 label={f.comment.label || 'Catatan'}
+//                                 fullWidth
+//                                 multiline
+//                                 rows={3}
+//                                 required={!!f.comment.required}
+//                                 value={form[f.comment.key] ?? ''}
+//                                 onChange={e => handleChange(f.comment!.key!, e.target.value)}
+//                               />
+//                             </Box>
+//                           )}
+//                         </Box>
+//                       </Grid>
+//                     )
+//                   }
+
+//                   if (f.type === 'nps_11') {
+//                     const val = Number(form[f.key] ?? 0)
+
+//                     return (
+//                       <Grid item xs={12} key={f.key}>
+//                         <Box p={2} border='1px solid #e5e7eb' borderRadius={2}>
+//                           <Typography variant='subtitle1' fontWeight={600}>
+//                             {f.label}
+//                             {f.required ? ' *' : ''}
+//                           </Typography>
+//                           <Box display='flex' gap={2} alignItems='center' mt={1}>
+//                             <Tooltip title={`${isNaN(val) ? 0 : val}`}>
+//                               <Slider
+//                                 value={isNaN(val) ? 0 : val}
+//                                 onChange={(_, v) => handleChange(f.key, Number(v))}
+//                                 min={0}
+//                                 max={10}
+//                                 step={1}
+//                                 marks={Array.from({ length: 11 }, (_, i) => ({ value: i, label: `${i}` }))}
+//                               />
+//                             </Tooltip>
+//                             <Chip label={isNaN(val) ? 0 : val} />
+//                           </Box>
+//                         </Box>
+//                       </Grid>
+//                     )
+//                   }
+
+//                   if (f.type === 'text_long') {
+//                     return (
+//                       <Grid item xs={12} key={f.key}>
+//                         <Box p={2} border='1px solid #e5e7eb' borderRadius={2}>
+//                           <TextField
+//                             label={`${f.label}${f.required ? ' *' : ''}`}
+//                             fullWidth
+//                             multiline
+//                             rows={5}
+//                             value={form[f.key] ?? ''}
+//                             onChange={e => handleChange(f.key, e.target.value)}
+//                           />
+//                         </Box>
+//                       </Grid>
+//                     )
+//                   }
+
+//                   return null // tipe file bukan di step ini
+//                 })}
+//               </Grid>
+//             </CardContent>
+//           </Card>
+//         )}
+
+//         {/* Step 2: Upload (jika aktif) */}
+//         {activeStep === uploadStepIndex && enableUploads && period && (
+//           <Card sx={{ mb: 3 }}>
+//             <CardContent sx={{ p: 4 }}>
+//               <Typography variant='h5' fontWeight={600} mb={1}>
+//                 Upload Dokumen Arsip
+//               </Typography>
+//               <Alert severity='info' sx={{ mb: 2 }}>
+//                 <AlertTitle>Info</AlertTitle>Silakan unggah dokumen sesuai ketentuan periode.
+//               </Alert>
+
+//               <Grid container spacing={2}>
+//                 {period.template.meta.uploadFields.map(u => (
+//                   <Grid item xs={12} md={6} key={u.key}>
+//                     <Box p={2} border='1px solid #e5e7eb' borderRadius={2}>
+//                       <Typography variant='subtitle1' fontWeight={600}>
+//                         {u.label}
+//                         {u.required ? ' *' : ''}
+//                       </Typography>
+//                       <Box mt={1} display='flex' gap={2} alignItems='center'>
+//                         <Button variant='outlined' component='label'>
+//                           Pilih File
+//                           <input
+//                             type='file'
+//                             accept={u.accept}
+//                             hidden
+//                             onChange={e => {
+//                               const f = e.target.files?.[0]
+
+//                               if (!f) return
+
+//                               // TODO: ganti dengan upload API sebenarnya, simpan URL permanen
+//                               const url = URL.createObjectURL(f)
+
+//                               setUploadMap(prev => ({ ...prev, [u.key]: { name: f.name, url, type: f.type } }))
+//                             }}
+//                           />
+//                         </Button>
+//                         {uploadMap[u.key]?.name && (
+//                           <Chip label={`Terunggah: ${uploadMap[u.key]?.name}`} color='success' variant='outlined' />
+//                         )}
+//                       </Box>
+//                     </Box>
+//                   </Grid>
+//                 ))}
+//               </Grid>
+
+//               <Alert severity='warning' sx={{ mt: 2 }}>
+//                 <Typography variant='body2'>
+//                   <b>Catatan:</b> Gunakan format sesuai ketentuan (mis. JPG/PNG/PDF).
+//                 </Typography>
+//               </Alert>
+//             </CardContent>
+//           </Card>
+//         )}
+
+//         {/* Step 3: Konfirmasi */}
+//         {activeStep === confirmStepIndex && (
+//           <Card sx={{ mb: 3 }}>
+//             <CardContent sx={{ p: 4 }}>
+//               <Typography variant='h5' fontWeight={600} mb={2}>
+//                 Konfirmasi Data
+//               </Typography>
+
+//               {/* ringkasan identitas */}
+//               <Box mb={2}>
+//                 <Typography variant='h6' color='primary' fontWeight={700} mb={1}>
+//                   Data Siswa
+//                 </Typography>
+//                 <Typography>
+//                   {student?.name} ({student?.nis})
+//                 </Typography>
+//                 <Typography variant='body2' color='text.secondary'>
+//                   {student?.class ?? '-'} · {student?.school ?? '-'}
+//                 </Typography>
+//                 {student?.address && (
+//                   <Typography variant='body2' color='text.secondary'>
+//                     {student.address}
+//                   </Typography>
+//                 )}
+//               </Box>
+
+//               <Divider sx={{ my: 2 }} />
+
+//               {/* ringkasan survey */}
+//               <Box mb={2}>
+//                 <Box display='flex' justifyContent='space-between' alignItems='center'>
+//                   <Typography variant='h6' color='primary' fontWeight={700}>
+//                     Ringkasan Survey
+//                   </Typography>
+//                   <Chip label={`Rata-rata: ${liveAvg || '-'}`} color='primary' variant='outlined' />
+//                 </Box>
+//                 <Grid container spacing={1} mt={0.5}>
+//                   {period?.template.fields.map(f => {
+//                     if (f.type === 'rating_5') {
+//                       return (
+//                         <Grid item xs={12} md={6} key={f.key}>
+//                           <Box
+//                             display='flex'
+//                             justifyContent='space-between'
+//                             border='1px solid #eee'
+//                             p={1.2}
+//                             borderRadius={1.2}
+//                           >
+//                             <Typography variant='body2'>{f.label}</Typography>
+//                             <Chip label={form[f.key] ?? '-'} size='small' />
+//                           </Box>
+//                         </Grid>
+//                       )
+//                     }
+
+//                     if (f.type === 'nps_11') {
+//                       return (
+//                         <Grid item xs={12} md={6} key={f.key}>
+//                           <Box
+//                             display='flex'
+//                             justifyContent='space-between'
+//                             border='1px solid #eee'
+//                             p={1.2}
+//                             borderRadius={1.2}
+//                           >
+//                             <Typography variant='body2'>{f.label}</Typography>
+//                             <Chip label={form[f.key] ?? '-'} size='small' />
+//                           </Box>
+//                         </Grid>
+//                       )
+//                     }
+
+//                     if (f.type === 'text_long' && form[f.key]) {
+//                       return (
+//                         <Grid item xs={12} key={f.key}>
+//                           <Typography variant='body2' color='text.secondary' mb={0.5}>
+//                             {f.label}
+//                           </Typography>
+//                           <Typography variant='body1'>{form[f.key]}</Typography>
+//                         </Grid>
+//                       )
+//                     }
+
+//                     return null
+//                   })}
+//                 </Grid>
+//               </Box>
+
+//               {enableUploads && (
+//                 <>
+//                   <Divider sx={{ my: 2 }} />
+//                   <Box>
+//                     <Typography variant='h6' color='primary' fontWeight={700} mb={1}>
+//                       Dokumen Terunggah
+//                     </Typography>
+//                     <Grid container spacing={1}>
+//                       {period?.template.meta.uploadFields.map(u => (
+//                         <Grid item xs={12} md={6} key={u.key}>
+//                           <Chip
+//                             className='w-full'
+//                             label={`${u.label}: ${uploadMap[u.key]?.name ?? '-'}`}
+//                             color='success'
+//                             variant='outlined'
+//                           />
+//                         </Grid>
+//                       ))}
+//                     </Grid>
+//                   </Box>
+//                 </>
+//               )}
+//             </CardContent>
+//           </Card>
+//         )}
+
+//         {/* Navigasi */}
+//         <Box display='flex' justifyContent='space-between'>
+//           <Button disabled={activeStep === 0} onClick={goBack} variant='outlined'>
+//             Kembali
+//           </Button>
+
+//           {activeStep === 0 && (
+//             <Button variant='contained' onClick={handleNextFromIdentitas} disabled={searching || !nis.trim()}>
+//               {searching ? 'Mencari...' : 'Cari & Lanjutkan'}
+//             </Button>
+//           )}
+
+//           {activeStep === 1 && (
+//             <Button variant='contained' onClick={goNext} disabled={!surveyRequiredOk}>
+//               Lanjutkan
+//             </Button>
+//           )}
+
+//           {enableUploads && activeStep === uploadStepIndex && (
+//             <Button variant='contained' onClick={goNext} disabled={!uploadOk}>
+//               Lanjutkan
+//             </Button>
+//           )}
+
+//           {activeStep === confirmStepIndex && (
+//             <Button
+//               variant='contained'
+//               onClick={onSubmit}
+//               disabled={submit.isPending}
+//               startIcon={submit.isPending ? <CircularProgress size={16} /> : undefined}
+//             >
+//               {submit.isPending ? 'Mengirim...' : 'Kirim Survey'}
+//             </Button>
+//           )}
+//         </Box>
+
+//         {/* Footer kecil: info total respons */}
+//         {stats && (
+//           <Box mt={2} textAlign='right'>
+//             <Typography variant='caption' color='text.secondary'>
+//               Total respons periode: <b>{stats.totalResponses}</b>
+//             </Typography>
+//           </Box>
+//         )}
+//       </Paper>
+//     </Container>
+//   )
+// }
+
 'use client'
-import { useState, useMemo } from 'react'
+
+import { useEffect, useMemo, useState } from 'react'
 
 import {
   Container,
@@ -21,275 +622,225 @@ import {
   Slider,
   Tooltip,
   Stack,
-  AlertTitle
+  AlertTitle,
+  LinearProgress
 } from '@mui/material'
 
+import { useActivePeriod, useFindStudentByNIS, useSubmitResponse, usePeriodStats } from '@/hooks/useSurvey'
 import CustomTextField from '@/@core/components/mui/TextField'
 
-// ======================= Types =======================
-interface StudentData {
-  nis: string
-  name: string
-  class: string
-  school: string
-  address: string
+type FormState = Record<string, any>
+
+type UploadItem = {
+  file?: File | null
+  name?: string
+  url?: string // preview ObjectURL
+  type?: string
 }
 
-// Rating 1..5
-type R5 = 1 | 2 | 3 | 4 | 5
+const MAX_FILE_BYTES = 15 * 1024 * 1024
 
-interface SurveyData {
-  generalSatisfaction: R5 | 0
-  dormCleanliness: R5 | 0
-  foodQuality: R5 | 0
-  securityDiscipline: R5 | 0
-  religiousActivities: R5 | 0
-  teacherCommunication: R5 | 0
-  facilities: R5 | 0
-  healthService: R5 | 0
-  administration: R5 | 0
-  financeTransparency: R5 | 0
-  academicCoaching: R5 | 0
-
-  // NPS 0..10
-  npsRecommend: number
-
-  // Long text tetap ada
-  feedback: string
-}
-
-interface ArchiveFiles {
-  familyCard: File | null
-  certificate: File | null
-  birthCertificate: File | null
-}
-
-// ======================= Label Helpers =======================
 const r5Label = (v: number) =>
-  (({ 1: 'Sangat Buruk', 2: 'Buruk', 3: 'Cukup', 4: 'Baik', 5: 'Sangat Baik' }) as Record<number, string>)[v] ?? ''
+  (({ 1: 'Sangat Buruk', 2: 'Buruk', 3: 'Cukup', 4: 'Baik', 5: 'Sangat Baik' }) as any)[v] ?? ''
 
-const npsMarks = Array.from({ length: 11 }, (_, i) => ({ value: i, label: `${i}` }))
-
-const categories: Array<{ key: keyof SurveyData; title: string }> = [
-  { key: 'generalSatisfaction', title: 'Kepuasan Umum' },
-  { key: 'dormCleanliness', title: 'Kebersihan Asrama' },
-  { key: 'foodQuality', title: 'Kualitas Makanan' },
-  { key: 'securityDiscipline', title: 'Keamanan & Kedisiplinan' },
-  { key: 'religiousActivities', title: 'Kegiatan Keagamaan' },
-  { key: 'teacherCommunication', title: 'Komunikasi dengan Pengasuh/Ustadz' },
-  { key: 'facilities', title: 'Fasilitas' },
-  { key: 'healthService', title: 'Layanan Kesehatan' },
-  { key: 'administration', title: 'Pelayanan Administrasi' },
-  { key: 'financeTransparency', title: 'Transparansi Keuangan' },
-  { key: 'academicCoaching', title: 'Kegiatan Akademik/Pembinaan' }
-]
-
-// ======================= Component =======================
-export default function SurveyArchiveApp() {
+export default function SurveyWizardPage() {
+  // 0 Identitas, 1 Survey, 2 Upload? (conditional), 3 Konfirmasi
+  const { data: period } = useActivePeriod()
   const [activeStep, setActiveStep] = useState(0)
-  const [nis, setNis] = useState('87654321')
-  const [studentData, setStudentData] = useState<StudentData | null>(null)
 
-  const [surveyData, setSurveyData] = useState<SurveyData>({
-    generalSatisfaction: 0,
-    dormCleanliness: 0,
-    foodQuality: 0,
-    securityDiscipline: 0,
-    religiousActivities: 0,
-    teacherCommunication: 0,
-    facilities: 0,
-    healthService: 0,
-    administration: 0,
-    financeTransparency: 0,
-    academicCoaching: 0,
-    npsRecommend: 0,
-    feedback: ''
+  // NIS wajib:
+  const [nis, setNis] = useState('')
+  const [hasSearched, setHasSearched] = useState(false)
+  const { data: student, isFetching: searching, error: studentErr } = useFindStudentByNIS(nis, hasSearched)
+
+  // ==== Upload progress state (bonus) ====
+  const [uploadPct, setUploadPct] = useState<number>(0)
+
+  // Hook submit (mendukung JSON & multipart + progress)
+  const submit = useSubmitResponse(period?.id ?? '', {
+    onUploadProgress: pct => setUploadPct(pct)
   })
 
-  const [archiveFiles, setArchiveFiles] = useState<ArchiveFiles>({
-    familyCard: null,
-    certificate: null,
-    birthCertificate: null
-  })
+  const { data: stats } = usePeriodStats(period?.id)
 
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState(false)
+  const [form, setForm] = useState<FormState>({})
+  const [uploadMap, setUploadMap] = useState<Record<string, UploadItem>>({})
+  const [err, setErr] = useState('')
 
-  const steps = ['Identifikasi Siswa', 'Survey Pondok', 'Upload Dokumen', 'Konfirmasi']
+  const enableUploads = !!period?.template.meta.enableUploads
 
-  // ======================= Dummy API =======================
-  const fetchStudentData = async (nisInput: string): Promise<StudentData | null> => {
-    setLoading(true)
-    setError('')
-    await new Promise(resolve => setTimeout(resolve, 800))
+  const steps = enableUploads
+    ? ['Identifikasi Siswa', 'Survey Pondok', 'Upload Dokumen', 'Konfirmasi']
+    : ['Identifikasi Siswa', 'Survey Pondok', 'Konfirmasi']
 
-    const dummyStudents: Record<string, StudentData> = {
-      '12345678': {
-        nis: '12345678',
-        name: 'Ahmad Rizki Pratama',
-        class: 'XII IPA 1',
-        school: 'SMA Negeri 1 Jakarta',
-        address: 'Jl. Merdeka No. 123, Jakarta Pusat'
-      },
-      '87654321': {
-        nis: '87654321',
-        name: 'Siti Nurhaliza',
-        class: 'XI IPS 2',
-        school: 'SMA Negeri 2 Bandung',
-        address: 'Jl. Sudirman No. 456, Bandung'
-      },
-      '11223344': {
-        nis: '11223344',
-        name: 'Budi Santoso',
-        class: 'X MIPA 3',
-        school: 'SMA Negeri 3 Surabaya',
-        address: 'Jl. Pemuda No. 789, Surabaya'
-      }
+  const uploadStepIndex = enableUploads ? 2 : -1
+  const confirmStepIndex = enableUploads ? 3 : 2
+
+  useEffect(() => {
+    if (!period) return
+    const init: FormState = {}
+
+    period.template.fields.forEach(f => {
+      init[f.key] = undefined
+      if (f.type === 'rating_5' && f.comment?.enabled && f.comment.key) init[f.comment.key] = ''
+    })
+    setForm(init)
+
+    const upInit: Record<string, UploadItem> = {}
+
+    if (period.template.meta?.uploadFields) {
+      period.template.meta.uploadFields.forEach(u => (upInit[u.key] = { file: null }))
     }
 
-    setLoading(false)
-    if (dummyStudents[nisInput]) return dummyStudents[nisInput]
-    setError('Data siswa dengan NIS tersebut tidak ditemukan')
+    setUploadMap(upInit)
+  }, [period])
 
-    return null
-  }
+  // reset progress bila tidak sedang submit
+  useEffect(() => {
+    if (!submit.isPending) setUploadPct(0)
+  }, [submit.isPending])
 
-  const handleSearchStudent = async () => {
+  const handleNextFromIdentitas = () => {
+    setErr('')
+
     if (!nis.trim()) {
-      setError('Mohon masukkan NIS')
+      setErr('NIS wajib diisi.')
 
       return
     }
 
-    const data = await fetchStudentData(nis)
+    // trigger search
+    setHasSearched(true)
+  }
 
-    if (data) {
-      setStudentData(data)
-      setActiveStep(1)
+  // setelah dapat student → lanjut otomatis
+  useEffect(() => {
+    if (hasSearched) {
+      if (student) setActiveStep(1)
+      else if (studentErr) setErr('Data siswa tidak ditemukan.')
     }
-  }
+  }, [hasSearched, student, studentErr])
 
-  const setRating = (key: keyof SurveyData, val: R5) => {
-    setSurveyData(prev => ({ ...prev, [key]: val }))
-  }
+  const handleChange = (k: string, v: any) => setForm(prev => ({ ...prev, [k]: v }))
 
-  const handleFileUpload = (field: keyof ArchiveFiles, file: File) => {
-    setArchiveFiles(prev => ({ ...prev, [field]: file }))
-  }
+  // validasi step Survey
+  const surveyRequiredOk = useMemo(() => {
+    if (!period) return false
 
-  // ======================= Validation + Stats =======================
-  const requiredRatingsFilled = useMemo(() => {
-    return categories.every(c => {
-      const v = surveyData[c.key]
+    for (const f of period.template.fields) {
+      const v = form[f.key]
 
-      return typeof v === 'number' && v >= 1 && v <= 5
-    })
-  }, [surveyData])
+      if (f.required) {
+        if (f.type === 'rating_5' && !(typeof v === 'number' && v >= 1 && v <= 5)) return false
+        if (f.type === 'nps_11' && !(typeof v === 'number' && v >= 0 && v <= 10)) return false
+        if (f.type === 'text_long' && (!v || String(v).trim().length === 0)) return false
+        if (f.type === 'file' && (!v || !v.url)) return false
+      }
 
-  const avgScore = useMemo(() => {
-    const vals = categories.map(c => (surveyData[c.key] as number) || 0).filter(v => v > 0)
+      if (f.type === 'rating_5' && f.comment?.enabled && f.comment.required && f.comment.key) {
+        const note = form[f.comment.key]
+
+        if (!note || String(note).trim().length === 0) return false
+      }
+    }
+
+    return true
+  }, [form, period])
+
+  // validasi step Upload (jika aktif) → cek file, bukan url
+  const uploadOk = useMemo(() => {
+    if (!enableUploads || !period) return true
+
+    for (const u of period.template.meta.uploadFields) {
+      const val = uploadMap[u.key]
+
+      if (u.required && !(val && val.file)) return false
+    }
+
+    return true
+  }, [enableUploads, period, uploadMap])
+
+  const liveAvg = useMemo(() => {
+    if (!period) return 0
+
+    const vals = period.template.fields
+      .filter(f => f.type === 'rating_5')
+      .map(f => Number(form[f.key] ?? 0))
+      .filter(v => v >= 1 && v <= 5)
 
     if (!vals.length) return 0
-    const sum = vals.reduce((a, b) => a + b, 0)
 
-    return Number((sum / vals.length).toFixed(2))
-  }, [surveyData])
+    return Number((vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2))
+  }, [form, period])
 
-  const npsType = useMemo(() => {
-    // 0-6 Detractors, 7-8 Passives, 9-10 Promoters (indikasi individual)
-    if (surveyData.npsRecommend >= 9) return 'Promoter'
-    if (surveyData.npsRecommend >= 7) return 'Passive'
+  const goNext = () => setActiveStep(s => s + 1)
+  const goBack = () => setActiveStep(s => Math.max(0, s - 1))
 
-    return 'Detractor'
-  }, [surveyData.npsRecommend])
+  // === SUBMIT ===
+  const onSubmit = async () => {
+    if (!period || !student) return
+    setErr('')
+    setUploadPct(0)
 
-  const handleNext = () => {
-    if (activeStep === 1) {
-      if (!requiredRatingsFilled) {
-        setError('Mohon lengkapi semua skor kategori (1–5).')
-
-        return
-      }
-    }
-
-    if (activeStep === 2) {
-      if (!archiveFiles.familyCard || !archiveFiles.certificate || !archiveFiles.birthCertificate) {
-        setError('Mohon upload semua dokumen yang diperlukan')
+    for (const u of period.template.meta.uploadFields) {
+      if (u.required && !uploadMap[u.key]?.file) {
+        setErr(`Upload "${u.label}" (${u.key}) wajib diisi.`)
 
         return
       }
     }
 
-    setError('')
-    setActiveStep(prev => prev + 1)
-  }
+    try {
+      if (enableUploads) {
+        // Guard “wajib multipart” ketika enableUploads,
+        // supaya pasti melewati kompres + upload di server.
+        const fd = new FormData()
 
-  const handleSubmit = async () => {
-    setLoading(true)
+        fd.set('studentId', student.id)
 
-    // Contoh payload siap statistik
-    const payload = {
-      student: studentData,
-      survey: surveyData,
-      stats: { averageScore: avgScore }
+        // answers non-file (server akan isi upload fields)
+        const answersNonFile: Record<string, any> = { ...form }
+
+        period.template.meta.uploadFields.forEach(u => {
+          delete (answersNonFile as any)[u.key]
+        })
+        fd.set('answers', JSON.stringify(answersNonFile))
+
+        // lampirkan file sesuai key
+        period.template.meta.uploadFields.forEach(u => {
+          const item = uploadMap[u.key]
+
+          if (item?.file) {
+            fd.set(u.key, item.file, item.file.name)
+          }
+        })
+
+        await submit.mutateAsync({ formData: fd })
+      } else {
+        // Mode JSON (tidak ada file)
+        const answers = { ...form } // tidak ada uploadMap
+
+        await submit.mutateAsync({ studentId: student.id, answers })
+      }
+
+      setActiveStep(confirmStepIndex + 1) // “success view”
+    } catch (e: any) {
+      console.error('[SUBMIT] error:', e?.message || e)
+      setErr('Gagal mengirim data.')
     }
-
-    // Simulasi submit
-    await new Promise(r => setTimeout(r, 1200))
-
-    console.log('Submit payload:', payload)
-    setLoading(false)
-    setSuccess(true)
   }
 
-  const FileUploadBox = ({
-    label,
-    file,
-    onChange,
-    accept = 'image/*'
-  }: {
-    label: string
-    file: File | null
-    onChange: (file: File) => void
-    accept?: string
-  }) => (
-    <Box className='border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors'>
-      <input
-        type='file'
-        accept={accept}
-        onChange={e => e.target.files?.[0] && onChange(e.target.files[0])}
-        style={{ display: 'none' }}
-        id={`upload-${label.replace(/\s+/g, '-')}`}
-      />
-      <label htmlFor={`upload-${label.replace(/\s+/g, '-')}`} className='cursor-pointer'>
-        <i className='tabler-cloud-upload text-gray-400 mb-2' />
-        <Typography variant='body1' className='mb-2 font-medium'>
-          {label}
-        </Typography>
-        {file ? (
-          <Chip label={file.name} color='success' variant='outlined' />
-        ) : (
-          <Typography variant='body2' color='textSecondary'>
-            Klik untuk upload atau drag & drop
-          </Typography>
-        )}
-      </label>
-    </Box>
-  )
-
-  if (success) {
+  // Sukses page
+  if (activeStep === confirmStepIndex + 1) {
     return (
-      <Container maxWidth='md' className='py-8'>
-        <Paper elevation={3} className='p-8 text-center'>
-          <i className='tabler-circle-check text-green-500 mb-4' />
-          <Typography variant='h4' className='mb-4 font-bold text-green-600'>
+      <Container maxWidth='md' sx={{ py: 8 }}>
+        <Paper elevation={3} sx={{ p: 6, textAlign: 'center' }}>
+          <i className='tabler-circle-check' />
+          <Typography variant='h4' sx={{ fontWeight: 700, mb: 1, color: 'green' }}>
             Berhasil!
           </Typography>
-          <Typography variant='body1' className='mb-6'>
-            Survey dan dokumen arsip Anda telah berhasil dikirim. Terima kasih atas partisipasi Anda.
-          </Typography>
-          <Button variant='contained' onClick={() => window.location.reload()}>
+          <Typography>Terima kasih. Jawaban Anda telah terkirim.</Typography>
+          <Button sx={{ mt: 3 }} variant='contained' onClick={() => location.reload()}>
             Kembali ke Awal
           </Button>
         </Paper>
@@ -298,20 +849,18 @@ export default function SurveyArchiveApp() {
   }
 
   return (
-    <Container maxWidth='lg' className='py-8'>
-      <Paper elevation={3} className='p-6'>
-        {/* Header */}
-        <Box className='mb-8 text-center'>
-          <Typography variant='h3' className='font-bold mb-2'>
-            Survey Wali Santri & Arsip Data
+    <Container maxWidth='lg' sx={{ py: 6 }}>
+      <Paper elevation={3} sx={{ p: 4 }}>
+        <Box textAlign='center' mb={4}>
+          <Typography variant='h4' fontWeight={700}>
+            {period?.template.title ?? 'Survey'}
           </Typography>
-          <Typography variant='subtitle1' color='textSecondary'>
-            Sistem Survey Pondok dan Pengarsipan Dokumen Siswa
+          <Typography variant='subtitle1' color='text.secondary'>
+            {period?.name}
           </Typography>
         </Box>
 
-        {/* Stepper */}
-        <Box className='mb-8'>
+        <Box mb={4}>
           <Stepper activeStep={activeStep} alternativeLabel>
             {steps.map(label => (
               <Step key={label}>
@@ -321,358 +870,446 @@ export default function SurveyArchiveApp() {
           </Stepper>
         </Box>
 
-        {error && (
-          <Alert severity='error' className='mb-4'>
-            {error}
+        {!!err && (
+          <Alert severity='error' sx={{ mb: 2 }}>
+            {err}
           </Alert>
         )}
 
-        {/* Step 1: Student Identification */}
+        {/* Progress upload (bonus) tampil saat sedang submit multipart */}
+        {enableUploads && submit.isPending && (
+          <Box mb={2}>
+            <Typography variant='caption' sx={{ display: 'block', mb: 0.5 }}>
+              Mengunggah & memproses dokumen… {uploadPct ? `${uploadPct}%` : ''}
+            </Typography>
+            <LinearProgress variant={uploadPct > 0 ? 'determinate' : 'indeterminate'} value={uploadPct} />
+          </Box>
+        )}
+
+        {/* Step 0: Identitas (NIS wajib) */}
         {activeStep === 0 && (
-          <Card className='mb-6'>
-            <CardContent className='p-6'>
-              <Typography variant='h5' className='mb-4 font-semibold'>
+          <Card sx={{ mb: 3 }}>
+            <CardContent sx={{ p: 4 }}>
+              <Typography variant='h5' fontWeight={600} mb={2}>
                 Identifikasi Siswa
               </Typography>
-              <Stack spacing={3}>
+              <Stack spacing={2}>
                 <CustomTextField
-                  fullWidth
-                  label='Nomor Induk Siswa (NIS)'
+                  label='Nomor Induk Siswa (NIS) *'
                   value={nis}
                   onChange={e => setNis(e.target.value)}
                   placeholder='Masukkan NIS siswa'
                 />
                 <Button
-                  fullWidth
                   variant='contained'
-                  onClick={handleSearchStudent}
-                  disabled={loading}
-                  startIcon={loading ? <CircularProgress size={20} /> : <i className='tabler-search' />}
+                  onClick={handleNextFromIdentitas}
+                  disabled={searching}
+                  startIcon={searching ? <CircularProgress size={18} /> : undefined}
                 >
-                  {loading ? 'Mencari...' : 'Cari Data'}
+                  {searching ? 'Mencari...' : 'Cari Data'}
                 </Button>
               </Stack>
-              {/* <Grid container spacing={3}>
-                <Grid item xs={12} md={8}>
-                  <CustomTextField
-                    fullWidth
-                    label='Nomor Induk Siswa (NIS)'
-                    value={nis}
-                    onChange={e => setNis(e.target.value)}
-                    placeholder='Masukkan NIS siswa'
-                  />
-                </Grid>
-                <Grid item xs={12} md={4}>
-                  <Button
-                    fullWidth
-                    variant='contained'
-                    onClick={handleSearchStudent}
-                    disabled={loading}
-                    startIcon={loading ? <CircularProgress size={20} /> : <i className='tabler-search' />}
-                  >
-                    {loading ? 'Mencari...' : 'Cari Data'}
-                  </Button>
-                </Grid>
-              </Grid> */}
 
-              {studentData && (
-                <Box className='mt-6 p-4  rounded-lg'>
-                  <Typography variant='h6' className='mb-3 font-semibold'>
+              {student && (
+                <Box mt={3} p={2} border='1px solid #e5e7eb' borderRadius={2}>
+                  <Typography variant='h6' fontWeight={600} mb={1}>
                     Data Siswa Ditemukan
                   </Typography>
-                  <Grid container spacing={2}>
+                  <Grid container spacing={1}>
                     <Grid item xs={12} sm={6}>
-                      <Typography variant='body2' color='textSecondary'>
-                        NIS
-                      </Typography>
-                      <Typography variant='body1' className='font-medium'>
-                        {studentData.nis}
-                      </Typography>
+                      <b>NIS:</b> {student.nis}
                     </Grid>
                     <Grid item xs={12} sm={6}>
-                      <Typography variant='body2' color='textSecondary'>
-                        Nama Lengkap
-                      </Typography>
-                      <Typography variant='body1' className='font-medium'>
-                        {studentData.name}
-                      </Typography>
+                      <b>Nama:</b> {student.name}
                     </Grid>
                     <Grid item xs={12} sm={6}>
-                      <Typography variant='body2' color='textSecondary'>
-                        Kelas
-                      </Typography>
-                      <Typography variant='body1' className='font-medium'>
-                        {studentData.class}
-                      </Typography>
+                      <b>Kelas:</b> {student.class ?? '-'}
                     </Grid>
                     <Grid item xs={12} sm={6}>
-                      <Typography variant='body2' color='textSecondary'>
-                        Sekolah
-                      </Typography>
-                      <Typography variant='body1' className='font-medium'>
-                        {studentData.school}
-                      </Typography>
+                      <b>Sekolah:</b> {student.school ?? '-'}
                     </Grid>
                     <Grid item xs={12}>
-                      <Typography variant='body2' color='textSecondary'>
-                        Alamat
-                      </Typography>
-                      <Typography variant='body1' className='font-medium'>
-                        {studentData.address}
-                      </Typography>
+                      <b>Alamat:</b> {student.address ?? '-'}
                     </Grid>
                   </Grid>
+                  <Box mt={2} display='flex' justifyContent='flex-end'>
+                    <Button variant='contained' onClick={goNext}>
+                      Lanjutkan
+                    </Button>
+                  </Box>
                 </Box>
               )}
             </CardContent>
           </Card>
         )}
 
-        {/* Step 2: Survey Pondok */}
-        {activeStep === 1 && (
-          <Card className='mb-6'>
-            <CardContent className='p-6'>
-              <Box className='flex items-center justify-between mb-2'>
-                <Typography variant='h5' className='font-semibold'>
+        {/* Step 1: Survey Pondok */}
+        {activeStep === 1 && period && (
+          <Card sx={{ mb: 3 }}>
+            <CardContent sx={{ p: 4 }}>
+              <Box display='flex' justifyContent='space-between' alignItems='center' mb={1}>
+                <Typography variant='h5' fontWeight={600}>
                   Survey Pondok
                 </Typography>
                 <Chip
-                  label={`Rata-rata Skor: ${avgScore || '-'}`}
-                  color={avgScore >= 4 ? 'success' : avgScore >= 3 ? 'warning' : 'default'}
+                  label={`Rata-rata: ${liveAvg || '-'}`}
+                  color={liveAvg >= 4 ? 'success' : liveAvg >= 3 ? 'warning' : 'default'}
                   variant='outlined'
                 />
               </Box>
-              <Typography variant='body2' color='textSecondary' className='mb-4'>
-                Beri penilaian 1 (Sangat Buruk) sampai 5 (Sangat Baik).
+              <Typography variant='body2' color='text.secondary' mb={2}>
+                Beri penilaian 1 (Sangat Buruk) s/d 5 (Sangat Baik).
               </Typography>
 
-              <Grid container spacing={3}>
-                {categories.map(({ key, title }) => (
-                  <Grid item xs={12} md={6} key={String(key)}>
-                    <Box className='p-4 rounded-xl border border-gray-200'>
-                      <Box className='flex items-center justify-between mb-1'>
-                        <Typography variant='subtitle1' className='font-medium'>
-                          {title}
-                        </Typography>
-                        <Typography variant='caption' color='textSecondary'>
-                          {surveyData[key] ? r5Label(Number(surveyData[key])) : 'Belum dinilai'}
-                        </Typography>
+              <Grid container spacing={2}>
+                {period.template.fields.map(f => {
+                  if (f.type === 'rating_5') {
+                    const val = Number(form[f.key] ?? 0)
+
+                    const showNote =
+                      f.comment?.enabled &&
+                      (f.comment.required ||
+                        (f.comment.showWhenRatingLTE && val > 0 && val <= f.comment.showWhenRatingLTE))
+
+                    return (
+                      <Grid item xs={12} md={6} key={f.key}>
+                        <div className='p-2 border rounded-lg'>
+                          <Box display='flex' justifyContent='space-between' alignItems='center' mb={0.5}>
+                            <Typography variant='subtitle1' fontWeight={600}>
+                              {f.label}
+                              {f.required ? ' *' : ''}
+                            </Typography>
+                            <Typography variant='caption' color='text.secondary'>
+                              {val ? r5Label(val) : 'Belum dinilai'}
+                            </Typography>
+                          </Box>
+                          <Rating value={val || 0} onChange={(_, v) => handleChange(f.key, v ?? 0)} size='large' />
+                          {f.comment?.enabled && f.comment.key && showNote && (
+                            <Box mt={1.5}>
+                              <CustomTextField
+                                label={f.comment.label || 'Catatan'}
+                                fullWidth
+                                multiline
+                                rows={3}
+                                required={!!f.comment.required}
+                                value={form[f.comment.key] ?? ''}
+                                onChange={e => handleChange(f.comment!.key!, e.target.value)}
+                              />
+                            </Box>
+                          )}
+                        </div>
+                      </Grid>
+                    )
+                  }
+
+                  if (f.type === 'nps_11') {
+                    const val = Number(form[f.key] ?? 0)
+
+                    return (
+                      <Grid item xs={12} key={f.key}>
+                        <div className='p-2 border rounded-lg'>
+                          <Typography variant='subtitle1' fontWeight={600}>
+                            {f.label}
+                            {f.required ? ' *' : ''}
+                          </Typography>
+                          <Box display='flex' gap={2} alignItems='center' mt={1}>
+                            <Tooltip title={`${isNaN(val) ? 0 : val}`}>
+                              <Slider
+                                value={isNaN(val) ? 0 : val}
+                                onChange={(_, v) => handleChange(f.key, Number(v))}
+                                min={0}
+                                max={10}
+                                step={1}
+                                marks={Array.from({ length: 11 }, (_, i) => ({ value: i, label: `${i}` }))}
+                              />
+                            </Tooltip>
+                            <Chip label={isNaN(val) ? 0 : val} />
+                          </Box>
+                        </div>
+                      </Grid>
+                    )
+                  }
+
+                  if (f.type === 'text_long') {
+                    return (
+                      <Grid item xs={12} key={f.key}>
+                        <div className='p-2 border rounded-lg'>
+                          <CustomTextField
+                            label={`${f.label}${f.required ? ' *' : ''}`}
+                            fullWidth
+                            multiline
+                            rows={5}
+                            value={form[f.key] ?? ''}
+                            onChange={e => handleChange(f.key, e.target.value)}
+                          />
+                        </div>
+                      </Grid>
+                    )
+                  }
+
+                  return null // tipe file bukan di step ini
+                })}
+              </Grid>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Step 2: Upload (jika aktif) */}
+        {activeStep === uploadStepIndex && enableUploads && period && (
+          <Card sx={{ mb: 3 }}>
+            <CardContent sx={{ p: 4 }}>
+              <Typography variant='h5' fontWeight={600} mb={1}>
+                Upload Dokumen Arsip
+              </Typography>
+              <Alert severity='info' sx={{ mb: 2 }}>
+                <AlertTitle>Info</AlertTitle>Silakan unggah dokumen sesuai ketentuan periode.
+              </Alert>
+
+              <Grid container spacing={2}>
+                {period.template.meta.uploadFields.map(u => (
+                  <Grid item xs={12} md={6} key={u.key}>
+                    <Box p={2} border='1px solid #e5e7eb' borderRadius={2}>
+                      <Typography variant='subtitle1' fontWeight={600}>
+                        {u.label}
+                        {u.required ? ' *' : ''}
+                      </Typography>
+                      <Box mt={1} display='flex' gap={2} alignItems='center'>
+                        <Button variant='outlined' component='label' disabled={submit.isPending}>
+                          Pilih File
+                          <input
+                            type='file'
+                            accept={u.accept}
+                            hidden
+                            onChange={e => {
+                              const f = e.target.files?.[0]
+
+                              if (!f) return
+
+                              // Validasi sisi-klien: ukuran
+                              if (f.size > MAX_FILE_BYTES) {
+                                setErr(`File terlalu besar untuk "${u.label}" (maks 15MB).`)
+
+                                return
+                              }
+
+                              // Validasi tipe berdasarkan accept (jika tersedia)
+                              if (u.accept && f.type) {
+                                const accepts = u.accept.split(',').map(s => s.trim())
+
+                                const ok = accepts.some(a => {
+                                  if (a.startsWith('.')) {
+                                    return f.name.toLowerCase().endsWith(a.toLowerCase())
+                                  }
+
+                                  if (a.endsWith('/*')) {
+                                    const prefix = a.slice(0, -1) // "image/*" -> "image/"
+
+                                    return f.type.startsWith(prefix)
+                                  }
+
+                                  return f.type === a
+                                })
+
+                                if (!ok) {
+                                  setErr(`Tipe file tidak sesuai untuk "${u.label}".`)
+
+                                  return
+                                }
+                              }
+
+                              // Revoke URL lama agar tidak leak
+                              setUploadMap(prev => {
+                                const prevUrl = prev[u.key]?.url
+
+                                if (prevUrl) URL.revokeObjectURL(prevUrl)
+
+                                const url = URL.createObjectURL(f) // preview baru
+
+                                return {
+                                  ...prev,
+                                  [u.key]: { file: f, name: f.name, url, type: f.type }
+                                }
+                              })
+                            }}
+                          />
+                        </Button>
+                        {uploadMap[u.key]?.name && (
+                          <Chip label={`Terpilih: ${uploadMap[u.key]?.name}`} color='success' variant='outlined' />
+                        )}
                       </Box>
-                      <Rating
-                        value={(surveyData[key] as number) || 0}
-                        onChange={(_, v) => v && setRating(key, v as R5)}
-                        size='large'
-                      />
                     </Box>
                   </Grid>
                 ))}
-
-                {/* NPS */}
-                <Grid item xs={12}>
-                  <Box className='p-4 rounded-xl border border-gray-200'>
-                    <Box className='flex items-center justify-between mb-2'>
-                      <Typography variant='subtitle1' className='font-medium'>
-                        Rekomendasi (NPS 0–10)
-                      </Typography>
-                      <Chip label={npsType} size='small' variant='outlined' />
-                    </Box>
-                    <Typography variant='body2' color='textSecondary' className='mb-2'>
-                      Seberapa besar kemungkinan Anda merekomendasikan pondok ini kepada orang lain?
-                    </Typography>
-                    <Tooltip title={`${surveyData.npsRecommend}`}>
-                      <Slider
-                        value={surveyData.npsRecommend}
-                        onChange={(_, v) => setSurveyData(prev => ({ ...prev, npsRecommend: v as number }))}
-                        step={1}
-                        min={0}
-                        max={10}
-                        marks={npsMarks}
-                      />
-                    </Tooltip>
-                  </Box>
-                </Grid>
-
-                {/* Saran & Masukan */}
-                <Grid item xs={12}>
-                  <CustomTextField
-                    fullWidth
-                    multiline
-                    rows={6}
-                    label='Saran & Masukan'
-                    value={surveyData.feedback}
-                    onChange={e => setSurveyData(prev => ({ ...prev, feedback: e.target.value }))}
-                    placeholder='Tulis masukan Anda untuk perbaikan pondok...'
-                  />
-                </Grid>
               </Grid>
-            </CardContent>
-          </Card>
-        )}
 
-        {/* Step 3: File Upload */}
-        {activeStep === 2 && (
-          <Card className='mb-6'>
-            <CardContent className='p-6'>
-              <Typography variant='h5' className='mb-4 font-semibold'>
-                Upload Dokumen Arsip
-              </Typography>
-              <Alert severity='info' className='mb-4'>
-                <AlertTitle>Info</AlertTitle>
-                Silakan unggah dokumen arsip yang diperlukan untuk melengkapi dan memvalidasi data pada sistem EMIS
-                Pondok Pesantren.
-              </Alert>
-
-              <Grid container spacing={4}>
-                <Grid item xs={12} md={4}>
-                  <FileUploadBox
-                    label='Kartu Keluarga'
-                    file={archiveFiles.familyCard}
-                    onChange={file => handleFileUpload('familyCard', file)}
-                  />
-                </Grid>
-                <Grid item xs={12} md={4}>
-                  <FileUploadBox
-                    label='Ijazah'
-                    file={archiveFiles.certificate}
-                    onChange={file => handleFileUpload('certificate', file)}
-                  />
-                </Grid>
-                <Grid item xs={12} md={4}>
-                  <FileUploadBox
-                    label='Akta Kelahiran'
-                    file={archiveFiles.birthCertificate}
-                    onChange={file => handleFileUpload('birthCertificate', file)}
-                  />
-                </Grid>
-              </Grid>
-              <Alert severity='warning' className='mt-4'>
+              <Alert severity='warning' sx={{ mt: 2 }}>
                 <Typography variant='body2'>
-                  <strong>Catatan:</strong> Format JPG/PNG, ukuran maksimal 5MB per file.
+                  <b>Catatan:</b> Gunakan format sesuai ketentuan (mis. JPG/PNG). File akan dikompresi di server sebelum
+                  diunggah ke Cloudinary.
                 </Typography>
               </Alert>
             </CardContent>
           </Card>
         )}
 
-        {/* Step 4: Confirmation */}
-        {activeStep === 3 && (
-          <Card className='mb-6'>
-            <CardContent className='p-6'>
-              <Typography variant='h5' className='mb-4 font-semibold'>
+        {/* Step 3: Konfirmasi */}
+        {activeStep === confirmStepIndex && (
+          <Card sx={{ mb: 3 }}>
+            <CardContent sx={{ p: 4 }}>
+              <Typography variant='h5' fontWeight={600} mb={2}>
                 Konfirmasi Data
               </Typography>
 
-              {/* Student Info Summary */}
-              <Box className='mb-6'>
-                <Typography variant='h6' className='mb-2 font-semibold text-blue-600'>
+              {/* ringkasan identitas */}
+              <Box mb={2}>
+                <Typography variant='h6' color='primary' fontWeight={700} mb={1}>
                   Data Siswa
                 </Typography>
-                <Typography variant='body1'>
-                  {studentData?.name} ({studentData?.nis})
+                <Typography>
+                  {student?.name} ({student?.nis})
                 </Typography>
-                <Typography variant='body2' color='textSecondary'>
-                  {studentData?.class} - {studentData?.school}
+                <Typography variant='body2' color='text.secondary'>
+                  {student?.class ?? '-'} · {student?.school ?? '-'}
                 </Typography>
+                {student?.address && (
+                  <Typography variant='body2' color='text.secondary'>
+                    {student.address}
+                  </Typography>
+                )}
               </Box>
 
-              <Divider className='my-4' />
+              <Divider sx={{ my: 2 }} />
 
-              {/* Survey Summary */}
-              <Box className='mb-6'>
-                <Box className='flex items-center justify-between'>
-                  <Typography variant='h6' className='mb-2 font-semibold text-blue-600'>
+              {/* ringkasan survey */}
+              <Box mb={2}>
+                <Box display='flex' justifyContent='space-between' alignItems='center'>
+                  <Typography variant='h6' color='primary' fontWeight={700}>
                     Ringkasan Survey
                   </Typography>
-                  <Chip label={`Rata-rata: ${avgScore || '-'}`} color='primary' variant='outlined' />
+                  <Chip label={`Rata-rata: ${liveAvg || '-'}`} color='primary' variant='outlined' />
                 </Box>
+                <Grid container spacing={1} mt={0.5}>
+                  {period?.template.fields.map(f => {
+                    if (f.type === 'rating_5') {
+                      return (
+                        <Grid item xs={12} md={6} key={f.key}>
+                          <Box
+                            display='flex'
+                            justifyContent='space-between'
+                            border='1px solid #eee'
+                            p={1.2}
+                            borderRadius={1.2}
+                          >
+                            <Typography variant='body2'>{f.label}</Typography>
+                            <Chip label={form[f.key] ?? '-'} size='small' />
+                          </Box>
+                        </Grid>
+                      )
+                    }
 
-                <Grid container spacing={2} className='mt-1'>
-                  {categories.map(({ key, title }) => (
-                    <Grid item xs={12} md={6} key={String(key)}>
-                      <Box className='flex items-center justify-between rounded-lg border p-3'>
-                        <Typography variant='body2'>{title}</Typography>
-                        <Chip label={surveyData[key] || '-'} size='small' />
-                      </Box>
-                    </Grid>
-                  ))}
+                    if (f.type === 'nps_11') {
+                      return (
+                        <Grid item xs={12} md={6} key={f.key}>
+                          <Box
+                            display='flex'
+                            justifyContent='space-between'
+                            border='1px solid #eee'
+                            p={1.2}
+                            borderRadius={1.2}
+                          >
+                            <Typography variant='body2'>{f.label}</Typography>
+                            <Chip label={form[f.key] ?? '-'} size='small' />
+                          </Box>
+                        </Grid>
+                      )
+                    }
 
-                  <Grid item xs={12} md={6}>
-                    <Box className='flex items-center justify-between rounded-lg border p-3'>
-                      <Typography variant='body2'>NPS (0–10)</Typography>
-                      <Chip label={surveyData.npsRecommend} size='small' />
-                    </Box>
-                  </Grid>
+                    if (f.type === 'text_long' && form[f.key]) {
+                      return (
+                        <Grid item xs={12} key={f.key}>
+                          <Typography variant='body2' color='text.secondary' mb={0.5}>
+                            {f.label}
+                          </Typography>
+                          <Typography variant='body1'>{form[f.key]}</Typography>
+                        </Grid>
+                      )
+                    }
 
-                  {surveyData.feedback && (
-                    <Grid item xs={12}>
-                      <Typography variant='body2' color='textSecondary' className='mb-1'>
-                        Saran & Masukan
-                      </Typography>
-                      <Typography variant='body1'>{surveyData.feedback}</Typography>
-                    </Grid>
-                  )}
+                    return null
+                  })}
                 </Grid>
               </Box>
 
-              <Divider className='my-4' />
-
-              {/* Files Summary */}
-              <Box className='mb-6'>
-                <Typography variant='h6' className='mb-2 font-semibold text-blue-600'>
-                  Dokumen Terunggah
-                </Typography>
-                <Grid container spacing={2}>
-                  <Grid item xs={12} sm={4}>
-                    <Chip
-                      label={`Kartu Keluarga: ${archiveFiles.familyCard?.name ?? '-'}`}
-                      color='success'
-                      variant='outlined'
-                      className='w-full'
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={4}>
-                    <Chip
-                      label={`Ijazah: ${archiveFiles.certificate?.name ?? '-'}`}
-                      color='success'
-                      variant='outlined'
-                      className='w-full'
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={4}>
-                    <Chip
-                      label={`Akta: ${archiveFiles.birthCertificate?.name ?? '-'}`}
-                      color='success'
-                      variant='outlined'
-                      className='w-full'
-                    />
-                  </Grid>
-                </Grid>
-              </Box>
+              {enableUploads && (
+                <>
+                  <Divider sx={{ my: 2 }} />
+                  <Box>
+                    <Typography variant='h6' color='primary' fontWeight={700} mb={1}>
+                      Dokumen Terunggah
+                    </Typography>
+                    <Grid container spacing={1}>
+                      {period?.template.meta.uploadFields.map(u => (
+                        <Grid item xs={12} md={6} key={u.key}>
+                          <Chip
+                            className='w-full'
+                            label={`${u.label}: ${uploadMap[u.key]?.name ?? '-'}`}
+                            color='success'
+                            variant='outlined'
+                          />
+                        </Grid>
+                      ))}
+                    </Grid>
+                  </Box>
+                </>
+              )}
             </CardContent>
           </Card>
         )}
 
-        {/* Navigation Buttons */}
-        <Box className='flex justify-between'>
-          <Button disabled={activeStep === 0} onClick={() => setActiveStep(prev => prev - 1)} variant='outlined'>
+        {/* Navigasi */}
+        <Box display='flex' justifyContent='space-between'>
+          <Button disabled={activeStep === 0 || submit.isPending} onClick={goBack} variant='outlined'>
             Kembali
           </Button>
 
-          {activeStep === steps.length - 1 ? (
-            <Button
-              variant='contained'
-              onClick={handleSubmit}
-              disabled={loading}
-              startIcon={loading ? <CircularProgress size={20} /> : null}
-            >
-              {loading ? 'Mengirim...' : 'Kirim Survey'}
+          {activeStep === 0 && (
+            <Button variant='contained' onClick={handleNextFromIdentitas} disabled={searching || !nis.trim()}>
+              {searching ? 'Mencari...' : 'Cari & Lanjutkan'}
             </Button>
-          ) : (
-            <Button variant='contained' onClick={handleNext} disabled={!studentData && activeStep === 0}>
+          )}
+
+          {activeStep === 1 && (
+            <Button variant='contained' onClick={goNext} disabled={!surveyRequiredOk || submit.isPending}>
               Lanjutkan
             </Button>
           )}
+
+          {enableUploads && activeStep === uploadStepIndex && (
+            <Button variant='contained' onClick={goNext} disabled={!uploadOk || submit.isPending}>
+              Lanjutkan
+            </Button>
+          )}
+
+          {activeStep === confirmStepIndex && (
+            <Button
+              variant='contained'
+              onClick={onSubmit}
+              disabled={submit.isPending}
+              startIcon={submit.isPending ? <CircularProgress size={16} /> : undefined}
+            >
+              {submit.isPending ? (enableUploads ? `Mengirim (${uploadPct || 0}%)` : 'Mengirim...') : 'Kirim Survey'}
+            </Button>
+          )}
         </Box>
+
+        {/* Footer kecil: info total respons */}
+        {stats && (
+          <Box mt={2} textAlign='right'>
+            <Typography variant='caption' color='text.secondary'>
+              Total respons periode: <b>{stats.totalResponses}</b>
+            </Typography>
+          </Box>
+        )}
       </Paper>
     </Container>
   )

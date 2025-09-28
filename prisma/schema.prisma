@@ -167,6 +167,7 @@ model Student {
     dormitoryRoom             DormitoryRoom?              @relation(fields: [dormitoryRoomId], references: [id])
     dormitoryRoomId           String?
     positionHistoryLeadership PositionHistoryLeadership[]
+    Response                  Response[]
 
     @@index([name]) // <-- TAMBAHKAN: Untuk pencarian berdasarkan nama
     @@index([dormitoryId]) // <-- TAMBAHKAN: Untuk filter santri per asrama
@@ -714,4 +715,39 @@ model Recipient {
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
+}
+
+model Period {
+    id       String    @id @default(cuid())
+    name     String
+    startsAt DateTime?
+    endsAt   DateTime?
+    isActive Boolean   @default(false)
+    template Json // {version, title, fields: FieldDef[]}
+
+    responses Response[]
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([isActive])
+}
+
+model Response {
+    id       String @id @default(cuid())
+    periodId String
+    period   Period @relation(fields: [periodId], references: [id])
+
+    studentId String?
+    student   Student? @relation(fields: [studentId], references: [id])
+
+    answers  Json // payload dinamis sesuai template
+    avgScore Float? // ringkasan (rating_5) - file/text tidak dihitung
+    nps      Int? // 0..10 (opsional)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([periodId])
+    @@index([studentId])
 }
