@@ -238,8 +238,8 @@ jobs:
 
           # Buat .env
           rm .env
-          echo "DIRECT_DATABASE_URL=postgresql://azkal:azkal@localhost:35060/${{ matrix.db }}?pgbouncer=true" >> .env
-          echo "DATABASE_URL=postgresql://azkal:azkal@localhost:6432/${{ matrix.db }}?pgbouncer=true" >> .env
+          echo "DIRECT_DATABASE_URL=postgresql://${{ secrets.DB_USER }}:${{ secrets.DB_PASS }}@${{ secrets.DB_HOST }}:35060/${{ matrix.db }}" >> .env
+          echo "DATABASE_URL=postgresql://${{ secrets.DB_USER }}:${{ secrets.DB_PASS }}@${{ secrets.DB_HOST }}:6432/${{ matrix.db }}?pgbouncer=true" >> .env
           echo "NEXTAUTH_URL=${{ matrix.url }}" >> .env
           echo "AUTH_TRUST_HOST=${{ matrix.url }}" >> .env
           echo "AUTH_SECRET=${{ secrets.AUTH_SECRET }}" >> .env
