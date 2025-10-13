@@ -976,32 +976,47 @@ function makePondokDefaultTemplate(): Template {
       ]
     },
     fields: [
-      rating('generalSatisfaction', 'Kepuasan Umum'),
-      rating('dormCleanliness', 'Kebersihan Asrama'),
-      rating('foodQuality', 'Kualitas Makanan'),
-      rating('securityDiscipline', 'Keamanan & Kedisiplinan'),
-      rating('religiousActivities', 'Kegiatan Keagamaan'),
-      rating('teacherCommunication', 'Komunikasi dengan Pengasuh/Ustadz'),
-      rating('facilities', 'Fasilitas'),
-      rating('healthService', 'Layanan Kesehatan'),
-      rating('administration', 'Pelayanan Administrasi'),
-      rating('financeTransparency', 'Transparansi Keuangan'),
-      rating('academicCoaching', 'Kegiatan Akademik/Pembinaan'),
+      // --- Fokus Utama: Perkembangan Anak di Rumah ---
+      rating('akhlakSantri', 'Akhlak & Tatakrama Anak di Rumah'),
+      rating('disciplineSantri', 'Kedisiplinan (belajar, aturan, tanggung jawab)'),
+      rating('jamaahSholat', 'Sholat Berjamaah'),
+      rating('respectParents', 'Sikap Hormat kepada Orang Tua & Keluarga'),
+      rating('socialInteraction', 'Interaksi Sosial di Lingkungan Rumah'),
+      rating('independence', 'Kemandirian (merapikan barang, membantu di rumah)'),
+      rating('communication', 'Komunikasi dengan Orang Tua'),
+      rating('timeManagement', 'Pengelolaan Waktu di Rumah'),
+      rating('positiveHabits', 'Kebiasaan Positif Lainnya'),
+
+      // --- Penilaian Umum tentang Pondok ---
+      rating('pondokOverall', 'Penilaian Umum Pondok'),
+      rating('pondokCommunication', 'Komunikasi & Informasi dari Pondok'),
+      rating('pondokTrustSafety', 'Keamanan & Kepercayaan'),
+      rating('pondokFacilities', 'Fasilitas Pondok secara Umum'),
+
+      // --- Rekomendasi & Masukan ---
       {
         key: 'npsRecommend',
-        label: 'Rekomendasi (NPS 0–10)',
+        label: 'Seberapa besar Anda merekomendasikan pondok ini? (NPS 0–10)',
         type: 'nps_11',
         required: true,
         stat: true,
         comment: { enabled: false, required: true }
       },
       {
-        key: 'feedback',
-        label: 'Saran & Masukan',
+        key: 'observedChanges',
+        label: 'Perubahan positif apa yang Anda lihat pada anak setelah mondok?',
         type: 'text_long',
         required: false,
         stat: false,
-        comment: { enabled: false, required: true }
+        comment: { enabled: false, required: false }
+      },
+      {
+        key: 'improvementSuggestions',
+        label: 'Saran untuk peningkatan pondok',
+        type: 'text_long',
+        required: false,
+        stat: false,
+        comment: { enabled: false, required: false }
       }
     ]
   }

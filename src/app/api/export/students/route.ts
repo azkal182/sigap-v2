@@ -162,6 +162,188 @@ async function getCurrentPlacementMap(studentIds: string[]) {
 //   return wb
 // }
 
+// async function buildDormWorkbook(
+//   dorm: { id: string; name: string },
+//   students: Array<{
+//     id: string
+//     nis: string
+//     name: string
+//     gender: string | null
+//     dateOfBirth: Date
+//     parrentPhone: string | null
+//     dormitoryRoom?: { name: string } | null
+//     status: string | null
+//   }>,
+//   placementMap: Map<string, { trackId: string | null; trackName: string | null; classNameAtThatTime: string | null }>
+// ) {
+//   const wb = new ExcelJS.Workbook()
+
+//   wb.creator = 'Sigap Exporter'
+//   wb.created = new Date()
+
+//   // Kelompokkan per track
+//   const groups = new Map<string, typeof students>()
+
+//   for (const s of students) {
+//     const p = placementMap.get(s.id)
+//     const key = p?.trackName ?? 'NO TRACK'
+
+//     if (!groups.has(key)) groups.set(key, [])
+//     groups.get(key)!.push(s)
+//   }
+
+//   // Urutkan sheet per track alfabetis
+//   const groupsArr = Array.from(groups.entries()).sort((a, b) => a[0].localeCompare(b[0]))
+
+//   for (const [trackName, rows] of groupsArr) {
+//     const ws = wb.addWorksheet(trackName.slice(0, 31) || 'Sheet1')
+
+//     // Lebar kolom (A..M)
+//     ws.columns = [
+//       { header: '', key: 'no', width: 6 }, // A
+//       { header: '', key: 'name', width: 28 }, // B
+//       { header: '', key: 'class', width: 18 }, // C
+//       { header: '', key: 'd1', width: 6 }, // D
+//       { header: '', key: 'd2', width: 6 }, // E
+//       { header: '', key: 'd3', width: 6 }, // F
+//       { header: '', key: 'k1', width: 6 }, // G
+//       { header: '', key: 'k2', width: 6 }, // H
+//       { header: '', key: 'k3', width: 6 }, // I
+//       { header: '', key: 's1', width: 6 }, // J
+//       { header: '', key: 's2', width: 6 }, // K
+//       { header: '', key: 's3', width: 6 }, // L
+//       { header: '', key: 'summary', width: 12 } // M (Ringkasan) — kosong, kamu isi via VBA
+//     ]
+
+//     // Judul dormitory (A1:M1) dengan background
+//     ws.mergeCells('A1:M1')
+//     const title = ws.getCell('A1')
+
+//     title.value = dorm.name.toUpperCase()
+//     title.alignment = { horizontal: 'center', vertical: 'middle' }
+//     title.font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' } }
+//     title.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE67E22' } }
+//     ws.getRow(1).height = 28
+
+//     // Header
+//     ws.mergeCells('A2:A3')
+//     ws.getCell('A2').value = 'NO'
+//     ws.mergeCells('B2:B3')
+//     ws.getCell('B2').value = 'NAMA'
+//     ws.mergeCells('C2:C3')
+//     ws.getCell('C2').value = 'KELAS'
+//     ws.mergeCells('D2:F2')
+//     ws.getCell('D2').value = 'DAUROH'
+//     ws.mergeCells('G2:I2')
+//     ws.getCell('G2').value = 'KBM'
+//     ws.mergeCells('J2:L2')
+//     ws.getCell('J2').value = 'SETORAN'
+//     ws.mergeCells('M2:M3')
+//     ws.getCell('M2').value = 'RINGKASAN'
+
+//     ws.getCell('D3').value = 1
+//     ws.getCell('E3').value = 2
+//     ws.getCell('F3').value = 3
+//     ws.getCell('G3').value = 1
+//     ws.getCell('H3').value = 2
+//     ws.getCell('I3').value = 3
+//     ws.getCell('J3').value = 1
+//     ws.getCell('K3').value = 2
+//     ws.getCell('L3').value = 3
+
+//     const headerFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE67E22' } }
+
+//     ;[
+//       'A2',
+//       'B2',
+//       'C2',
+//       'D2',
+//       'E2',
+//       'F2',
+//       'G2',
+//       'H2',
+//       'I2',
+//       'J2',
+//       'K2',
+//       'L2',
+//       'M2',
+//       'A3',
+//       'B3',
+//       'C3',
+//       'D3',
+//       'E3',
+//       'F3',
+//       'G3',
+//       'H3',
+//       'I3',
+//       'J3',
+//       'K3',
+//       'L3'
+//     ].forEach(addr => {
+//       const c = ws.getCell(addr)
+
+//       c.font = { bold: true }
+//       c.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }
+//       c.fill = headerFill
+//       c.border = {
+//         top: { style: 'thin' },
+//         left: { style: 'thin' },
+//         bottom: { style: 'thin' },
+//         right: { style: 'thin' }
+//       }
+//     })
+//     ws.getRow(2).height = 24
+//     ws.getRow(3).height = 18
+
+//     // Data: urutkan Kelas → Nama (kelas kosong ditaruh terakhir)
+//     rows
+//       .sort((a, b) => {
+//         const ca = (placementMap.get(a.id)?.classNameAtThatTime ?? '').trim()
+//         const cb = (placementMap.get(b.id)?.classNameAtThatTime ?? '').trim()
+
+//         if (ca && !cb) return -1
+//         if (!ca && cb) return 1
+//         const byClass = ca.localeCompare(cb)
+
+//         return byClass !== 0 ? byClass : a.name.localeCompare(b.name)
+//       })
+//       .forEach((s, idx) => {
+//         const p = placementMap.get(s.id)
+
+//         const r = ws.addRow([
+//           idx + 1, // A: No
+//           s.name, // B: Nama
+//           p?.classNameAtThatTime ?? '', // C: Kelas
+//           '',
+//           '',
+//           '', // D-F: Dauroh
+//           '',
+//           '',
+//           '', // G-I: KBM
+//           '',
+//           '',
+//           '', // J-L: Setoran
+//           '' // M: Ringkasan (kosong, isi via VBA)
+//         ])
+
+//         r.eachCell((cell, col) => {
+//           cell.border = {
+//             top: { style: 'thin' },
+//             left: { style: 'thin' },
+//             bottom: { style: 'thin' },
+//             right: { style: 'thin' }
+//           }
+
+//           if (col === 1 || (col >= 4 && col <= 13)) {
+//             cell.alignment = { horizontal: 'center', vertical: 'middle' }
+//           }
+//         })
+//       })
+//   }
+
+//   return wb
+// }
+
 async function buildDormWorkbook(
   dorm: { id: string; name: string },
   students: Array<{
@@ -181,42 +363,55 @@ async function buildDormWorkbook(
   wb.creator = 'Sigap Exporter'
   wb.created = new Date()
 
-  // Kelompokkan per track
-  const groups = new Map<string, typeof students>()
+  // hanya yang punya track
+  const byTrack = new Map<string, typeof students>()
 
   for (const s of students) {
     const p = placementMap.get(s.id)
-    const key = p?.trackName ?? 'NO TRACK'
 
-    if (!groups.has(key)) groups.set(key, [])
-    groups.get(key)!.push(s)
+    if (!p?.trackName) continue
+    if (!byTrack.has(p.trackName)) byTrack.set(p.trackName, [])
+    byTrack.get(p.trackName)!.push(s)
   }
 
-  // Urutkan sheet per track alfabetis
-  const groupsArr = Array.from(groups.entries()).sort((a, b) => a[0].localeCompare(b[0]))
+  if (byTrack.size === 0) {
+    const ws = wb.addWorksheet('NO TRACK')
 
-  for (const [trackName, rows] of groupsArr) {
-    const ws = wb.addWorksheet(trackName.slice(0, 31) || 'Sheet1')
+    ws.mergeCells('A1:L1')
+    const t = ws.getCell('A1')
 
-    // Lebar kolom (A..M)
+    t.value = dorm.name.toUpperCase()
+    t.alignment = { horizontal: 'center', vertical: 'middle' }
+    t.font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' } }
+    t.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B4870' } }
+
+    return wb
+  }
+
+  const tracks = Array.from(byTrack.keys()).sort((a, b) => a.localeCompare(b))
+
+  for (const trackName of tracks) {
+    const rows = byTrack.get(trackName)!
+    const ws = wb.addWorksheet(trackName.slice(0, 31))
+
+    // A..L (12 kolom) — tanpa kolom KELAS
     ws.columns = [
       { header: '', key: 'no', width: 6 }, // A
-      { header: '', key: 'name', width: 28 }, // B
-      { header: '', key: 'class', width: 18 }, // C
-      { header: '', key: 'd1', width: 6 }, // D
-      { header: '', key: 'd2', width: 6 }, // E
-      { header: '', key: 'd3', width: 6 }, // F
-      { header: '', key: 'k1', width: 6 }, // G
-      { header: '', key: 'k2', width: 6 }, // H
-      { header: '', key: 'k3', width: 6 }, // I
-      { header: '', key: 's1', width: 6 }, // J
-      { header: '', key: 's2', width: 6 }, // K
-      { header: '', key: 's3', width: 6 }, // L
-      { header: '', key: 'summary', width: 12 } // M (Ringkasan) — kosong, kamu isi via VBA
+      { header: '', key: 'name', width: 32 }, // B
+      { header: '', key: 'd1', width: 6 }, // C
+      { header: '', key: 'd2', width: 6 }, // D
+      { header: '', key: 'd3', width: 6 }, // E
+      { header: '', key: 'k1', width: 6 }, // F
+      { header: '', key: 'k2', width: 6 }, // G
+      { header: '', key: 'k3', width: 6 }, // H
+      { header: '', key: 's1', width: 6 }, // I
+      { header: '', key: 's2', width: 6 }, // J
+      { header: '', key: 's3', width: 6 }, // K
+      { header: '', key: 'summary', width: 12 } // L
     ]
 
-    // Judul dormitory (A1:M1) dengan background
-    ws.mergeCells('A1:M1')
+    // Baris 1: judul Dormitory
+    ws.mergeCells('A1:L1')
     const title = ws.getCell('A1')
 
     title.value = dorm.name.toUpperCase()
@@ -225,120 +420,122 @@ async function buildDormWorkbook(
     title.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE67E22' } }
     ws.getRow(1).height = 28
 
-    // Header
-    ws.mergeCells('A2:A3')
-    ws.getCell('A2').value = 'NO'
-    ws.mergeCells('B2:B3')
-    ws.getCell('B2').value = 'NAMA'
-    ws.mergeCells('C2:C3')
-    ws.getCell('C2').value = 'KELAS'
-    ws.mergeCells('D2:F2')
-    ws.getCell('D2').value = 'DAUROH'
-    ws.mergeCells('G2:I2')
-    ws.getCell('G2').value = 'KBM'
-    ws.mergeCells('J2:L2')
-    ws.getCell('J2').value = 'SETORAN'
-    ws.mergeCells('M2:M3')
-    ws.getCell('M2').value = 'RINGKASAN'
+    // kelompok per kelas
+    const byClass = new Map<string, typeof rows>()
 
-    ws.getCell('D3').value = 1
-    ws.getCell('E3').value = 2
-    ws.getCell('F3').value = 3
-    ws.getCell('G3').value = 1
-    ws.getCell('H3').value = 2
-    ws.getCell('I3').value = 3
-    ws.getCell('J3').value = 1
-    ws.getCell('K3').value = 2
-    ws.getCell('L3').value = 3
+    for (const s of rows) {
+      const cls = (placementMap.get(s.id)?.classNameAtThatTime ?? '').trim()
+      const key = cls || 'TANPA KELAS'
 
-    const headerFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE67E22' } }
+      if (!byClass.has(key)) byClass.set(key, [])
+      byClass.get(key)!.push(s)
+    }
 
-    ;[
-      'A2',
-      'B2',
-      'C2',
-      'D2',
-      'E2',
-      'F2',
-      'G2',
-      'H2',
-      'I2',
-      'J2',
-      'K2',
-      'L2',
-      'M2',
-      'A3',
-      'B3',
-      'C3',
-      'D3',
-      'E3',
-      'F3',
-      'G3',
-      'H3',
-      'I3',
-      'J3',
-      'K3',
-      'L3'
-    ].forEach(addr => {
-      const c = ws.getCell(addr)
+    const classNames = Array.from(byClass.keys()).sort((a, b) => {
+      if (a === 'TANPA KELAS') return 1
+      if (b === 'TANPA KELAS') return -1
 
-      c.font = { bold: true }
-      c.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }
-      c.fill = headerFill
-      c.border = {
-        top: { style: 'thin' },
-        left: { style: 'thin' },
-        bottom: { style: 'thin' },
-        right: { style: 'thin' }
-      }
+      return a.localeCompare(b)
     })
-    ws.getRow(2).height = 24
-    ws.getRow(3).height = 18
 
-    // Data: urutkan Kelas → Nama (kelas kosong ditaruh terakhir)
-    rows
-      .sort((a, b) => {
-        const ca = (placementMap.get(a.id)?.classNameAtThatTime ?? '').trim()
-        const cb = (placementMap.get(b.id)?.classNameAtThatTime ?? '').trim()
+    let r = 3
 
-        if (ca && !cb) return -1
-        if (!ca && cb) return 1
-        const byClass = ca.localeCompare(cb)
+    for (const className of classNames) {
+      const list = byClass.get(className)!.sort((a, b) => a.name.localeCompare(b.name))
 
-        return byClass !== 0 ? byClass : a.name.localeCompare(b.name)
+      // judul kelas (A..L)
+      ws.mergeCells(`A${r}:L${r}`)
+      const kc = ws.getCell(`A${r}`)
+
+      kc.value = `KELAS: ${className}`
+      kc.font = { bold: true, size: 12, color: { argb: 'FFFFFFFF' } }
+      kc.alignment = { horizontal: 'left', vertical: 'middle' }
+      kc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F5A86' } }
+      ws.getRow(r).height = 22
+      r++
+
+      // header dua lapis
+      const headerTop = r,
+        headerSub = r + 1
+
+      ws.mergeCells(`A${headerTop}:A${headerSub}`)
+      ws.getCell(`A${headerTop}`).value = 'NO'
+      ws.mergeCells(`B${headerTop}:B${headerSub}`)
+      ws.getCell(`B${headerTop}`).value = 'NAMA'
+      ws.mergeCells(`C${headerTop}:E${headerTop}`)
+      ws.getCell(`C${headerTop}`).value = 'DAUROH'
+      ws.mergeCells(`F${headerTop}:H${headerTop}`)
+      ws.getCell(`F${headerTop}`).value = 'KBM'
+      ws.mergeCells(`I${headerTop}:K${headerTop}`)
+      ws.getCell(`I${headerTop}`).value = 'SETORAN'
+      ws.mergeCells(`L${headerTop}:L${headerSub}`)
+      ws.getCell(`L${headerTop}`).value = 'RINGKASAN'
+
+      ws.getCell(`C${headerSub}`).value = 1
+      ws.getCell(`D${headerSub}`).value = 2
+      ws.getCell(`E${headerSub}`).value = 3
+      ws.getCell(`F${headerSub}`).value = 1
+      ws.getCell(`G${headerSub}`).value = 2
+      ws.getCell(`H${headerSub}`).value = 3
+      ws.getCell(`I${headerSub}`).value = 1
+      ws.getCell(`J${headerSub}`).value = 2
+      ws.getCell(`K${headerSub}`).value = 3
+
+      const headFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE67E22' } }
+      const topCells = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'].map(c => `${c}${headerTop}`)
+
+      const subCells = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K'].map(c => `${c}${headerSub}`)
+
+      ;[...topCells, ...subCells].forEach(addr => {
+        const c = ws.getCell(addr)
+
+        c.font = { bold: true }
+        c.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }
+        c.fill = headFill
+        c.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' }
+        }
       })
-      .forEach((s, idx) => {
-        const p = placementMap.get(s.id)
+      ws.getRow(headerTop).height = 22
+      ws.getRow(headerSub).height = 18
 
-        const r = ws.addRow([
-          idx + 1, // A: No
-          s.name, // B: Nama
-          p?.classNameAtThatTime ?? '', // C: Kelas
+      r = headerSub + 1
+
+      // data: hanya No & Nama; kolom C..K kosong; L ringkasan kosong
+      list.forEach((s, idx) => {
+        const rowObj = ws.addRow([
+          idx + 1, // A
+          s.name, // B
           '',
           '',
-          '', // D-F: Dauroh
+          '', // C-E Dauroh
           '',
           '',
-          '', // G-I: KBM
+          '', // F-H KBM
           '',
           '',
-          '', // J-L: Setoran
-          '' // M: Ringkasan (kosong, isi via VBA)
+          '', // I-K Setoran
+          '' // L Ringkasan
         ])
 
-        r.eachCell((cell, col) => {
+        rowObj.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' }
+        rowObj.getCell(2).alignment = { horizontal: 'left', vertical: 'middle' }
+        rowObj.eachCell(cell => {
           cell.border = {
             top: { style: 'thin' },
             left: { style: 'thin' },
             bottom: { style: 'thin' },
             right: { style: 'thin' }
           }
-
-          if (col === 1 || (col >= 4 && col <= 13)) {
-            cell.alignment = { horizontal: 'center', vertical: 'middle' }
-          }
         })
+        r++
       })
+
+      r++ // spasi antar blok
+    }
   }
 
   return wb

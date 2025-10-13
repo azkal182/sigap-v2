@@ -60,21 +60,36 @@ export function useActivePeriod() {
   return useQuery({
     queryKey: ['periods', 'active'],
     queryFn: async () => {
-      const { data } = await apiGet<{ data: { id: string; name: string; template: Template } }>('/api/periods/active')
+      const { data } = await apiGet<{
+        data: {
+          hasResponded: any
+          id: string
+          name: string
+          template: Template
+        }
+      }>('/api/periods/active')
 
       return data
     }
   })
 }
 
-export function useFindStudentByNIS(nis: string, enabled: boolean) {
+export function useFindStudentByNIS(nis: string, enabled: boolean, periodId?: string) {
   return useQuery({
     queryKey: ['students', 'nis', nis],
     enabled: enabled && !!nis,
     queryFn: async () => {
-      const { data } = await apiGet<{ data: any }>(`/api/students/nis/${encodeURIComponent(nis)}`)
+      const { data } = await apiGet<{ data: any }>(`/api/students/nis/${encodeURIComponent(nis)}?periodId=${periodId}`)
 
-      return data as { id: string; nis: string; name: string; class?: string; school?: string; address?: string }
+      return data as {
+        hasResponded: any
+        id: string
+        nis: string
+        name: string
+        class?: string
+        school?: string
+        address?: string
+      }
     }
   })
 }

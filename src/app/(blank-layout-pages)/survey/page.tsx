@@ -651,7 +651,7 @@ export default function SurveyWizardPage() {
   // NIS wajib:
   const [nis, setNis] = useState('')
   const [hasSearched, setHasSearched] = useState(false)
-  const { data: student, isFetching: searching, error: studentErr } = useFindStudentByNIS(nis, hasSearched)
+  const { data: student, isFetching: searching, error: studentErr } = useFindStudentByNIS(nis, hasSearched, period?.id)
 
   // ==== Upload progress state (bonus) ====
   const [uploadPct, setUploadPct] = useState<number>(0)
@@ -714,10 +714,30 @@ export default function SurveyWizardPage() {
   }
 
   // setelah dapat student → lanjut otomatis
+  //   useEffect(() => {
+  //     if (hasSearched) {
+  //       if (student) setActiveStep(1)
+  //       else if (studentErr) setErr('Data siswa tidak ditemukan.')
+  //     }
+  //   }, [hasSearched, student, studentErr])
+
   useEffect(() => {
-    if (hasSearched) {
-      if (student) setActiveStep(1)
-      else if (studentErr) setErr('Data siswa tidak ditemukan.')
+    if (!hasSearched) return
+
+    if (studentErr) {
+      setErr('Data siswa tidak ditemukan.')
+
+      return
+    }
+
+    if (student) {
+      console.log(student)
+
+      if (student.hasResponded) {
+        setErr('Anda sudah mengisi survei untuk periode ini.')
+      } else {
+        setActiveStep(1)
+      }
     }
   }, [hasSearched, student, studentErr])
 
@@ -830,6 +850,17 @@ export default function SurveyWizardPage() {
     }
   }
 
+  if (!period) {
+    return (
+      <div className='flex items-center justify-center min-h-screen '>
+        <div className='text-center'>
+          <h2 className='text-xl font-semibold '>Tidak ada survey yang aktif</h2>
+          <p className='mt-2  text-sm'>Silakan cek kembali nanti atau hubungi admin jika ini tidak sesuai.</p>
+        </div>
+      </div>
+    )
+  }
+
   // Sukses page
   if (activeStep === confirmStepIndex + 1) {
     return (
@@ -933,7 +964,7 @@ export default function SurveyWizardPage() {
                     </Grid>
                   </Grid>
                   <Box mt={2} display='flex' justifyContent='flex-end'>
-                    <Button variant='contained' onClick={goNext}>
+                    <Button disabled={!period.hasResponded} variant='contained' onClick={goNext}>
                       Lanjutkan
                     </Button>
                   </Box>

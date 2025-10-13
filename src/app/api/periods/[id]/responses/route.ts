@@ -121,7 +121,8 @@ import { z } from 'zod'
 
 import prisma from '@/lib/prisma'
 import { TemplateSchema, makeResponseSchemaFromTemplate } from '@/schemas/survey-schemas'
-import { uploadImageWithCompression } from '@/lib/upload/gdrive'
+
+// import { uploadImageWithCompression } from '@/lib/upload/gdrive'
 
 // Definisikan tipe untuk konteks
 type RouteContext = {
@@ -197,40 +198,40 @@ export async function POST(req: NextRequest, { params: paramsPromise }: RouteCon
             return Response.json({ error: `Upload "${u.label}" (${u.key}) is required` }, { status: 422 })
           }
 
-          if (maybeFile instanceof File) {
-            try {
-              const start = Date.now()
+          //   if (maybeFile instanceof File) {
+          //     try {
+          //       const start = Date.now()
 
-              console.log(
-                `[UPLOAD] Start ${u.key}: name="${maybeFile.name}", type="${maybeFile.type}", size=${maybeFile.size}B`
-              )
+          //       console.log(
+          //         `[UPLOAD] Start ${u.key}: name="${maybeFile.name}", type="${maybeFile.type}", size=${maybeFile.size}B`
+          //       )
 
-              const uploaded = await uploadImageWithCompression({ file: maybeFile, nis: student.nis })
-              const dur = Date.now() - start
+          //       const uploaded = await uploadImageWithCompression({ file: maybeFile, nis: student.nis })
+          //       const dur = Date.now() - start
 
-              console.log('[UPLOAD] Metadata:', {
-                field: u.key,
-                name: maybeFile.name,
-                mime: maybeFile.type,
-                size_bytes: maybeFile.size,
-                duration_ms: dur,
-                url: uploaded.url
-              })
+          //       console.log('[UPLOAD] Metadata:', {
+          //         field: u.key,
+          //         name: maybeFile.name,
+          //         mime: maybeFile.type,
+          //         size_bytes: maybeFile.size,
+          //         duration_ms: dur,
+          //         url: uploaded.url
+          //       })
 
-              answers[u.key] = {
-                name: maybeFile.name || uploaded.name || u.key,
-                url: uploaded.url,
-                type: `image/${uploaded.mimeType || 'jpeg'}`
-              }
-            } catch (err: any) {
-              console.error(`[UPLOAD] Failed ${u.key}:`, err?.message || err)
+          //       answers[u.key] = {
+          //         name: maybeFile.name || uploaded.name || u.key,
+          //         url: uploaded.url,
+          //         type: `image/${uploaded.mimeType || 'jpeg'}`
+          //       }
+          //     } catch (err: any) {
+          //       console.error(`[UPLOAD] Failed ${u.key}:`, err?.message || err)
 
-              return Response.json(
-                { error: `Upload gagal untuk ${u.key}`, details: String(err?.message ?? err) },
-                { status: 500 }
-              )
-            }
-          }
+          //       return Response.json(
+          //         { error: `Upload gagal untuk ${u.key}`, details: String(err?.message ?? err) },
+          //         { status: 500 }
+          //       )
+          //     }
+          //   }
         }
       }
     } else {
