@@ -51,12 +51,17 @@ const getStatusIcon = (status: AbsenceStatus | undefined): JSX.Element => {
 // --- KOMPONEN TERPISAH UNTUK SETIAP TABEL MINGGUAN ---
 interface WeeklyTableProps {
   week: WeeklyReportData
+  dormitoryId: string
   attendanceData: AbsenceReportData[]
 }
 
-const WeeklyAttendanceTable: React.FC<WeeklyTableProps> = ({ week, attendanceData }) => {
+const WeeklyAttendanceTable: React.FC<WeeklyTableProps> = ({ week, attendanceData, dormitoryId }) => {
   const columns = useMemo<ColumnDef<AbsenceReportData>[]>(() => {
-    const slotsPerDay = 3
+    let slotsPerDay = 3
+
+    if (dormitoryId === 'b2c3d4e5-f6a7-8901-2345-abcdef012345') {
+      slotsPerDay = 4
+    }
 
     const numberColumn: ColumnDef<AbsenceReportData> = {
       header: () => (
@@ -332,7 +337,12 @@ export default function AbsensiPage() {
         </div>
       ) : (
         weeklyReport.map((week, weekIndex) => (
-          <WeeklyAttendanceTable key={weekIndex} week={week} attendanceData={attendanceData} />
+          <WeeklyAttendanceTable
+            dormitoryId={allowedDormitoryIds[0]}
+            key={weekIndex}
+            week={week}
+            attendanceData={attendanceData}
+          />
         ))
       )}
     </div>

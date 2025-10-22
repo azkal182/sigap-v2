@@ -39,7 +39,7 @@ const CreatePermitFormDialog = ({ open, onClose, onSubmit, currentUserId }: Crea
       startDate: '',
       endDate: null,
       userId: currentUserId,
-      allowedSlots: user?.role === 'KEAMANAN' ? [1, 2, 3] : [],
+      allowedSlots: user?.role === 'KEAMANAN' ? [1, 2, 3, 4] : [],
       permitSTatus: 'PERMIT'
     }
   })
@@ -132,6 +132,7 @@ const CreatePermitFormDialog = ({ open, onClose, onSubmit, currentUserId }: Crea
             <MenuItem value={1}>1</MenuItem>
             <MenuItem value={2}>2</MenuItem>
             <MenuItem value={3}>3</MenuItem>
+            <MenuItem value={4}>4</MenuItem>
           </CustomTextField>
         )}
       />
