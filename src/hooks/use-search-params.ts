@@ -36,7 +36,7 @@ function sanitizeErrors(errors: Record<string, string[] | undefined>): Record<st
 
 // Debounce utility
 function useDebounce<T extends any[]>(callback: (...args: T) => void, delay: number) {
-  const timeoutRef = useRef<NodeJS.Timeout>()
+  const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
 
   return useCallback(
     (...args: T) => {

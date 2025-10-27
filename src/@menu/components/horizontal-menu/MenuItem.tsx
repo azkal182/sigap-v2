@@ -112,7 +112,8 @@ const MenuItem: ForwardRefRenderFunction<HTMLLIElement, MenuItemProps> = (props,
 
   // Change active state when the url changes
   useEffect(() => {
-    const href = rest.href || (component && typeof component !== 'string' && component.props.href)
+    const href =
+      rest.href || (component && typeof component !== 'string' && (component as ReactElement<any>).props.href)
 
     if (href) {
       // Check if the current url matches any of the children urls

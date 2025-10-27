@@ -1,6 +1,6 @@
 // React Imports
 import { cloneElement, createElement, forwardRef } from 'react'
-import type { ForwardRefRenderFunction } from 'react'
+import type { ForwardRefRenderFunction, ReactElement } from 'react'
 
 // Third-party Imports
 import classnames from 'classnames'
@@ -81,7 +81,7 @@ const MenuButton: ForwardRefRenderFunction<HTMLAnchorElement, MenuButtonProps> =
       )
     } else {
       // Otherwise, clone the element
-      const { className: classNameProp, ...props } = component.props
+      const { className: classNameProp, ...props } = (component as ReactElement<any>).props
 
       return cloneElement(
         component,

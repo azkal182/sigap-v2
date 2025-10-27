@@ -55,13 +55,14 @@
 import { NextResponse } from 'next/server'
 
 import NextAuth from 'next-auth'
+import type { NextRequest } from 'next/server'
 
 import authConfig from './lib/auth.config'
 import { apiAuthPrefix, authRoutes, DEFAULT_LOGIN_REDIRECT, publicRoutes } from './routes'
 
 const { auth } = NextAuth(authConfig)
 
-export default auth(async function middleware(req) {
+export const proxy = auth(async function middleware(req: any) {
   const { nextUrl } = req
   const pathname = nextUrl.pathname
 

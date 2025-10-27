@@ -31,7 +31,7 @@ import CustomAutocomplete from '@core/components/mui/Autocomplete'
 import CustomTextField from '@core/components/mui/TextField'
 
 // Fungsi untuk mendapatkan ikon berdasarkan status absensi
-const getStatusIcon = (status: AbsenceStatus | undefined): JSX.Element => {
+const getStatusIcon = (status: AbsenceStatus | undefined): React.ReactElement => {
   const iconSize = 'size-4'
 
   switch (status) {
