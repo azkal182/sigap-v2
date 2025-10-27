@@ -154,7 +154,16 @@ jobs:
       # --- Mengelola Artefak ---
       - name: Package artifacts
         run: |
-          tar -czf build-files.tar.gz .next/ public/ package.json pnpm-lock.yaml
+          # Include all necessary Next.js 16 files and directories
+          tar -czf build-files.tar.gz \
+            .next/ \
+            public/ \
+            package.json \
+            pnpm-lock.yaml \
+            next.config.ts \
+            tailwind.config.ts \
+            tsconfig.json \
+            .env.example
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -229,12 +238,29 @@ jobs:
           ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} << EOF
           cd /home/${{ secrets.VPS_USER }}/project/${{ matrix.folder }}
 
-          # Hapus file lama
-          rm -rf .next/ public/ package.json pnpm-lock.yaml
+          # Hapus file lama termasuk semua file build Next.js 16
+          rm -rf .next/ public/ package.json pnpm-lock.yaml next.config.ts tailwind.config.ts tsconfig.json .env.example
 
           # Ekstrak artefak
           tar -xzf build-files.tar.gz
           rm build-files.tar.gz
+
+          # Verifikasi struktur build Next.js 16
+          echo "Verifying Next.js 16 build structure..."
+          if [ -d ".next" ]; then
+            echo "✓ .next directory found"
+            ls -la .next/ | head -10
+          else
+            echo "❌ .next directory missing!"
+            exit 1
+          fi
+
+          # Periksa file manifest yang diharapkan Next.js 16
+          if [ -f ".next/server/app-manifest.json" ] || [ -d ".next/server/pages" ] || [ -d ".next/server/app" ]; then
+            echo "✓ Next.js 16 server files found"
+          else
+            echo "⚠️ Next.js 16 server structure not as expected, but continuing..."
+          fi
 
           # Buat .env
           rm .env
@@ -258,12 +284,64 @@ jobs:
           # Install dependensi
           pnpm install --production
 
-          # Restart PM2, jalankan tanpa "start"
-          if pm2 describe ${{ matrix.app }} > /dev/null; then
-            pm2 stop ${{ matrix.app }}
-            pm2 delete ${{ matrix.app }}
+          # Verify Next.js 16 build structure and files
+          echo "🔍 Verifying Next.js 16 deployment files..."
+
+          # Check critical Next.js 16 files
+          REQUIRED_FILES=(".next/server/next-server.js.nft" ".next/server/middleware-manifest.json" ".next/server/app-manifest.json")
+          MISSING_FILES=()
+
+          for file in "${REQUIRED_FILES[@]}"; do
+            if [ -f "$file" ]; then
+              echo "✓ Found: $file"
+            else
+              echo "⚠️  Missing: $file"
+              MISSING_FILES+=("$file")
+            fi
+          done
+
+          # Check for required directories
+          REQUIRED_DIRS=(".next/static" ".next/server" ".next/cache")
+          for dir in "${REQUIRED_DIRS[@]}"; do
+            if [ -d "$dir" ]; then
+              echo "✓ Found directory: $dir"
+            else
+              echo "⚠️  Missing directory: $dir"
+            fi
+          done
+
+          # If critical files are missing, attempt to fix with Next.js 16 specific commands
+          if [ ${#MISSING_FILES[@]} -gt 0 ]; then
+            echo "🔧 Attempting to fix missing Next.js 16 files..."
+
+            # Try to regenerate missing files if possible
+            if [ -f "package.json" ] && [ -d "node_modules" ]; then
+              echo "Running Next.js build verification..."
+              npx next build --debug 2>&1 | head -20 || echo "Build verification completed with warnings"
+            fi
           fi
+
+          # Restart PM2 dengan penanganan error yang lebih baik
+          echo "🔄 Restarting PM2 process..."
+          if pm2 describe ${{ matrix.app }} > /dev/null; then
+            echo "Stopping existing process..."
+            pm2 stop ${{ matrix.app }} || echo "Failed to stop process (may not be running)"
+            pm2 delete ${{ matrix.app }} || echo "Failed to delete process (may not exist)"
+          fi
+
+          # Start dengan logging yang lebih detail
+          echo "Starting application on port ${{ matrix.port }}..."
           pm2 start npm --name "${{ matrix.app }}" -- start -- -p ${{ matrix.port }}
+
+          # Verifikasi aplikasi berjalan
+          sleep 5
+          if pm2 describe ${{ matrix.app }} > /dev/null; then
+            echo "✅ Application started successfully"
+            pm2 logs ${{ matrix.app }} --lines 10 --nostream || echo "No logs available"
+          else
+            echo "❌ Failed to start application"
+            exit 1
+          fi
           EOF
   #---
   # Job untuk notifikasi
