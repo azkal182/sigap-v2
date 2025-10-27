@@ -1,10 +1,12 @@
 'use server'
 
-import { hashSync } from 'bcryptjs'
+import { hash, hashSync } from 'bcryptjs'
 
 import prisma from '@/lib/prisma'
-import type { FilterTeacherParams } from './shemas/teacher-schema'
+import type { FilterTeacherParams, ResetPasswordTeacherInput } from './shemas/teacher-schema'
 import { Prisma } from '@/generated/prisma'
+import type { APIResult } from '@/types/api-types'
+import { handleServerError } from '@/lib/handle-error'
 
 export type PaginationMeta = {
   total: number
@@ -134,14 +136,29 @@ export async function assignTeacherToDormitory(teacherId: string, dormitoryId: s
 }
 
 export async function getTeacherWithDormitories(options: FilterTeacherParams): Promise<TeacherListResponse> {
-  const { page = 1, limit = 10, search = '', sortBy = 'name', sortOrder = 'asc' } = options
+  const { page = 1, limit = 10, search = '', sortBy = 'name', sortOrder = 'asc', dormitoryIds = [] } = options
 
   const skip = (page - 1) * limit
   const allowedSortFields = ['name'] as const
   const safeSortBy = allowedSortFields.includes(sortBy) ? sortBy : 'name'
 
   const whereCondition: Prisma.TeacherWhereInput = {
-    AND: [...(search ? [{ name: { contains: search, mode: Prisma.QueryMode.insensitive } }] : [])]
+    AND: [
+      ...(search ? [{ name: { contains: search, mode: Prisma.QueryMode.insensitive } }] : []),
+      ...(dormitoryIds.length > 0
+        ? [
+            {
+              teacherDormitories: {
+                some: {
+                  dormitoryId: {
+                    in: dormitoryIds
+                  }
+                }
+              }
+            }
+          ]
+        : [])
+    ]
   }
 
   const total = await prisma.teacher.count({ where: whereCondition })
@@ -151,6 +168,7 @@ export async function getTeacherWithDormitories(options: FilterTeacherParams): P
 
   const teachers = await prisma.teacher.findMany({
     skip,
+    take: limit,
     where: whereCondition,
     select: {
       id: true,
@@ -212,5 +230,64 @@ export const getTeacherOption = async (filter: { dormitoryIds?: string[] }): Pro
   return {
     success: true,
     data: teachers
+  }
+}
+
+export async function resetPasswordTeacher(input: ResetPasswordTeacherInput): Promise<
+  APIResult<
+    Prisma.UserGetPayload<{
+      select: {
+        id: true
+        name: true
+      }
+    }>
+  >
+> {
+  try {
+    const { id } = input
+
+    const teacher = await prisma.teacher.findUnique({
+      where: {
+        id
+      },
+      select: {
+        id: true,
+        name: true,
+        user: true
+      }
+    })
+
+    if (!teacher) {
+      return { success: false, error: 'Pengajar tidak ditemukan!' }
+    }
+
+    const user = await prisma.user.findUnique({
+      where: {
+        id: teacher.user.id
+      }
+    })
+
+    if (!user) {
+      return { success: false, error: 'user tidak ditemukan!' }
+    }
+
+    const password = await hash('ppdf', 10)
+
+    const data = await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password
+      },
+      select: {
+        name: true,
+        id: true
+      }
+    })
+
+    return { success: true, message: `password pengajar ${data.name} berhasil direset`, data: data }
+  } catch (error) {
+    const message = handleServerError('Gagal reset pengajar:', error)
+
+    return { success: false, error: message }
   }
 }

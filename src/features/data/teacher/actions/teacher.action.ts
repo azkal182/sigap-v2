@@ -7,11 +7,13 @@ import {
   assignTeacherToDormitory,
   getTeacherWithDormitories,
   updateTeacher,
-  getTeacherOption
+  getTeacherOption,
+  resetPasswordTeacher
 } from '@/features/data/teacher/teacher.service'
-import type { CreateTeacherInput, FilterTeacherParams } from '../shemas/teacher-schema'
-import { CreateTeacherSchema } from '../shemas/teacher-schema'
+import type { CreateTeacherInput, FilterTeacherParams, ResetPasswordTeacherInput } from '../shemas/teacher-schema'
+import { CreateTeacherSchema, ResetPasswordTeacherSchema } from '../shemas/teacher-schema'
 import { handleServerError } from '@/lib/handle-error'
+import { validateAndRun } from '@/utils/validate-and-run'
 
 export async function getTeacherOptionAction(filter: { dormitoryIds?: string[] }): Promise<TeacherOptionResponse> {
   try {
@@ -133,3 +135,7 @@ export async function editTeacherAction(input: CreateTeacherInput) {
 //     return { success: false, error: error.message || 'Gagal mengambil data guru' }
 //   }
 // }
+
+export async function resetPasswordTeacherAction(input: ResetPasswordTeacherInput) {
+  return validateAndRun(ResetPasswordTeacherSchema, input, resetPasswordTeacher)
+}

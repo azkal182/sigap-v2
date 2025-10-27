@@ -22,7 +22,7 @@ const authConfig = {
 
         if (!user) return null
 
-        if (process.env.NODE_ENV === 'production') {
+        if (process.env.NODE_ENV !== 'production') {
           const isPasswordValid = await bcrypt.compare(
             typeof credentials?.password === 'string' ? credentials.password : '',
             user.password // pastikan field password ada di tabel user

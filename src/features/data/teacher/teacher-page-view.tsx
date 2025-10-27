@@ -12,7 +12,7 @@ import { toast } from 'react-toastify'
 import type { CreateTeacherInput } from './shemas/teacher-schema'
 import { filterTeacherSchema } from './shemas/teacher-schema'
 import { useCustomSearchParams } from '@/hooks/useCustomSearchParams'
-import { useCreateTeacher, useEditTeacher, useTeachers } from './teacher.query'
+import { useCreateTeacher, useEditTeacher, useResetPasswordTeacher, useTeachers } from './teacher.query'
 import { DataTableWithParams } from '@/components/DataTableWithParams'
 import TeacherFormDialog from './components/teacher-dialog'
 import type { TeacherItem } from './teacher.service'
@@ -29,14 +29,23 @@ const TeacherPageView = () => {
 
   const { allowedDormitoryIds: dormitoryId } = usePermissionStore()
 
+  const memoizedInitialParams = useMemo(
+    () => ({
+      dormitoryIds: dormitoryId
+    }),
+    [dormitoryId]
+  )
+
   const searchParams = useCustomSearchParams({
-    defaultParams: filterTeacherSchema
+    defaultParams: filterTeacherSchema,
+    initialParams: memoizedInitialParams
   })
 
   const { data, isLoading: queryLoading } = useTeachers(searchParams.params, searchParams.isReady)
 
   const { mutate: createTeacher } = useCreateTeacher()
   const { mutate: editTeacher } = useEditTeacher()
+  const { mutate: resetPasswordTeacher } = useResetPasswordTeacher()
 
   const columns = useMemo<ColumnDef<any>[]>(
     () => [
@@ -58,7 +67,13 @@ const TeacherPageView = () => {
           const dormitories = row.original.dormitories.map((item: any) => item.name)
 
           return (
-            <Stack direction='row' spacing={1}>
+            <Stack
+              direction='row'
+              spacing={1}
+              flexWrap='wrap'
+              useFlexGap
+              sx={{ maxWidth: 250 }} // opsional, untuk batasi lebar agar wrap terlihat
+            >
               {dormitories.map((item: any, index: number) => (
                 <Chip size='small' key={index} label={item} color='primary' />
               ))}
@@ -83,14 +98,14 @@ const TeacherPageView = () => {
               <IconButton size='small' onClick={() => handleOpenEditDialog(dorm)}>
                 <i className='tabler-edit text-green-400' />
               </IconButton>
-              <IconButton size='small' onClick={() => console.log('Delete', dorm.id)}>
+              {/* <IconButton size='small' onClick={() => console.log('Delete', dorm.id)}>
                 <i className='tabler-trash text-red-400' />
               </IconButton>
               <Link href={`/data/dormitory/${dorm.id}`}>
                 <IconButton size='small'>
                   <i className='tabler-eye text-primary' />
                 </IconButton>
-              </Link>
+              </Link> */}
             </div>
           )
         }
@@ -146,8 +161,17 @@ const TeacherPageView = () => {
       onConfirm: async () => {
         try {
           //   const res = await closePermit({ permitId: id })
-
-          toast.success(`Password ${name} berhasil direset`)
+          resetPasswordTeacher(
+            { id },
+            {
+              onSuccess: ({ data }) => {
+                toast.success(`reset password ${data?.name} berhasil`)
+              },
+              onError: err => {
+                toast.error(err.message || 'Gagal reset pengajar')
+              }
+            }
+          )
         } catch (err: any) {
           if (err instanceof ActionError) {
             // kalau kamu menyertakan issues dari server
@@ -157,7 +181,7 @@ const TeacherPageView = () => {
             toast.error('Terjadi kesalahan tak terduga')
           }
 
-          console.log(id)
+          //   console.log(id)
 
           // kalau kamu ingin modal TIDAK “resolve true” saat gagal,
           // boleh throw lagi biar ConfirmProvider menutup sebagai cancel:

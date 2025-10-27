@@ -5,10 +5,11 @@ import {
   createTeacherAction,
   getFilterTeachersAction,
   editTeacherAction, // ⬅️
-  getTeacherOptionAction
+  getTeacherOptionAction,
+  resetPasswordTeacherAction
 } from './actions/teacher.action'
 
-import type { CreateTeacherInput, FilterTeacherParams } from './shemas/teacher-schema'
+import type { CreateTeacherInput, FilterTeacherParams, ResetPasswordTeacherInput } from './shemas/teacher-schema'
 
 export function useTeachers(params: FilterTeacherParams, isValid: boolean) {
   return useQuery({
@@ -76,6 +77,18 @@ export const useEditTeacher = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teachers'] })
+    }
+  })
+}
+
+export const useResetPasswordTeacher = () => {
+  return useMutation({
+    mutationFn: async (input: ResetPasswordTeacherInput) => {
+      const res = await resetPasswordTeacherAction(input)
+
+      if (!res.success) throw new Error(res.error)
+
+      return res
     }
   })
 }
