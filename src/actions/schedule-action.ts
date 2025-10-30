@@ -122,7 +122,7 @@ type ScheduleFilter = {
 export const getScheduleAction = async (filter: ScheduleFilter): Promise<ScheduleResponse> => {
   const { classId, teacherId, userId } = filter
 
-  console.log('[getScheduleAction] Input filter:', filter)
+  //   console.log('[getScheduleAction] Input filter:', filter)
 
   if (!classId && !teacherId && !userId) {
     console.warn('[getScheduleAction] Filter tidak valid, semua parameter kosong')
@@ -134,7 +134,7 @@ export const getScheduleAction = async (filter: ScheduleFilter): Promise<Schedul
   }
 
   try {
-    console.log('[getScheduleAction] Menjalankan query ke database...')
+    // console.log('[getScheduleAction] Menjalankan query ke database...')
 
     const schedule = await prisma.schedule.findMany({
       where: {
@@ -182,7 +182,7 @@ export const getScheduleAction = async (filter: ScheduleFilter): Promise<Schedul
       }
     })
 
-    console.log(`[getScheduleAction] Ditemukan ${schedule.length} jadwal`)
+    // console.log(`[getScheduleAction] Ditemukan ${schedule.length} jadwal`)
 
     const formated = schedule.map(item => {
       return {
@@ -203,7 +203,7 @@ export const getScheduleAction = async (filter: ScheduleFilter): Promise<Schedul
       }
     })
 
-    console.log('[getScheduleAction] Data terformat siap dikirim')
+    // console.log('[getScheduleAction] Data terformat siap dikirim')
 
     return {
       success: true,

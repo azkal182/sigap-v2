@@ -177,8 +177,8 @@ export async function getClassByDormitoryIdAction(dormitoryId: string, trackId: 
   try {
     const data = await getClassByDormitoryId(dormitoryId, trackId)
 
-    console.log('done ')
-    console.log(JSON.stringify(data, null, 2))
+    // console.log('done ')
+    // console.log(JSON.stringify(data, null, 2))
 
     return data
   } catch (error) {
@@ -204,7 +204,7 @@ export async function createClassAction(
 }
 
 export async function getClassDetailByIdAction(classId: string): Promise<ClassDetailResponse> {
-  console.log('getClassDetailByIdAction : ', classId)
+  //   console.log('getClassDetailByIdAction : ', classId)
 
   try {
     const data = await getClassDetailById(classId)
@@ -432,7 +432,7 @@ export async function handleClassTransferAction(input: ClassTransferInput) {
   const parsed = ClassTransferSchema.safeParse(input)
 
   if (!parsed.success) {
-    console.log(parsed.error.flatten().fieldErrors)
+    // console.log(parsed.error.flatten().fieldErrors)
 
     return {
       success: false,

@@ -536,20 +536,20 @@ export async function getClassAbsences(params: GetClassAbsenceParams): Promise<A
   const { classId, slotId, absentDate } = params
 
   try {
-    console.log('[getClassAbsences] Params:', params)
+    // console.log('[getClassAbsences] Params:', params)
 
     const local = DateTime.fromISO(absentDate, { zone: 'Asia/Jakarta' })
     const luxonWeekday = local.weekday // 1=Senin ... 7=Minggu
     const dayOfWeek = luxonWeekday % 7 // 0=Ahad (sesuai DB), 1=Senin, ... 6=Sabtu
 
-    console.log(
-      '[getClassAbsences] Local date:',
-      local.toISO(),
-      'Luxon weekday(1..7):',
-      luxonWeekday,
-      'DB dayOfWeek(0=Ahad):',
-      dayOfWeek
-    )
+    // console.log(
+    //   '[getClassAbsences] Local date:',
+    //   local.toISO(),
+    //   'Luxon weekday(1..7):',
+    //   luxonWeekday,
+    //   'DB dayOfWeek(0=Ahad):',
+    //   dayOfWeek
+    // )
 
     const scheduletest = await db.schedule.findMany({
       where: { classId, scheduleSlotId: slotId, dayOfWeek },
@@ -560,7 +560,7 @@ export async function getClassAbsences(params: GetClassAbsenceParams): Promise<A
       }
     })
 
-    console.log('[getClassAbsences] Schedules found for classId and slotId:', scheduletest)
+    // console.log('[getClassAbsences] Schedules found for classId and slotId:', scheduletest)
 
     const schedule = await db.schedule.findFirst({
       where: { classId, scheduleSlotId: slotId, dayOfWeek },
@@ -571,7 +571,7 @@ export async function getClassAbsences(params: GetClassAbsenceParams): Promise<A
       }
     })
 
-    console.log('[getClassAbsences] Found schedule:', schedule?.id)
+    // console.log('[getClassAbsences] Found schedule:', schedule?.id)
 
     if (!schedule) return { success: true, data: null }
 

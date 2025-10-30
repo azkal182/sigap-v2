@@ -238,7 +238,7 @@ export default function SurveyArchiveApp() {
     // Simulasi submit
     await new Promise(r => setTimeout(r, 1200))
 
-    console.log('Submit payload:', payload)
+    // console.log('Submit payload:', payload)
     setLoading(false)
     setSuccess(true)
   }

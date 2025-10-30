@@ -1393,7 +1393,7 @@ export const getSubjectOptionByTrackId = async (trackId: string): Promise<Subjec
 
 export const getSlotOption = async (dormitoryIds: string[]): Promise<SlotOptionResponse> => {
   try {
-    console.log({ dormitoryIds })
+    // console.log({ dormitoryIds })
 
     const data = await db.scheduleSlot.findMany({
       where: {
@@ -1413,7 +1413,7 @@ export const getSlotOption = async (dormitoryIds: string[]): Promise<SlotOptionR
       }
     })
 
-    console.log(data.map(data => ({ dormitoryId: data.dormitoryId })))
+    // console.log(data.map(data => ({ dormitoryId: data.dormitoryId })))
 
     return {
       success: true,

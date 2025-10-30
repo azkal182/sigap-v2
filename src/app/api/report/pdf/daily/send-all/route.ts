@@ -5,7 +5,7 @@ import { DateTime } from 'luxon'
 
 import { parseBoolean } from '@/lib/parseBoolean'
 import { getDailyReportByDormAndClass } from '@/lib/get-report-daily-by-dormitory-and-class'
-import { sendReportToAllTelegram } from '@/utils/send-report'
+import { sendReportToAllRecipients } from '@/utils/send-report'
 
 export async function GET(req: NextRequest) {
   try {
@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
 
     // Kirim ke semua telegram recipients aktif
     const jsDate = luxonDate.toJSDate()
-    const res = await sendReportToAllTelegram(data ?? [], jsDate)
+    const res = await sendReportToAllRecipients(data ?? [], jsDate)
 
     return NextResponse.json(res, { status: 'error' in res ? 400 : 200 })
   } catch (err: any) {

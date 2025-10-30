@@ -46,7 +46,7 @@ export async function getDailyReportByDormAndClass(
   const startDate = targetDateLuxon.startOf('day').toJSDate()
   const endDate = targetDateLuxon.endOf('day').toJSDate()
 
-  console.log({ startDate, endDate })
+  //   console.log({ startDate, endDate })
 
   // 2. Ambil semua data absensi dengan status 'ABSENT' pada hari tersebut
   const absences = await prisma.absence.findMany({
@@ -112,7 +112,7 @@ export async function getDailyReportByDormAndClass(
     }
   })
 
-  console.log(JSON.stringify(absences, null, 2))
+  //   console.log(JSON.stringify(absences, null, 2))
 
   // 3. Proses data untuk membuat struktur laporan hierarkis
   const report: Record<string, DormitoryDailyReportData> = {}

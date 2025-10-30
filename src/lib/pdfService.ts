@@ -605,6 +605,8 @@ export const sendPdfToTelegram = async (pdfBuffer: Buffer, caption: string, tele
           throw new Error(`Telegram API error untuk chatId ${chatId}: ${JSON.stringify(result)}`)
         }
 
+        // console.log(JSON.stringify(result, null, 2))
+
         console.log(`✅ Berhasil kirim ke chatId: ${chatId}`)
         break // Keluar dari loop jika berhasil
       } catch (error) {
@@ -685,7 +687,8 @@ export const sendPdfToWhatsApp = async (
   date: Date
 ) => {
   const {
-    endpoint = process.env.WA_ENDPOINT || 'http://165.22.106.176:3030/wa_azkal/messages/send/media-buffer',
+    // endpoint = process.env.WA_ENDPOINT || 'http://165.22.106.176:3030/wa_azkal/messages/send/media-buffer',
+    endpoint = process.env.WA_ENDPOINT || 'http://165.22.106.176:1111/send/file',
     apiKey = process.env.WA_API_KEY || process.env.WHATSAPP_API_KEY,
     filename = `Laporan_Absensi_${format(date, 'dd-MM-yyyy', { locale: id })}.pdf`,
     mediaType = 'document'
@@ -694,7 +697,8 @@ export const sendPdfToWhatsApp = async (
   if (!apiKey) throw new Error('WA API key tidak ditemukan. Set WA_API_KEY/WHATSAPP_API_KEY di env.')
 
   //   @ts-ignore
-  const pdfBlob = new Blob([pdfBuffer], { type: 'application/pdf' })
+  //   const pdfBlob = new Blob([pdfBuffer], { type: 'application/pdf' })
+  const file = new File([pdfBuffer], filename, { type: 'application/pdf' })
 
   // Worker untuk kirim WA ke satu JID (punya retry/backoff)
   const sendToJid = async (jid: string) => {
@@ -705,11 +709,16 @@ export const sendPdfToWhatsApp = async (
       try {
         const formData = new FormData()
 
-        formData.append('jid', jid)
-        formData.append('type', 'number')
-        formData.append('mediaType', mediaType)
+        // formData.append('jid', jid)
+        // formData.append('type', 'number')
+        // formData.append('mediaType', mediaType)
+        // formData.append('caption', caption)
+        // formData.append('file', pdfBlob, filename)
+
+        formData.append('phone', jid)
+        // formData.append('phone', '120363422244170266@g.us')
         formData.append('caption', caption)
-        formData.append('file', pdfBlob, filename)
+        formData.append('file', file)
 
         const res = await fetch(endpoint, {
           method: 'POST',

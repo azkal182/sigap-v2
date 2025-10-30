@@ -212,7 +212,7 @@ export async function getPermitsService(params: GetPermitsParams): Promise<APIRe
     //   permitFilter.createdBy = { role: { name: 'KEAMANAN' } }
     // }
 
-    console.log(JSON.stringify(permitFilter))
+    // console.log(JSON.stringify(permitFilter))
 
     const permits = await prisma.permit.findMany({
       where: permitFilter,

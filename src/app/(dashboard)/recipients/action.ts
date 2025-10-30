@@ -5,7 +5,7 @@ import { DateTime } from 'luxon'
 
 import prisma from '@/lib/prisma'
 import { getDailyReportByDormAndClass } from '@/lib/get-report-daily-by-dormitory-and-class'
-import { sendReportToAllTelegram, sendReportToOneRecipient } from '@/utils/send-report'
+import { sendReportToAllRecipients, sendReportToOneRecipient } from '@/utils/send-report'
 
 // -------- helpers ----------
 function toLuxon(dateStr: string, tz: string) {
@@ -160,7 +160,8 @@ export async function actionSendAll(formData: FormData) {
     const day = dt.day
 
     const data = await getDailyReportByDormAndClass(year, month, day, tz)
-    const res = await sendReportToAllTelegram(data ?? [], dt.toJSDate())
+    // const res = await sendReportToAllTelegram(data ?? [], dt.toJSDate())
+    const res = await sendReportToAllRecipients(data ?? [], dt.toJSDate())
 
     if ('error' in res) return res
 

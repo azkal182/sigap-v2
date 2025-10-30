@@ -159,7 +159,7 @@ export default function StudentForm() {
   }, [districtId])
 
   const onSubmit: SubmitHandler<StudentFormInput> = data => {
-    console.log('Form Submitted:', data)
+    // console.log('Form Submitted:', data)
 
     addStudent(data, {
       onSuccess: data => {

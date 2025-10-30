@@ -460,7 +460,7 @@ export default function PeriodStatsPage() {
 
   const { data: comments } = useComments(periodId, { field: field || undefined, sort, q, limit, offset })
 
-  console.log(comments)
+  //   console.log(comments)
 
   const total = comments?.total ?? 0
   const canPrev = offset > 0

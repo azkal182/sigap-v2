@@ -731,7 +731,7 @@ export default function SurveyWizardPage() {
     }
 
     if (student) {
-      console.log(student)
+      //   console.log(student)
 
       if (student.hasResponded) {
         setErr('Anda sudah mengisi survei untuk periode ini.')

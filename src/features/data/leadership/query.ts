@@ -190,7 +190,7 @@ export function useDetailLeadership(params: { id?: string; termLeadershipId?: st
       const res = await getDetailLeadershipAction({ id: params.id, termLeadershipId: params.termLeadershipId })
 
       if (!res.success) {
-        console.log('Error fetching leadership detail:', res.error, res.issues)
+        // console.log('Error fetching leadership detail:', res.error, res.issues)
         throw new ActionError(res.error, res.issues)
       }
 

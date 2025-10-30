@@ -104,7 +104,7 @@ export async function updateCredentials(userId: string, data: { username: string
 
   updateData.mustChangeCredentials = false // Flag jika sudah ganti kredensial
 
-  console.log('updated data', updateData)
+  //   console.log('updated data', updateData)
 
   return await prisma.user.update({
     where: { id: userId },

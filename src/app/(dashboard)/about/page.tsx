@@ -8,7 +8,7 @@ import { permissionHelper } from '@/utils/permission-helper'
 export default function Page() {
   const { permissions, allowedDormitoryIds } = usePermissionStore()
 
-  console.log(JSON.stringify({ permissions, allowedDormitoryIds }))
+  //   console.log(JSON.stringify({ permissions, allowedDormitoryIds }))
 
   //   const canEdit = permissions.includes('dormitory:edit')
   const canEdit = permissionHelper.checkByResource('dormitory', 'edit')

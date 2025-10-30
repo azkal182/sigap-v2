@@ -40,15 +40,15 @@ export async function getStudentsFromTeacherSchedule(
   students: StudentWithAbsence[]
 } | null> {
   try {
-    console.log('[DEBUG] Start getStudentsFromTeacherSchedule')
-    console.log('[DEBUG] Params:', { userId, dayOfWeek, searchHour, searchMinute, todayString, handoverMinutes })
+    // console.log('[DEBUG] Start getStudentsFromTeacherSchedule')
+    // console.log('[DEBUG] Params:', { userId, dayOfWeek, searchHour, searchMinute, todayString, handoverMinutes })
 
     const searchTime = `${String(searchHour).padStart(2, '0')}:${String(searchMinute).padStart(2, '0')}`
     const searchMin = hhmmToMinutes(searchTime)
     const today = todayString ?? DateTime.now().toISODate()
 
-    console.log('[DEBUG] searchTime:', searchTime)
-    console.log('[DEBUG] today:', today)
+    // console.log('[DEBUG] searchTime:', searchTime)
+    // console.log('[DEBUG] today:', today)
 
     // 0) Ambil teacher + dorm yang diampu
     const teacher = await prisma.teacher.findUnique({
@@ -59,7 +59,7 @@ export async function getStudentsFromTeacherSchedule(
       }
     })
 
-    console.log('[DEBUG] teacher:', teacher)
+    // console.log('[DEBUG] teacher:', teacher)
 
     if (!teacher || teacher.teacherDormitories.length === 0) {
       console.log('[DEBUG] Teacher tidak ditemukan atau tidak punya dormitory')
@@ -69,12 +69,12 @@ export async function getStudentsFromTeacherSchedule(
 
     const dormitoryIds = teacher.teacherDormitories.map(td => td.dormitoryId)
 
-    console.log('[DEBUG] dormitoryIds:', dormitoryIds)
+    // console.log('[DEBUG] dormitoryIds:', dormitoryIds)
 
     // Patok validitas ke tengah hari WIB pada tanggal target (hindari edge 00:00)
     const now = DateTime.fromISO(today, { zone: 'Asia/Jakarta' }).set({ hour: 12 }).toJSDate()
 
-    console.log('[DEBUG] now (for validity check):', now.toISOString())
+    // console.log('[DEBUG] now (for validity check):', now.toISOString())
 
     // 1) Query utama: interval half-open [start, end) → start ≤ search AND end > search
     let schedule = await prisma.schedule.findFirst({
@@ -116,7 +116,7 @@ export async function getStudentsFromTeacherSchedule(
       orderBy: { scheduleSlot: { startTime: 'asc' } }
     })
 
-    console.log('[DEBUG] schedule (primary half-open):', schedule)
+    // console.log('[DEBUG] schedule (primary half-open):', schedule)
 
     // 2) Handover override:
     // Jika kita berada di menit-menit awal slot baru, dan handoverMinutes > 0,
@@ -163,12 +163,12 @@ export async function getStudentsFromTeacherSchedule(
         })
 
         if (prevSchedule) {
-          console.log('[DEBUG] Handover override → use previous schedule:', {
-            prevId: prevSchedule.id,
-            prevSlot: prevSchedule.scheduleSlot.slot,
-            prevEnd: prevSchedule.scheduleSlot.endTime,
-            nextStart: nextStartStr
-          })
+          //   console.log('[DEBUG] Handover override → use previous schedule:', {
+          //     prevId: prevSchedule.id,
+          //     prevSlot: prevSchedule.scheduleSlot.slot,
+          //     prevEnd: prevSchedule.scheduleSlot.endTime,
+          //     nextStart: nextStartStr
+          //   })
           schedule = prevSchedule
         } else {
           console.log('[DEBUG] Handover override attempted, but no previous schedule found.')
@@ -184,13 +184,13 @@ export async function getStudentsFromTeacherSchedule(
 
     const slotNumber = schedule.scheduleSlot.slot
 
-    console.log('[DEBUG] slotNumber from schedule:', slotNumber)
+    // console.log('[DEBUG] slotNumber from schedule:', slotNumber)
 
     // 3) Rentang WIB untuk hari "today" (buat filter Permit aktif)
     const todayStart = DateTime.fromISO(today, { zone: 'Asia/Jakarta' }).startOf('day').toJSDate()
     const todayEnd = DateTime.fromISO(today, { zone: 'Asia/Jakarta' }).endOf('day').toJSDate()
 
-    console.log('[DEBUG] WIB range:', { todayStart, todayEnd })
+    // console.log('[DEBUG] WIB range:', { todayStart, todayEnd })
 
     // 4) Ambil siswa yang sedang STUDYING di classId tsb + absensi hari ini + permit aktif sekarang
     const students = await prisma.student.findMany({
@@ -220,7 +220,7 @@ export async function getStudentsFromTeacherSchedule(
       orderBy: { name: 'asc' }
     })
 
-    console.log('[DEBUG] students raw count:', students.length)
+    // console.log('[DEBUG] students raw count:', students.length)
 
     // 5) Bentuk data siswa dengan default dari permit jika belum ada absensi
     const studentsWithAbsence: StudentWithAbsence[] = students.map(student => {
@@ -249,8 +249,8 @@ export async function getStudentsFromTeacherSchedule(
       }
     })
 
-    console.log('[DEBUG] studentsWithAbsence count:', studentsWithAbsence.length)
-    console.log('[DEBUG] Timestamp:', new Date())
+    // console.log('[DEBUG] studentsWithAbsence count:', studentsWithAbsence.length)
+    // console.log('[DEBUG] Timestamp:', new Date())
 
     // 6) Hasil akhir
     const result = {
@@ -262,14 +262,14 @@ export async function getStudentsFromTeacherSchedule(
       subjectName: schedule.subject.name
     }
 
-    console.log('[DEBUG] Final result:', {
-      className: result.className,
-      dormitoryName: result.dormitoryName,
-      scheduleId: result.scheduleId,
-      subjectName: result.subjectName,
-      studentsCount: result.students.length
-    })
-    console.log('[DEBUG] End getStudentsFromTeacherSchedule')
+    // console.log('[DEBUG] Final result:', {
+    //   className: result.className,
+    //   dormitoryName: result.dormitoryName,
+    //   scheduleId: result.scheduleId,
+    //   subjectName: result.subjectName,
+    //   studentsCount: result.students.length
+    // })
+    // console.log('[DEBUG] End getStudentsFromTeacherSchedule')
 
     return result
   } catch (error) {

@@ -130,9 +130,15 @@ export async function sendReportToAllRecipients(data: Dormitory[], date: Date) {
 // Helper: normalisasi nomor WA -> JID
 function toWhatsAppJid(phone?: string | null): string | null {
   if (!phone) return null
-  let digits = phone.replace(/\D/g, '')
+  let input = phone.trim()
 
-  // asumsi ID: ganti awalan 0 menjadi 62
+  // jika format grup, kembalikan apa adanya
+  if (/@g\.us$/.test(input)) return input
+
+  // hanya ambil angka
+  let digits = input.replace(/\D/g, '')
+
+  // ubah awalan 0 jadi 62
   if (digits.startsWith('0')) digits = '62' + digits.slice(1)
 
   return `${digits}@s.whatsapp.net`

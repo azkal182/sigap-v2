@@ -148,7 +148,7 @@ export async function updateRolePermissionsAndDormitories(
     // Buat daftar semua cache key yang akan dihapus
     const cacheKeys = usersToInvalidate.map(user => `user_permissions:${user.id}`)
 
-    console.log(`Invalidating ${cacheKeys.length} user caches for roleId: ${roleId}`)
+    // console.log(`Invalidating ${cacheKeys.length} user caches for roleId: ${roleId}`)
 
     // Hapus semua kunci dari Redis dalam satu perintah untuk efisiensi
     await redis.del(cacheKeys)

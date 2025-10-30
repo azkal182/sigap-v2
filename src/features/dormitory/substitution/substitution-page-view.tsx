@@ -59,7 +59,7 @@ function dayOfWeekFromDateKey(dateKey: string): 1 | 2 | 3 | 4 | 5 | 6 | 7 {
 
 // Fake API call: returns a mock batchId & (optional) mergeGroupId
 async function fakeCreateSubstitution(payload: any) {
-  console.log('FAKE createSubstitutions payload:', payload)
+  //   console.log('FAKE createSubstitutions payload:', payload)
   await new Promise(r => setTimeout(r, 600))
 
   return {

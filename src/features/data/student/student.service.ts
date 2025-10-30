@@ -353,10 +353,10 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
       }
     })
 
-    console.log({
-      total: students.filter(s => s.dormitory?.name).length,
-      totalWithoutDoem: students.filter(s => !s.dormitory?.name).length
-    })
+    // console.log({
+    //   total: students.filter(s => s.dormitory?.name).length,
+    //   totalWithoutDoem: students.filter(s => !s.dormitory?.name).length
+    // })
 
     const formattedStudents: StudentItem[] = students
       .map(s => {

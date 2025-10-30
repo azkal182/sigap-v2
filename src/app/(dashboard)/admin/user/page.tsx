@@ -18,7 +18,7 @@ const UserPage = async () => {
 
   const users = await getUsersAction()
 
-  console.log(users)
+  //   console.log(users)
 
   return <UserPageView />
 }

@@ -17,7 +17,7 @@ export const getUsersAction = async () => {
       action: 'view'
     })
 
-    console.log('[getUsersAction] Permission check result:', { allowed })
+    // console.log('[getUsersAction] Permission check result:', { allowed })
 
     if (!allowed) {
       console.warn('[getUsersAction] Permission denied')
@@ -213,7 +213,7 @@ const updateSchema = z.object({
 })
 
 export async function updateCredentialsAction(input: z.infer<typeof updateSchema>) {
-  console.log('[SERVER] triggered', input)
+  //   console.log('[SERVER] triggered', input)
 
   const parsed = updateSchema.safeParse(input)
 
