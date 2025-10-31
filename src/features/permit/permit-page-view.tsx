@@ -18,27 +18,38 @@ import Button from '@mui/material/Button'
 
 import CardContent from '@mui/material/CardContent'
 
-import { useClosePermit, useCreatePermit, useGetPermits } from '@features/permit/permit.query'
+import { useClosePermit, useCreatePermit, useExtendPermit, useGetPermits } from '@features/permit/permit.query'
 import { usePermissionStore } from '@/store/permission'
 import CreatePermitFormDialog from '@features/permit/components/create-permit-form-dialog'
-import type { CreatePermitInput } from '@features/permit/permit-schema'
+import type { CreatePermitInput, ExtendPermitInput } from '@features/permit/permit-schema'
 import { useConfirm } from '@/hooks/useConfirm'
 import { ActionError } from '@/utils/action-error'
+import ExtendPermitFormDialog from './components/ExtendPermitFormDialog'
 
 const PermitPageView = () => {
   const { user } = usePermissionStore()
   const [open, setOpen] = useState(false)
 
+  const [openExtend, setOpenExtend] = useState(false)
+  const [extendPayload, setExtendPayload] = useState<{
+    permitId: string
+    studentName: string
+    regency: string
+    dormitoryName: string
+    userId?: string
+  } | null>(null)
+
   const { data, isLoading } = useGetPermits(user?.id)
   const { mutate: createPermit } = useCreatePermit()
   const { mutateAsync: closePermit } = useClosePermit()
+  const { mutateAsync: extendPermit } = useExtendPermit()
   const confirm = useConfirm()
   const [loading, setLoading] = useState(false)
 
   const onReturn = async (id: string, name: string) => {
     const ok = await confirm({
       title: 'update data ini?',
-      description: `${name} kembali ke asrama?`,
+      description: `${name} Cabut izin?`,
       confirmText: 'Simpan',
       confirmColor: 'primary',
 
@@ -84,6 +95,21 @@ const PermitPageView = () => {
     })
   }
 
+  const handleExtendSubmit = (input: ExtendPermitInput) => {
+    // alert('perpanjang')
+    console.log(JSON.stringify(input, null, 2))
+
+    extendPermit(input, {
+      onSuccess: res => {
+        toast.success(res.message ?? 'Perpanjangan berhasil')
+        setOpenExtend(false)
+        setExtendPayload(null)
+      },
+      onError: (err: any) => {
+        toast.error(err.message ?? 'Gagal perpanjang izin')
+      }
+    })
+  }
   if (!user || isLoading) {
     return <div>Loading</div>
   }
@@ -106,6 +132,9 @@ const PermitPageView = () => {
                 <TableRow>
                   <TableCell>No</TableCell>
                   <TableCell>Nama</TableCell>
+                  {user.role === 'KEAMANAN' && <TableCell>Asrama</TableCell>}
+                  {user.role === 'KEAMANAN' && <TableCell>Alamat</TableCell>}
+
                   <TableCell>Status</TableCell>
                   <TableCell>Tanggal</TableCell>
                   <TableCell>Jam ke</TableCell>
@@ -118,6 +147,9 @@ const PermitPageView = () => {
                   <TableRow key={item.id}>
                     <TableCell>{index + 1}</TableCell>
                     <TableCell>{item.student.name}</TableCell>
+                    {user.role === 'KEAMANAN' && <TableCell>{item.student?.dormitory?.name ?? '-'}</TableCell>}
+                    {user.role === 'KEAMANAN' && <TableCell>{item.student?.regency?.label ?? '-'}</TableCell>}
+
                     <TableCell>{item.permitSTatus === 'PERMIT' ? 'IZIN' : 'SAKIT'}</TableCell>
                     <TableCell>
                       {DateTime.fromJSDate(item.startDate).toFormat('dd-MM-yy')} --
@@ -127,14 +159,41 @@ const PermitPageView = () => {
                     <TableCell>{item.createdBy.name}</TableCell>
                     {user.role === 'KEAMANAN' && (
                       <TableCell>
-                        <Button
-                          disabled={item.endDate !== null}
-                          onClick={() => onReturn(item.id, item.student.name)}
-                          size='small'
-                          variant='contained'
-                        >
-                          Cabut Izin
-                        </Button>
+                        <div className='flex space-x-2'>
+                          <Button
+                            //   disabled={item.endDate !== null}
+                            onClick={() => onReturn(item.id, item.student.name)}
+                            size='small'
+                            variant='contained'
+                          >
+                            Cabut
+                          </Button>
+                          <Button
+                            //   disabled={item.endDate !== null}
+                            onClick={() => {
+                              console.log({
+                                permitId: item.id,
+                                studentName: item.student.name,
+                                userId: user.id,
+                                regency: item.student.regency?.label ?? '',
+                                dormitoryName: item.student.dormitory?.name ?? ''
+                              })
+
+                              setExtendPayload({
+                                permitId: item.id,
+                                studentName: item.student.name,
+                                userId: user.id,
+                                regency: item.student.regency?.label ?? '',
+                                dormitoryName: item.student.dormitory?.name ?? ''
+                              })
+                              setOpenExtend(true)
+                            }}
+                            size='small'
+                            variant='contained'
+                          >
+                            Perpanjang
+                          </Button>
+                        </div>
                       </TableCell>
                     )}
                   </TableRow>
@@ -151,6 +210,25 @@ const PermitPageView = () => {
         onClose={() => setOpen(false)}
         onSubmit={handleSubmit}
       />
+
+      {/* Dialog Perpanjang Izin: hanya Nama + Tanggal */}
+      {extendPayload && (
+        <ExtendPermitFormDialog
+          currentUserId={extendPayload.userId}
+          open={openExtend}
+          onClose={() => {
+            setOpenExtend(false)
+            setExtendPayload(null)
+          }}
+          onSubmit={handleExtendSubmit}
+          title='Perpanjang Izin'
+          permitId={extendPayload.permitId}
+          studentName={extendPayload.studentName}
+          regency={extendPayload.regency}
+          dormitoryName={extendPayload.dormitoryName}
+          //   submitLabel={isExtending ? 'Menyimpan...' : 'Simpan'}
+        />
+      )}
     </div>
   )
 }

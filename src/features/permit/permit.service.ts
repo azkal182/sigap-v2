@@ -1,7 +1,12 @@
 import { DateTime } from 'luxon'
 
-import type { ClosePermitInput, CreatePermitInput, GetPermitsParams } from '@features/permit/permit-schema'
-import { backendCreatePermitSchema, closePermitSchema } from '@features/permit/permit-schema'
+import type {
+  ClosePermitInput,
+  CreatePermitInput,
+  ExtendPermitInput,
+  GetPermitsParams
+} from '@features/permit/permit-schema'
+import { backendCreatePermitSchema, closePermitSchema, extendPermitSchema } from '@features/permit/permit-schema'
 import prisma from '@/lib/prisma'
 import type { APIResult } from '@/types/api-types'
 import type { Permit, Prisma } from '@/generated/prisma'
@@ -17,6 +22,16 @@ type ResponsePermits = Prisma.PermitGetPayload<{
     student: {
       select: {
         name: true
+        regency: {
+          select: {
+            label: true
+          }
+        }
+        dormitory: {
+          select: {
+            name: true
+          }
+        }
       }
     }
     createdBy: {
@@ -188,11 +203,12 @@ export async function getPermitsService(params: GetPermitsParams): Promise<APIRe
     if (!user) return { success: false, error: 'User tidak ditemukan' }
 
     const todayStart = DateTime.now().setZone('Asia/Jakarta').startOf('day').toJSDate()
-    const todayEnd = DateTime.now().setZone('Asia/Jakarta').endOf('day').toJSDate()
+    const todayEnd = DateTime.now().setZone('Asia/Jakarta').toJSDate()
+    console.log({ todayStart, todayEnd })
 
     const permitFilter: Prisma.PermitWhereInput = {
       startDate: { lte: todayEnd },
-      OR: [{ endDate: null }, { endDate: { gte: todayStart } }]
+      OR: [{ endDate: null }, { endDate: { gte: todayEnd } }]
     }
 
     const dormIds = user.userDormitories?.map(ud => ud.dormitoryId) ?? []
@@ -223,7 +239,21 @@ export async function getPermitsService(params: GetPermitsParams): Promise<APIRe
         allowedSlots: true,
         reason: true,
         permitSTatus: true,
-        student: { select: { name: true } },
+        student: {
+          select: {
+            name: true,
+            regency: {
+              select: {
+                label: true
+              }
+            },
+            dormitory: {
+              select: {
+                name: true
+              }
+            }
+          }
+        },
         createdBy: { select: { name: true, role: { select: { name: true } } } }
       },
       orderBy: { startDate: 'desc' }
@@ -315,7 +345,7 @@ export async function closePermitService(input: ClosePermitInput): Promise<APIRe
   }
 
   try {
-    const endDateJkt = DateTime.now().setZone('Asia/Jakarta').endOf('day').toJSDate()
+    const endDateJkt = DateTime.now().setZone('Asia/Jakarta').toJSDate()
 
     const updated = await prisma.permit.update({
       where: { id: parsed.data.permitId },
@@ -326,6 +356,77 @@ export async function closePermitService(input: ClosePermitInput): Promise<APIRe
       success: true,
       data: updated,
       message: 'data berhasil diperbaharui'
+    }
+  } catch (e: any) {
+    return {
+      success: false,
+      error: 'Gagal memperbaharui data!',
+      issues: e?.meta ?? undefined
+    }
+  }
+}
+
+export async function extendPermitService(input: ExtendPermitInput): Promise<
+  APIResult<
+    Prisma.PermitGetPayload<{
+      include: {
+        student: true
+      }
+    }>
+  >
+> {
+  // validasi input
+  const parsed = extendPermitSchema.safeParse(input)
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: 'Validasi gagal',
+      issues: parsed.error.flatten().fieldErrors
+    }
+  }
+
+  const { permitId, endDate, userId } = parsed.data
+
+  try {
+    // cek user ada
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true }
+    })
+
+    if (!user) {
+      return {
+        success: false,
+        error: 'User tidak ditemukan'
+      }
+    }
+
+    // cek permit ada
+    const permit = await prisma.permit.findUnique({
+      where: { id: permitId },
+      select: { id: true }
+    })
+
+    if (!permit) {
+      return {
+        success: false,
+        error: 'Permit tidak ditemukan'
+      }
+    }
+
+    // update endDate permit
+    const data = await prisma.permit.update({
+      where: { id: permitId },
+      data: { endDate },
+      include: {
+        student: true
+      }
+    })
+
+    return {
+      success: true,
+      data,
+      message: `Izin ${data.student.name} berhasil diperpanjang`
     }
   } catch (e: any) {
     return {

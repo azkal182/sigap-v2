@@ -93,6 +93,20 @@ export const closePermitSchema = z.object({
   permitId: z.string().uuid({ message: 'permitId harus UUID yang valid' })
 })
 
+export const extendPermitSchema = z.object({
+  permitId: z.string(),
+  endDate: z.coerce.date().refine(date => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const input = new Date(date)
+    input.setHours(0, 0, 0, 0)
+    return input > today // harus setelah hari ini
+  }, 'Tanggal harus setelah hari ini'),
+  userId: z.string()
+})
+
+export type ExtendPermitInput = z.infer<typeof extendPermitSchema>
+
 export type ClosePermitInput = z.infer<typeof closePermitSchema>
 
 export type BackendCreatePermitPayload = z.infer<typeof backendCreatePermitSchema>
