@@ -46,6 +46,9 @@ export async function getStudentsFromTeacherSchedule(
     const searchTime = `${String(searchHour).padStart(2, '0')}:${String(searchMinute).padStart(2, '0')}`
     const searchMin = hhmmToMinutes(searchTime)
     const today = todayString ?? DateTime.now().toISODate()
+    const probeTime = DateTime.fromISO(today, { zone: 'Asia/Jakarta' })
+      .set({ hour: searchHour, minute: searchMinute, second: 0, millisecond: 0 })
+      .toJSDate()
 
     // console.log('[DEBUG] searchTime:', searchTime)
     // console.log('[DEBUG] today:', today)
@@ -210,9 +213,19 @@ export async function getStudentsFromTeacherSchedule(
         },
         permits: {
           where: {
-            startDate: { lte: todayEnd },
-            OR: [{ endDate: null }, { endDate: { gte: todayStart } }],
-            AND: [{ OR: [{ allowedSlots: { has: slotNumber } }, { allowedSlots: { equals: [] } }] }]
+            // izin aktif pada detik "probeTime"
+            startDate: { lte: probeTime },
+            OR: [{ endDate: null }, { endDate: { gt: probeTime } }], // end exclusive
+            // AND: [{ OR: [{ allowedSlots: { has: slotNumber } }, { allowedSlots: { equals: [] } }] }]
+            AND: [
+              {
+                OR: [
+                  { allowedSlots: { has: slotNumber } },
+                  { allowedSlots: { equals: [] } }
+                  //   { allowedSlots: null }
+                ]
+              }
+            ]
           },
           select: { reason: true, permitSTatus: true }
         }
