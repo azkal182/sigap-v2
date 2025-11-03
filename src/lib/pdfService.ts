@@ -686,11 +686,15 @@ export const sendPdfToWhatsApp = async (
   opts: SendWAOptions = {},
   date: Date
 ) => {
+  const luxonDate = DateTime.fromJSDate(date, { zone: 'Asia/Jakarta' })
+  const fileName = `Laporan_Absensi_${luxonDate.toFormat('dd-MM-yyyy')}.pdf`
   const {
     // endpoint = process.env.WA_ENDPOINT || 'http://165.22.106.176:3030/wa_azkal/messages/send/media-buffer',
     endpoint = process.env.WA_ENDPOINT || 'http://165.22.106.176:1111/send/file',
     apiKey = process.env.WA_API_KEY || process.env.WHATSAPP_API_KEY,
-    filename = `Laporan_Absensi_${format(date, 'dd-MM-yyyy', { locale: id })}.pdf`,
+    // filename = `Laporan_Absensi_${format(date, 'dd-MM-yyyy', { locale: id })}.pdf`,
+    filename = fileName,
+
     mediaType = 'document'
   } = opts
 
