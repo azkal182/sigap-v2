@@ -157,7 +157,7 @@ const PermitPageView = () => {
                     </TableCell>
                     <TableCell>{item.allowedSlots.join(',')}</TableCell>
                     <TableCell>{item.createdBy.name}</TableCell>
-                    {user.role === 'KEAMANAN' && (
+                    {(user.role === 'KEAMANAN' || user.role === 'KESEHATAN') && (
                       <TableCell>
                         <div className='flex space-x-2'>
                           <Button
@@ -168,31 +168,33 @@ const PermitPageView = () => {
                           >
                             Cabut
                           </Button>
-                          <Button
-                            //   disabled={item.endDate !== null}
-                            onClick={() => {
-                              console.log({
-                                permitId: item.id,
-                                studentName: item.student.name,
-                                userId: user.id,
-                                regency: item.student.regency?.label ?? '',
-                                dormitoryName: item.student.dormitory?.name ?? ''
-                              })
+                          {user.role === 'KEAMANAN' && (
+                            <Button
+                              //   disabled={item.endDate !== null}
+                              onClick={() => {
+                                console.log({
+                                  permitId: item.id,
+                                  studentName: item.student.name,
+                                  userId: user.id,
+                                  regency: item.student.regency?.label ?? '',
+                                  dormitoryName: item.student.dormitory?.name ?? ''
+                                })
 
-                              setExtendPayload({
-                                permitId: item.id,
-                                studentName: item.student.name,
-                                userId: user.id,
-                                regency: item.student.regency?.label ?? '',
-                                dormitoryName: item.student.dormitory?.name ?? ''
-                              })
-                              setOpenExtend(true)
-                            }}
-                            size='small'
-                            variant='contained'
-                          >
-                            Perpanjang
-                          </Button>
+                                setExtendPayload({
+                                  permitId: item.id,
+                                  studentName: item.student.name,
+                                  userId: user.id,
+                                  regency: item.student.regency?.label ?? '',
+                                  dormitoryName: item.student.dormitory?.name ?? ''
+                                })
+                                setOpenExtend(true)
+                              }}
+                              size='small'
+                              variant='contained'
+                            >
+                              Perpanjang
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     )}

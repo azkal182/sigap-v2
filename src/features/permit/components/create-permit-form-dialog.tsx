@@ -39,7 +39,7 @@ const CreatePermitFormDialog = ({ open, onClose, onSubmit, currentUserId }: Crea
       startDate: '',
       endDate: null,
       userId: currentUserId,
-      allowedSlots: user?.role === 'KEAMANAN' ? [1, 2, 3, 4] : [],
+      allowedSlots: user?.role === 'KEAMANAN' || user?.role === 'KESEHATAN' ? [1, 2, 3, 4] : [],
       permitSTatus: 'PERMIT'
     }
   })
