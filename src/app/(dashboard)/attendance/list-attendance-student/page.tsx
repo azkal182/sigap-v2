@@ -250,61 +250,64 @@ const WeeklyAttendanceTable: React.FC<WeeklyTableProps> = ({ week, attendanceDat
 }
 
 // --- KOMPONEN UTAMA HALAMAN ---
+
 export default function AbsensiPage() {
   const [attendanceData, setAttendanceData] = useState<AbsenceReportData[]>([])
   const [weeklyReport, setWeeklyReport] = useState<WeeklyReportData[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [classId, setClassId] = useState('')
-  const { allowedDormitoryIds } = usePermissionStore()
 
+  const { allowedDormitoryIds } = usePermissionStore()
   const { data: classes, isLoading: classesLoading } = useClassesByDormitory({
     dormitoryId: allowedDormitoryIds[0]
   })
 
-  // Set tahun dan bulan secara hardcode untuk contoh
-  const todayJakarta = DateTime.now().setZone('Asia/Jakarta').startOf('day')
-  const today = DateTime.now().toFormat('dd-MM-yyyy')
-  const timezone = todayJakarta.zoneName
-  const month = todayJakarta.month // angka bulan (1-12)
-  const year = todayJakarta.year
-  let startDayOfWeek = 6 // 6 = Sabtu
+  // === BULAN TERPILIH: default ke awal bulan ini (Asia/Jakarta) ===
+  const nowJakarta = DateTime.now().setZone('Asia/Jakarta')
+  const [selectedMonth, setSelectedMonth] = useState<DateTime>(nowJakarta.startOf('month'))
 
-  // khusus illiyyin
+  // === OPSI: bulan ini + 3 bulan sebelumnya ===
+  const monthOptions = useMemo(() => {
+    return Array.from({ length: 4 }, (_, i) => nowJakarta.minus({ months: i }).startOf('month'))
+  }, [nowJakarta.toISO()]) // toISO untuk memicu re-render saat hari berganti (jarang perlu)
+
+  const timezone = selectedMonth.zoneName
+  const month = selectedMonth.month
+  const year = selectedMonth.year
+  const queryDate = selectedMonth.toFormat('dd-MM-yyyy') // selalu tgl 01-<bulan>-<tahun>
+
+  let startDayOfWeek = 6
   if (allowedDormitoryIds[0] === 'b2c3d4e5-f6a7-8901-2345-abcdef012345') {
     startDayOfWeek = 3
   }
 
   useEffect(() => {
-    if (classId) {
-      async function fetchData() {
-        setIsLoading(true)
+    if (!classId) return
+    let cancelled = false
 
-        // const data = await getMonthlyAttendanceReport(classId, today, timezone)
+    ;(async () => {
+      setIsLoading(true)
+      try {
         const res = await axios(
-          `/api/attendance/report/monthly?classId=${classId}&date=${today}&tz=${timezone}&${`start_week_day=${startDayOfWeek}`}`
+          `/api/attendance/report/monthly?classId=${classId}&date=${queryDate}&tz=${timezone}&start_week_day=${startDayOfWeek}`
         )
-
-        // console.log(res)
-
-        const data = res.data
-
+        const data: AbsenceReportData[] = res.data
         const uniqueDates = getUniqueDates(data, year, month, startDayOfWeek)
-
-        // console.log(uniqueDates)
-
         const weeklyData = groupDatesByWeek(uniqueDates, startDayOfWeek)
 
-        // console.log(weeklyData)
-
-        setAttendanceData(data)
-        setWeeklyReport(weeklyData)
-        setIsLoading(false)
+        if (!cancelled) {
+          setAttendanceData(data)
+          setWeeklyReport(weeklyData)
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false)
       }
+    })()
 
-      fetchData()
+    return () => {
+      cancelled = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [year, month, startDayOfWeek, classId])
+  }, [classId, queryDate, timezone, year, month, startDayOfWeek])
 
   if (classesLoading) {
     return (
@@ -317,22 +320,43 @@ export default function AbsensiPage() {
   return (
     <div className='font-inter'>
       <title>Laporan Absensi Santri</title>
-      <CustomAutocomplete
-        className='mb-4'
-        fullWidth
-        options={classes ?? []}
-        id='autocomplete-custom'
-        getOptionLabel={option => option.name || ''}
-        onChange={(_, value) => {
-          setClassId(value?.id || '')
-        }}
-        renderInput={params => <CustomTextField placeholder='Pilih Kelas' {...params} label='Pilih Kelas' />}
-      />
 
-      {/*<meta name='description' content='Laporan absensi bulanan santri per minggu.' />*/}
-      {/*<h1 className='text-3xl font-bold mb-6 text-center'>Laporan Absensi Bulanan</h1>*/}
-      {attendanceData.length === 0 ? (
-        <div className='flex justify-center items-center h-screen'>
+      <div className='grid grid-cols-1 md:grid-cols-2 gap-3 mb-4'>
+        <CustomAutocomplete
+          fullWidth
+          options={classes ?? []}
+          id='autocomplete-custom'
+          getOptionLabel={option => option.name || ''}
+          onChange={(_, value) => setClassId(value?.id || '')}
+          renderInput={params => <CustomTextField placeholder='Pilih Kelas' {...params} label='Pilih Kelas' />}
+        />
+
+        {/* === Selector bulan: hanya 4 opsi (bulan ini + 3 sebelumnya) === */}
+        <CustomTextField
+          select
+          label='Periode (Bulan • Tahun)'
+          value={selectedMonth.toISO()} // pakai ISO sebagai key yang stabil
+          onChange={e => {
+            const dt = DateTime.fromISO(e.target.value).setZone('Asia/Jakarta').startOf('month')
+            setSelectedMonth(dt)
+          }}
+          SelectProps={{ native: true }}
+          fullWidth
+        >
+          {monthOptions.map(dt => (
+            <option key={dt.toISO()} value={dt.toISO()?.toString()}>
+              {dt.setLocale('id').toFormat('LLLL yyyy')}
+            </option>
+          ))}
+        </CustomTextField>
+      </div>
+
+      {isLoading ? (
+        <div className='w-full flex items-center justify-center py-10'>
+          <CircularProgress />
+        </div>
+      ) : attendanceData.length === 0 ? (
+        <div className='flex justify-center items-center h-[50vh]'>
           <p>Tidak ada data absensi yang tersedia.</p>
         </div>
       ) : (
@@ -348,3 +372,102 @@ export default function AbsensiPage() {
     </div>
   )
 }
+
+// export default function AbsensiPage() {
+//   const [attendanceData, setAttendanceData] = useState<AbsenceReportData[]>([])
+//   const [weeklyReport, setWeeklyReport] = useState<WeeklyReportData[]>([])
+//   const [isLoading, setIsLoading] = useState(false)
+//   const [classId, setClassId] = useState('')
+//   const { allowedDormitoryIds } = usePermissionStore()
+
+//   const { data: classes, isLoading: classesLoading } = useClassesByDormitory({
+//     dormitoryId: allowedDormitoryIds[0]
+//   })
+
+//   // Set tahun dan bulan secara hardcode untuk contoh
+//   const todayJakarta = DateTime.now().setZone('Asia/Jakarta').startOf('day')
+//   const today = DateTime.now().toFormat('dd-MM-yyyy')
+//   const timezone = todayJakarta.zoneName
+//   const month = todayJakarta.month // angka bulan (1-12)
+//   const year = todayJakarta.year
+//   let startDayOfWeek = 6 // 6 = Sabtu
+
+//   // khusus illiyyin
+//   if (allowedDormitoryIds[0] === 'b2c3d4e5-f6a7-8901-2345-abcdef012345') {
+//     startDayOfWeek = 3
+//   }
+
+//   useEffect(() => {
+//     if (classId) {
+//       async function fetchData() {
+//         setIsLoading(true)
+
+//         // const data = await getMonthlyAttendanceReport(classId, today, timezone)
+//         const res = await axios(
+//           `/api/attendance/report/monthly?classId=${classId}&date=${today}&tz=${timezone}&${`start_week_day=${startDayOfWeek}`}`
+//         )
+
+//         // console.log(res)
+
+//         const data = res.data
+
+//         const uniqueDates = getUniqueDates(data, year, month, startDayOfWeek)
+
+//         // console.log(uniqueDates)
+
+//         const weeklyData = groupDatesByWeek(uniqueDates, startDayOfWeek)
+
+//         // console.log(weeklyData)
+
+//         setAttendanceData(data)
+//         setWeeklyReport(weeklyData)
+//         setIsLoading(false)
+//       }
+
+//       fetchData()
+//     }
+//     // eslint-disable-next-line react-hooks/exhaustive-deps
+//   }, [year, month, startDayOfWeek, classId])
+
+//   if (classesLoading) {
+//     return (
+//       <div className='w-full h-screen flex items-center justify-center'>
+//         <CircularProgress />
+//       </div>
+//     )
+//   }
+
+//   return (
+//     <div className='font-inter'>
+//       <title>Laporan Absensi Santri</title>
+//       <CustomAutocomplete
+//         className='mb-4'
+//         fullWidth
+//         options={classes ?? []}
+//         id='autocomplete-custom'
+//         getOptionLabel={option => option.name || ''}
+//         onChange={(_, value) => {
+//           setClassId(value?.id || '')
+//         }}
+//         renderInput={params => <CustomTextField placeholder='Pilih Kelas' {...params} label='Pilih Kelas' />}
+//       />
+
+//       {/*<meta name='description' content='Laporan absensi bulanan santri per minggu.' />*/}
+//       {/*<h1 className='text-3xl font-bold mb-6 text-center'>Laporan Absensi Bulanan</h1>*/}
+//       {attendanceData.length === 0 ? (
+//         <div className='flex justify-center items-center h-screen'>
+//           <p>Tidak ada data absensi yang tersedia.</p>
+//         </div>
+//       ) : (
+//         weeklyReport.map((week, weekIndex) => (
+//           <WeeklyAttendanceTable
+//             dormitoryId={allowedDormitoryIds[0]}
+//             key={weekIndex}
+//             week={week}
+//             attendanceData={attendanceData}
+//           />
+//         ))
+//       )}
+//     </div>
+//   )
+// }
