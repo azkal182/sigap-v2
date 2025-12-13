@@ -61,6 +61,10 @@ const TeacherPageView = () => {
         header: 'Nama'
       },
       {
+        accessorKey: 'username',
+        header: 'Username'
+      },
+      {
         id: 'dormitories',
         header: 'Asrama',
         cell: ({ row }) => {

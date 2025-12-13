@@ -31,6 +31,7 @@ type DromitoryName = {
 export type TeacherItem = {
   id: string
   name: string
+  username: string
   dormitories: DromitoryName[]
 }
 
@@ -173,6 +174,11 @@ export async function getTeacherWithDormitories(options: FilterTeacherParams): P
     select: {
       id: true,
       name: true,
+      user: {
+        select: {
+          username: true
+        }
+      },
       teacherDormitories: {
         select: {
           dormitory: {
@@ -190,6 +196,7 @@ export async function getTeacherWithDormitories(options: FilterTeacherParams): P
   const formatTeachers = teachers.map(item => ({
     id: item.id,
     name: item.name,
+    username: item.user.username,
     dormitories: item.teacherDormitories.map(d => ({ id: d.dormitory.id, name: d.dormitory.name }))
   }))
 
