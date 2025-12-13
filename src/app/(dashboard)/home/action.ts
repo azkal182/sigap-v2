@@ -30,7 +30,8 @@ export async function getStudentsFromTeacherSchedule(
   searchHour: number,
   searchMinute: number,
   todayString?: string,
-  handoverMinutes: number = 0 // 0 = langsung pindah di batas; 5 = tahan 5 menit di slot lama
+  handoverMinutes: number = 0, // 0 = langsung pindah di batas; 5 = tahan 5 menit di slot lama
+  shiftMinutes: number = 10
 ): Promise<{
   className: string
   scheduleId: string
@@ -43,12 +44,31 @@ export async function getStudentsFromTeacherSchedule(
     // console.log('[DEBUG] Start getStudentsFromTeacherSchedule')
     // console.log('[DEBUG] Params:', { userId, dayOfWeek, searchHour, searchMinute, todayString, handoverMinutes })
 
-    const searchTime = `${String(searchHour).padStart(2, '0')}:${String(searchMinute).padStart(2, '0')}`
-    const searchMin = hhmmToMinutes(searchTime)
+    // const searchTime = `${String(searchHour).padStart(2, '0')}:${String(searchMinute).padStart(2, '0')}`
+    // const searchMin = hhmmToMinutes(searchTime)
+    // const today = todayString ?? DateTime.now().toISODate()
+    // const probeTime = DateTime.fromISO(today, { zone: 'Asia/Jakarta' })
+    //   .set({ hour: searchHour, minute: searchMinute, second: 0, millisecond: 0 })
+
     const today = todayString ?? DateTime.now().toISODate()
-    const probeTime = DateTime.fromISO(today, { zone: 'Asia/Jakarta' })
-      .set({ hour: searchHour, minute: searchMinute, second: 0, millisecond: 0 })
-      .toJSDate()
+
+    // waktu asli (dipakai untuk probeTime permit, logging, dll)
+    const actualDT = DateTime.fromISO(today, { zone: 'Asia/Jakarta' }).set({
+      hour: searchHour,
+      minute: searchMinute,
+      second: 0,
+      millisecond: 0
+    })
+
+    // waktu efektif untuk cari jadwal (diundurkan shiftMinutes)
+    const effectiveDT = actualDT.minus({ minutes: shiftMinutes })
+
+    const searchTime = effectiveDT.toFormat('HH:mm')
+    const searchMin = effectiveDT.hour * 60 + effectiveDT.minute
+
+    const probeTime = actualDT.toJSDate() // rekomendasi: permit tetap pakai waktu asli
+
+    //   .toJSDate()
 
     // console.log('[DEBUG] searchTime:', searchTime)
     // console.log('[DEBUG] today:', today)
@@ -166,12 +186,12 @@ export async function getStudentsFromTeacherSchedule(
         })
 
         if (prevSchedule) {
-          //   console.log('[DEBUG] Handover override → use previous schedule:', {
-          //     prevId: prevSchedule.id,
-          //     prevSlot: prevSchedule.scheduleSlot.slot,
-          //     prevEnd: prevSchedule.scheduleSlot.endTime,
-          //     nextStart: nextStartStr
-          //   })
+          console.log('[DEBUG] Handover override → use previous schedule:', {
+            prevId: prevSchedule.id,
+            prevSlot: prevSchedule.scheduleSlot.slot,
+            prevEnd: prevSchedule.scheduleSlot.endTime,
+            nextStart: nextStartStr
+          })
           schedule = prevSchedule
         } else {
           console.log('[DEBUG] Handover override attempted, but no previous schedule found.')
