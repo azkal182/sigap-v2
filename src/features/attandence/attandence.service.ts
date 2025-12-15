@@ -541,7 +541,7 @@ export async function getClassAbsences(params: GetClassAbsenceParams): Promise<A
     const local = DateTime.fromISO(absentDate, { zone: 'Asia/Jakarta' })
     const luxonWeekday = local.weekday // 1=Senin ... 7=Minggu
     const dayOfWeek = luxonWeekday % 7 // 0=Ahad (sesuai DB), 1=Senin, ... 6=Sabtu
-
+    const dateStart = local.startOf('day').toJSDate()
     // console.log(
     //   '[getClassAbsences] Local date:',
     //   local.toISO(),
@@ -551,19 +551,43 @@ export async function getClassAbsences(params: GetClassAbsenceParams): Promise<A
     //   dayOfWeek
     // )
 
-    const scheduletest = await db.schedule.findMany({
-      where: { classId, scheduleSlotId: slotId, dayOfWeek },
-      include: {
-        class: { select: { id: true, name: true, dormitory: { select: { name: true } } } },
-        teacher: { select: { id: true } },
-        subject: { select: { name: true } }
-      }
-    })
+    // const scheduletest = await db.schedule.findMany({
+    //   where: { classId, scheduleSlotId: slotId, dayOfWeek },
+    //   include: {
+    //     class: { select: { id: true, name: true, dormitory: { select: { name: true } } } },
+    //     teacher: { select: { id: true } },
+    //     subject: { select: { name: true } }
+    //   }
+    // })
+
+    // const schedules = await db.schedule.findMany({
+    //   where: { classId, scheduleSlotId: slotId, dayOfWeek },
+    //   orderBy: { validFrom: 'desc' },
+    //   select: { id: true, active: true, validFrom: true, validTo: true, teacherId: true, subjectId: true }
+    // })
+    // console.log(schedules)
 
     // console.log('[getClassAbsences] Schedules found for classId and slotId:', scheduletest)
 
+    // const schedule = await db.schedule.findFirst({
+    //   where: { classId, scheduleSlotId: slotId, dayOfWeek },
+    //   include: {
+    //     class: { select: { id: true, name: true, dormitory: { select: { name: true } } } },
+    //     teacher: { select: { id: true } },
+    //     subject: { select: { name: true } }
+    //   }
+    // })
+
     const schedule = await db.schedule.findFirst({
-      where: { classId, scheduleSlotId: slotId, dayOfWeek },
+      where: {
+        classId,
+        scheduleSlotId: slotId,
+        dayOfWeek,
+        active: true,
+        validFrom: { lte: dateStart },
+        OR: [{ validTo: null }, { validTo: { gte: dateStart } }]
+      },
+      orderBy: { validFrom: 'desc' }, // penting!
       include: {
         class: { select: { id: true, name: true, dormitory: { select: { name: true } } } },
         teacher: { select: { id: true } },
@@ -571,7 +595,7 @@ export async function getClassAbsences(params: GetClassAbsenceParams): Promise<A
       }
     })
 
-    // console.log('[getClassAbsences] Found schedule:', schedule?.id)
+    console.log('[getClassAbsences] Found schedule:', schedule?.id)
 
     if (!schedule) return { success: true, data: null }
 
