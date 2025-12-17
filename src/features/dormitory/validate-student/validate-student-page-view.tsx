@@ -30,7 +30,7 @@ import { usePermissionStore } from '@/store/permission'
 import CustomAutocomplete from '@/@core/components/mui/Autocomplete'
 import CustomTextField from '@/@core/components/mui/TextField'
 import { useSlotData } from '@/features/data/dormitory/dormitory.query'
-import { AbsenceStatus } from '@/generated/prisma'
+import { AbsenceStatus } from '@/generated/prisma/enums'
 
 const ValidateStudentPageView = () => {
   const [slotId, setSlotId] = useState<string | ''>('')
@@ -91,6 +91,8 @@ const ValidateStudentPageView = () => {
       note: abs.note || undefined // Hanya kirim note jika ada isinya
     })) as UpdateAbsencesInput
 
+    console.log(JSON.stringify(updates, null, 2))
+
     updateAbsences(updates, {
       onSuccess: () => {
         toast.success('Absensi berhasil diperbarui!')
@@ -107,12 +109,16 @@ const ValidateStudentPageView = () => {
     if (data?.students) {
       console.log(data)
 
-      const mapped = data.students.map(student => ({
-        id: student.absence.id,
-        studentId: student.id,
-        status: student.absence.status,
-        note: student.absence.note ?? ''
-      }))
+      const mapped = data.students
+        .filter(student => student.absence?.id)
+        .map(student => ({
+          id: student.absence!.id,
+          studentId: student.id,
+          status: student.absence!.status,
+          note: student.absence!.note ?? ''
+        }))
+
+      console.log('Mapped absence data:', mapped)
 
       setAbsenceData(mapped)
     }
