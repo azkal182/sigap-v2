@@ -30,7 +30,7 @@ import { usePermissionStore } from '@/store/permission'
 import CustomAutocomplete from '@/@core/components/mui/Autocomplete'
 import CustomTextField from '@/@core/components/mui/TextField'
 import { useSlotData } from '@/features/data/dormitory/dormitory.query'
-import { AbsenceStatus } from '@/generated/prisma/enums'
+import { AbsenceStatus } from '@/generated/prisma'
 
 const ValidateStudentPageView = () => {
   const [slotId, setSlotId] = useState<string | ''>('')
@@ -107,7 +107,7 @@ const ValidateStudentPageView = () => {
 
   useEffect(() => {
     if (data?.students) {
-      console.log(data)
+      //   console.log(data)
 
       const mapped = data.students
         .filter(student => student.absence?.id)
@@ -118,7 +118,7 @@ const ValidateStudentPageView = () => {
           note: student.absence!.note ?? ''
         }))
 
-      console.log('Mapped absence data:', mapped)
+      //   console.log('Mapped absence data:', mapped)
 
       setAbsenceData(mapped)
     }
