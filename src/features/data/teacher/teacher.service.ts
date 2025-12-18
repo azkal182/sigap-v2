@@ -4,7 +4,7 @@ import { hash, hashSync } from 'bcryptjs'
 
 import prisma from '@/lib/prisma'
 import type { FilterTeacherParams, ResetPasswordTeacherInput } from './shemas/teacher-schema'
-import { Prisma } from '@/generated/prisma'
+import { Prisma } from '@/generated/prisma/client'
 import type { APIResult } from '@/types/api-types'
 import { handleServerError } from '@/lib/handle-error'
 
@@ -53,32 +53,36 @@ export type TeacherOptionResponse = TeacherOptionSuccess | TeacherListError
 export type TeacherListResponse = TeacherListSuccess | TeacherListError
 
 export async function createTeacher(name: string) {
-  const rolePengajar = await prisma.role.findUnique({
-    where: { name: 'PENGAJAR' }
-  })
+  try {
+    const rolePengajar = await prisma.role.findUnique({
+      where: { name: 'PENGAJAR' }
+    })
 
-  if (!rolePengajar) {
     if (!rolePengajar) {
-      throw new Error('Role PENGAJAR tidak ditemukan')
+      if (!rolePengajar) {
+        throw new Error('Role PENGAJAR tidak ditemukan')
+      }
     }
-  }
 
-  return await prisma.teacher.create({
-    data: {
-      name,
-      user: {
-        create: {
-          name: name,
-          username: name.toLocaleLowerCase(),
-          password: hashSync('ppdf'),
-          mustChangeCredentials: true,
-          role: {
-            connect: { id: rolePengajar.id }
+    return await prisma.teacher.create({
+      data: {
+        name,
+        user: {
+          create: {
+            name: name,
+            username: name.toLocaleLowerCase(),
+            password: hashSync('ppdf'),
+            mustChangeCredentials: true,
+            role: {
+              connect: { id: rolePengajar.id }
+            }
           }
         }
       }
-    }
-  })
+    })
+  } catch (error) {
+    return handleServerError('create teacher', error)
+  }
 }
 
 export async function createTeacherWithDormitories(name: string, dormitoryIds: string[]) {

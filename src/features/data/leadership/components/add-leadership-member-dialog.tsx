@@ -10,7 +10,7 @@ import CustomTextField from '@/@core/components/mui/TextField'
 import StudentAutocomplete from '@/components/StudentAutoComplete'
 
 import { addLeadershipMemberSchema, type AddLeadershipMemberInput } from '../schemas/leadership.schema'
-import { PositionRole } from '@/generated/prisma'
+import { PositionRole } from '@/generated/prisma/enums'
 
 interface LeadershipFormDialogProps {
   open: boolean

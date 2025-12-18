@@ -14,9 +14,6 @@
     "build:icons": "tsx src/assets/iconify-icons/bundle-icons-css.ts",
     "postinstall": "prisma generate"
   },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
-  },
   "lint-staged": {
     "**/*.{js,ts,jsx,tsx}": "prettier . --write"
   },
@@ -33,13 +30,15 @@
     "@mui/material": "6.2.1",
     "@mui/material-nextjs": "6.2.1",
     "@mui/x-data-grid": "^8.5.3",
-    "@prisma/client": "6.10.1",
+    "@prisma/adapter-pg": "^7.1.0",
+    "@prisma/client": "7.1.0",
     "@tanstack/react-query": "^5.81.5",
     "@tanstack/react-table": "^8.21.3",
     "bcryptjs": "^3.0.2",
     "classnames": "2.5.1",
     "cloudinary": "^2.7.0",
     "date-fns": "^4.1.0",
+    "dotenv": "^17.2.3",
     "exceljs": "^4.4.0",
     "file-saver": "^2.0.5",
     "googleapis": "^160.0.0",
@@ -99,7 +98,7 @@
     "postcss": "8.4.49",
     "postcss-styled-syntax": "0.7.0",
     "prettier": "3.4.2",
-    "prisma": "^6.10.1",
+    "prisma": "^7.1.0",
     "stylelint": "16.12.0",
     "stylelint-use-logical-spec": "5.0.1",
     "stylis": "4.3.4",

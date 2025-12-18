@@ -1,6 +1,6 @@
 'use server'
 
-import type { Province, Regency, District, Village } from '@/generated/prisma'
+import type { Province, Regency, District, Village } from '@/generated/prisma/client'
 
 import prisma from '@/lib/prisma'
 

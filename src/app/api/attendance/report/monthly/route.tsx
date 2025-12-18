@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 import { DateTime } from 'luxon'
 
-import { type AbsenceStatus } from '@/generated/prisma'
+import { type AbsenceStatus } from '@/generated/prisma/enums'
 import prisma from '@/lib/prisma'
 
 // async function getMonthlyAttendanceReport(

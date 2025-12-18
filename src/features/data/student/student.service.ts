@@ -2,7 +2,7 @@ import { DateTime } from 'luxon'
 
 import db from '@/lib/prisma'
 import type { FilterStudentParams, StudentFormInput } from './schemas/student-schema'
-import { HistoryStatus, Prisma, RegistrationStatus, StudentStatus } from '@/generated/prisma'
+import { HistoryStatus, Prisma, RegistrationStatus, StudentStatus } from '@/generated/prisma/client'
 import { handleServerError } from '@/lib/handle-error'
 import type { APIPaginatedResult, APIResult } from '@/types/api-types'
 

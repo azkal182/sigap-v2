@@ -4,7 +4,7 @@ import { DateTime } from 'luxon'
 import db from '@/lib/prisma'
 import type { CreateAbsencesInput, UpdateAbsencesInput } from './schemas/attendent-schema'
 import type { APIResult } from '@/types/api-types'
-import type { AbsenceStatus } from '@/generated/prisma'
+import type { AbsenceStatus } from '@/generated/prisma/client'
 
 // Asumsikan tipe ini ada
 
@@ -78,6 +78,7 @@ export async function createAbsences(
 
 export async function updateAbsences(data: UpdateAbsencesInput): Promise<APIResult<{ count: number }>> {
   try {
+    // console.log('Updating absences with data:', JSON.stringify(data, null, 2))
     // Karena Prisma tidak memiliki updateMany, kita menggunakan transaksi
     const result = await db.$transaction(
       data.map(abs =>
@@ -93,7 +94,7 @@ export async function updateAbsences(data: UpdateAbsencesInput): Promise<APIResu
 
     return { success: true, data: { count: result.length } }
   } catch (error) {
-    console.error('Failed to update absences in batch:', error)
+    // console.error('Failed to update absences in batch:', error)
 
     return { success: false, error: 'Gagal memperbarui absensi massal.' }
   }

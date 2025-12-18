@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 import { DateTime } from 'luxon'
 
-import { HistoryStatus, type AbsenceStatus } from '@/generated/prisma'
+import { HistoryStatus, type AbsenceStatus } from '@/generated/prisma/client'
 import prisma from '@/lib/prisma'
 
 // Interface yang sama seperti laporan bulanan

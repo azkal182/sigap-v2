@@ -1,6 +1,6 @@
 import { DateTime } from 'luxon'
 
-import type { Prisma } from '@/generated/prisma'
+import type { Prisma } from '@/generated/prisma/client'
 import type { APIResult } from '@/types/api-types'
 import prisma from '@/lib/prisma'
 

@@ -1,6 +1,6 @@
 import { DateTime } from 'luxon'
 
-import { AbsenceStatus, HistoryStatus } from '@/generated/prisma'
+import { AbsenceStatus, HistoryStatus } from '@/generated/prisma/client'
 import prisma from '@/lib/prisma'
 
 // Struktur data untuk detail absensi siswa

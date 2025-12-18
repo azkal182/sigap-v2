@@ -28,7 +28,8 @@ import {
   updateSubjectAction,
   handleClassTransferAction,
   moveTeacherScheduleAction,
-  moveDormitoyAction
+  moveDormitoyAction,
+  updateScheduleWithTakeoverAction
 } from './actions/dormitory.action'
 import type {
   ClassFormInput,
@@ -39,7 +40,8 @@ import type {
   MoveTeacherScheduleInput,
   SksOptionParams,
   SubjectFormInput,
-  TrackFormSchema
+  TrackFormSchema,
+  UpdateScheduleWithTakeoverInput
 } from './schemas/dormitory-schema'
 import { getScheduleAction } from '@/actions/schedule-action'
 import type { CreateScheduleResult } from './dormitory.service'
@@ -398,14 +400,16 @@ export const useUpdateSchedule = () => {
       const result = await updateScheduleAction(payload)
 
       if (!result.success) {
-        // throw new Error(result.error)
-        throw { message: result.error, conflict: result.conflict }
+        throw {
+          message: result.error,
+          conflict: result.conflict,
+          conflictScheduleId: result.data?.conflictWithScheduleId
+        }
       }
 
       return result
     },
     onSuccess: (_, variables) => {
-      // Lakukan revalidate query berdasarkan key dan classId
       queryClient.invalidateQueries({
         queryKey: ['schedule_class', variables.classId]
       })
@@ -427,7 +431,27 @@ export const useMoveTeacherSchedule = () => {
       return result
     },
     onSuccess: () => {
-      // Lakukan revalidate query berdasarkan key dan classId
+      queryClient.invalidateQueries({
+        queryKey: ['schedule_class']
+      })
+    }
+  })
+}
+
+export const useUpdateScheduleWithTakeover = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (payload: UpdateScheduleWithTakeoverInput) => {
+      const result = await updateScheduleWithTakeoverAction(payload)
+
+      if (!result.success) {
+        throw new ActionError(result.error, result.issues)
+      }
+
+      return result
+    },
+    onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ['schedule_class']
       })

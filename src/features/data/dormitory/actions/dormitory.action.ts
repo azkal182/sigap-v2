@@ -26,7 +26,8 @@ import {
   updateClass,
   updateSubject,
   moveTeacherSchedule,
-  moveDormitory
+  moveDormitory,
+  updateScheduleWithTakeover
 } from './../dormitory.service'
 
 import {
@@ -42,7 +43,8 @@ import {
   sksOptionSchema,
   subjectFormSchema,
   trackOptionSchema,
-  trackSchema
+  trackSchema,
+  updateScheduleWithTakeoverSchema
 } from './../schemas/dormitory-schema'
 
 import prisma from '@/lib/prisma'
@@ -336,6 +338,10 @@ export async function updateScheduleAction(input: unknown): Promise<CreateSchedu
 
 export async function moveTeacherScheduleAction(input: unknown) {
   return validateAndRun(moveTeacherScheduleSchema, input, moveTeacherSchedule)
+}
+
+export async function updateScheduleWithTakeoverAction(input: unknown) {
+  return validateAndRun(updateScheduleWithTakeoverSchema, input, updateScheduleWithTakeover)
 }
 
 export const getSubjectOptionByTrackIdAction = async (trackId: string): Promise<SubjectOptionResponse> => {

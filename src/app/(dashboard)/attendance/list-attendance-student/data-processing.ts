@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-import { AbsenceStatus } from '@/generated/prisma'
+import { AbsenceStatus } from '@/generated/prisma/enums'
 
 // Mendefinisikan status absensi yang tersedia
 const statuses = [AbsenceStatus.PRESENT, AbsenceStatus.ABSENT, AbsenceStatus.SICK, AbsenceStatus.PERMIT]

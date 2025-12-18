@@ -22,7 +22,7 @@ import { toast } from 'react-toastify'
 
 import { useUpdateTeacherAttendanceBulk } from '../query'
 import type { TeacherAttendanceResult } from '../service'
-import type { AbsenceStatus } from '@/generated/prisma'
+import type { AbsenceStatus } from '@/generated/prisma/enums'
 
 interface Props {
   data: TeacherAttendanceResult[]

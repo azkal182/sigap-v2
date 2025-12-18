@@ -1,15 +1,18 @@
+import 'dotenv/config'
 import { hashSync } from 'bcryptjs'
+import { PrismaPg } from '@prisma/adapter-pg'
 
 // Import JSON data
 import Provinces from './json/provinsi.json'
 import Regencies from './json/kabupaten.json'
 import Districts from './json/kecamatan.json'
 import Villages from './json/kelurahan.json'
-import { $Enums, PrismaClient } from '@/generated/prisma'
+import { $Enums, PrismaClient } from '@/generated/prisma/client'
 
 import GenderType = $Enums.GenderType
 
-const prisma = new PrismaClient()
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! })
+const prisma = new PrismaClient({ adapter })
 
 // Define a type for the village data structure
 type VillageData = {

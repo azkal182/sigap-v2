@@ -1,8 +1,8 @@
 'use server'
 
 import db from '@/lib/prisma'
-import { Prisma, StudentStatus } from '@/generated/prisma'
-import { PrismaClientKnownRequestError } from '@/generated/prisma/runtime/library'
+import { Prisma, StudentStatus } from '@/generated/prisma/client'
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/client'
 
 export const createStudentFromImportData = async (data: any) => {
   try {

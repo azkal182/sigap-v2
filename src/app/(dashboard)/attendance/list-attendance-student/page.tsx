@@ -24,7 +24,7 @@ import axios from 'axios'
 
 import type { AbsenceReportData, WeeklyReportData, AbsenceDetail } from './data-processing'
 import { getMonthlyAttendanceReport, getUniqueDates, groupDatesByWeek } from './data-processing'
-import { AbsenceStatus } from '@/generated/prisma'
+import { AbsenceStatus } from '@/generated/prisma/enums'
 import { useClassesByDormitory } from '@features/dormitory/validate-teacher/query'
 import { usePermissionStore } from '@/store/permission'
 import CustomAutocomplete from '@core/components/mui/Autocomplete'

@@ -2,7 +2,7 @@
 
 import { DateTime } from 'luxon'
 
-import { AbsenceStatus } from '@/generated/prisma'
+import { AbsenceStatus } from '@/generated/prisma/client'
 import prisma from '@/lib/prisma'
 
 // ✅ Tipe untuk objek siswa yang disederhanakan

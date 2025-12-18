@@ -1,4 +1,4 @@
-import type { HistoryStatus } from '@/generated/prisma'
+import type { HistoryStatus } from '@/generated/prisma/client'
 
 export const convertHistoryStatus = (status: HistoryStatus): string => {
   switch (status) {

@@ -9,7 +9,7 @@ import FormDialog from '@/components/form-dialog'
 import CustomTextField from '@/@core/components/mui/TextField'
 import StudentAutocomplete from '@/components/StudentAutoComplete'
 
-import { PositionRole } from '@/generated/prisma'
+import { PositionRole } from '@/generated/prisma/enums'
 import { addLeadershipChairmanSchema, type AddLeadershipChairmanInput } from '../schemas/leadership.schema'
 
 interface LeadershipFormDialogProps {

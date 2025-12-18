@@ -9,7 +9,7 @@ import type {
 import { backendCreatePermitSchema, closePermitSchema, extendPermitSchema } from '@features/permit/permit-schema'
 import prisma from '@/lib/prisma'
 import type { APIResult } from '@/types/api-types'
-import type { Permit, Prisma } from '@/generated/prisma'
+import type { Permit, Prisma } from '@/generated/prisma/client'
 
 type ResponsePermits = Prisma.PermitGetPayload<{
   select: {

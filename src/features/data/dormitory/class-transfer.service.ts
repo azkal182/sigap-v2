@@ -1,7 +1,6 @@
 // src/services/class-transfer.service.ts
 'use server'
-import type { Prisma } from '@/generated/prisma'
-import { PrismaClient, HistoryStatus } from '@/generated/prisma'
+import { HistoryStatus, Prisma } from '@/generated/prisma/client'
 import {
   ClassTransferSchema,
   MoveWithinTrackSchema,
@@ -14,8 +13,7 @@ import {
 } from './schemas/class-transfer.schema'
 
 import type { APIResult, APIResponse, APIError } from '@/types/api-types'
-
-const prisma = new PrismaClient()
+import prisma from '@/lib/prisma'
 
 /* --------------------------------- Helpers -------------------------------- */
 

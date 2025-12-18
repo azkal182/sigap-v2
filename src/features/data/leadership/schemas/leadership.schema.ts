@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { PositionRole } from '@/generated/prisma'
+import { PositionRole } from '@/generated/prisma/enums'
 
 // ======================
 // Leadership

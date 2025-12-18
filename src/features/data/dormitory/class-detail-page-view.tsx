@@ -257,7 +257,6 @@
 
 import React, { useMemo, useState } from 'react'
 
-// MUI
 import {
   Button,
   Card,
@@ -265,6 +264,7 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
+  DialogContentText,
   DialogTitle,
   FormControl,
   InputLabel,
@@ -312,9 +312,14 @@ import {
   useHandleClassTransfer,
   useMoveTeacherSchedule,
   useSchedule,
-  useUpdateSchedule
+  useUpdateSchedule,
+  useUpdateScheduleWithTakeover
 } from './dormitory.query'
-import type { CreateScheduleInput, MoveTeacherScheduleInput } from './schemas/dormitory-schema'
+import type {
+  CreateScheduleInput,
+  MoveTeacherScheduleInput,
+  UpdateScheduleWithTakeoverInput
+} from './schemas/dormitory-schema'
 import ScheduleFormDialog from './components/schedule-form-dialog'
 import ScheduleSubject from './schedule-subject'
 import { useTrackByDormIds } from '@/features/dormitory/dormitory-track/query'
@@ -352,7 +357,28 @@ const ClassDetailPageView = ({
   const { mutate: createSchedule } = useCreateSchedule()
   const { mutate: updateSchedule } = useUpdateSchedule()
   const { mutate: moveTeacherSchedule } = useMoveTeacherSchedule()
+  const { mutate: updateWithTakeover } = useUpdateScheduleWithTakeover()
   const { data: scheduleData } = useSchedule({ classId })
+
+  // State untuk edit mode conflict (takeover)
+  const [editCurrentScheduleId, setEditCurrentScheduleId] = useState<string | undefined>()
+
+  // State untuk preview dialog (dry-run)
+  const [previewDialog, setPreviewDialog] = useState<{
+    open: boolean
+    data: {
+      willClose: { id: string; info: string }[]
+      willCreate: {
+        teacherId: string
+        subjectId: string
+        classId: string
+        dayOfWeek: number
+        scheduleSlotId: string
+      }
+      effectiveFrom: Date
+    } | null
+    payload: UpdateScheduleWithTakeoverInput | null
+  }>({ open: false, data: null, payload: null })
 
   // Track & Class queries
   const { data: trackList } = useTrackByDormIds([dormitoryId]) // asumsi shape: { data: Array<{id,name,...}> }
@@ -375,9 +401,13 @@ const ClassDetailPageView = ({
     setScheduleDialog({ open: true, mode, data })
     setMoveSchedule(false)
     setScheduleId(undefined)
+    setEditCurrentScheduleId(undefined)
   }
 
-  const closeScheduleDialog = () => setScheduleDialog(prev => ({ ...prev, open: false, data: null }))
+  const closeScheduleDialog = () => {
+    setScheduleDialog(prev => ({ ...prev, open: false, data: null }))
+    setEditCurrentScheduleId(undefined)
+  }
 
   const handleSubmitSchedule = (form: CreateScheduleInput) => {
     if (scheduleDialog.mode === 'create') {
@@ -403,28 +433,87 @@ const ClassDetailPageView = ({
           closeScheduleDialog()
         },
         onError: (error: any) => {
-          if (error?.conflict === 'teacher') toast.error(error.message || 'Guru bentrok.')
-          else if (error?.conflict === 'class') toast.error(error.message || 'Kelas bentrok.')
-          else toast.error(error.message || 'Gagal memperbarui Jadwal.')
+          if (error?.conflict === 'teacher') {
+            toast.error(error.message || 'Guru bentrok.')
+            setMoveSchedule(true)
+            setScheduleId(error?.conflictScheduleId)
+            setEditCurrentScheduleId(form.id) // Track jadwal yang sedang diedit
+          } else if (error?.conflict === 'class') {
+            toast.error(error.message || 'Kelas bentrok.')
+          } else {
+            toast.error(error.message || 'Gagal memperbarui Jadwal.')
+          }
         }
       })
     }
   }
 
   const handleMoveSchedule = (form: MoveTeacherScheduleInput) => {
-    moveTeacherSchedule(form, {
+    // Jika ada editCurrentScheduleId, ini adalah takeover dari edit mode
+    if (editCurrentScheduleId && scheduleId) {
+      const takeoverPayload: UpdateScheduleWithTakeoverInput = {
+        currentScheduleId: editCurrentScheduleId,
+        conflictScheduleId: scheduleId,
+        to: form.to,
+        dryRun: true // First, do dry-run to get preview
+      }
+
+      updateWithTakeover(takeoverPayload, {
+        onSuccess: (result: any) => {
+          if (result.data?.preview) {
+            // Show preview dialog
+            setPreviewDialog({
+              open: true,
+              data: {
+                willClose: result.data.willClose,
+                willCreate: result.data.willCreate,
+                effectiveFrom: result.data.effectiveFrom
+              },
+              payload: { ...takeoverPayload, dryRun: false } // Store payload for confirmation
+            })
+          }
+        },
+        onError: (error: any) => {
+          toast.error(error.message || 'Gagal memvalidasi jadwal.')
+        }
+      })
+    } else {
+      // Create mode - use moveTeacherSchedule as before
+      moveTeacherSchedule(form, {
+        onSuccess: () => {
+          toast.success('Jadwal berhasil dipindah!')
+          closeScheduleDialog()
+          setMoveSchedule(false)
+          setScheduleId(undefined)
+        },
+        onError: (error: any) => {
+          toast.error(error.message || 'Gagal memindah Jadwal.')
+        }
+      })
+    }
+  }
+
+  // Konfirmasi preview dan eksekusi takeover
+  const confirmTakeoverPreview = () => {
+    if (!previewDialog.payload) return
+
+    updateWithTakeover(previewDialog.payload, {
       onSuccess: () => {
-        toast.success('Jadwal berhasil dipindah!')
+        toast.success('Jadwal berhasil dipindah dan diperbarui!')
         closeScheduleDialog()
         setMoveSchedule(false)
         setScheduleId(undefined)
+        setEditCurrentScheduleId(undefined)
+        setPreviewDialog({ open: false, data: null, payload: null })
       },
       onError: (error: any) => {
-        toast.error(error.message || 'Gagal memindah Jadwal.')
+        toast.error(error.message || 'Gagal memindah jadwal.')
       }
     })
+  }
 
-    // console.log('handleMoveSchedule', form)
+  const closeTakeoverPreview = () => {
+    setPreviewDialog({ open: false, data: null, payload: null })
   }
 
   const handleChangeTab = (_: React.SyntheticEvent, newValue: string) => setActiveTab(newValue)
@@ -849,6 +938,45 @@ const ClassDetailPageView = ({
         dormitoryIds={[dormitoryId]}
         trackId={trackId}
       />
+
+      {/* ====== Preview Dialog untuk Takeover ====== */}
+      <Dialog open={previewDialog.open} onClose={closeTakeoverPreview} maxWidth='sm' fullWidth>
+        <DialogTitle>Konfirmasi Pemindahan Jadwal</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            Aksi ini akan menutup jadwal berikut dan membuat jadwal baru:
+          </DialogContentText>
+
+          {previewDialog.data && (
+            <>
+              <Typography variant='subtitle2' color='error' sx={{ mb: 1 }}>
+                Jadwal yang akan ditutup:
+              </Typography>
+              <Stack spacing={1} sx={{ mb: 2, pl: 2 }}>
+                {previewDialog.data.willClose.map((item, idx) => (
+                  <Typography key={idx} variant='body2'>
+                    • {item.info}
+                  </Typography>
+                ))}
+              </Stack>
+
+              <Typography variant='subtitle2' color='success.main' sx={{ mb: 1 }}>
+                Jadwal baru akan dibuat dengan data yang Anda input.
+              </Typography>
+
+              <Typography variant='caption' color='text.secondary'>
+                Efektif mulai: {new Date(previewDialog.data.effectiveFrom).toLocaleString('id-ID')}
+              </Typography>
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeTakeoverPreview}>Batal</Button>
+          <Button variant='contained' color='warning' onClick={confirmTakeoverPreview}>
+            Konfirmasi Pindah
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Card>
   )
 }

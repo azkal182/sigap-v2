@@ -1,7 +1,7 @@
 'use server'
 
-import type { Leadership, PositionHistoryLeadership, TermLeadership } from '@/generated/prisma'
-import { PositionRole, Prisma } from '@/generated/prisma'
+import type { Leadership, PositionHistoryLeadership, TermLeadership } from '@/generated/prisma/client'
+import { PositionRole, Prisma } from '@/generated/prisma/client'
 import { handleServerError } from '@/lib/handle-error'
 
 import prisma from '@/lib/prisma'

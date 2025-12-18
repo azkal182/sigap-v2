@@ -12,7 +12,7 @@ const nextConfig: NextConfig = {
       }
     ]
   },
-  serverExternalPackages: ['pdfkit'],
+  serverExternalPackages: ['pdfkit', '@prisma/adapter-pg', 'pg'],
   experimental: {
     authInterrupts: true
   }

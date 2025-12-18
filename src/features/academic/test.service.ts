@@ -4,7 +4,7 @@ import { handleServerError } from '@/lib/handle-error'
 import type { APIResult } from '@/types/api-types'
 import type { RegistrationListParams, TestRegistrationInput } from './test-schema'
 import prisma from '@/lib/prisma'
-import type { Prisma } from '@/generated/prisma'
+import type { Prisma } from '@/generated/prisma/client'
 
 type TestRegistrationListResult = Prisma.TestRegistrationGetPayload<{
   include: {

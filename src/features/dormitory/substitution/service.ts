@@ -5,7 +5,7 @@ import { DateTime } from 'luxon'
 import { z } from 'zod'
 
 import prisma from '@/lib/prisma'
-import type { Prisma } from '@/generated/prisma'
+import type { Prisma } from '@/generated/prisma/client'
 import type { APIResult } from '@/types/api-types'
 import { handleServerError } from '@/lib/handle-error'
 

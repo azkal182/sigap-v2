@@ -122,6 +122,33 @@ export const moveTeacherScheduleSchema = z
   .strict()
 export type MoveTeacherScheduleInput = z.infer<typeof moveTeacherScheduleSchema>
 
+/**
+ * UPDATE WITH TAKEOVER — tutup jadwal yang diedit DAN jadwal yang bentrok, buat jadwal baru.
+ * Digunakan saat update jadwal mengalami conflict dan user memilih untuk "takeover".
+ */
+export const updateScheduleWithTakeoverSchema = z
+  .object({
+    // Jadwal yang sedang diedit (akan ditutup)
+    currentScheduleId: z.string().uuid(),
+    // Jadwal yang bentrok (akan ditutup)
+    conflictScheduleId: z.string().uuid(),
+    // Data jadwal baru
+    to: z
+      .object({
+        classId: z.string().uuid(),
+        subjectId: z.string().uuid(),
+        teacherId: z.string().uuid(),
+        scheduleSlotId: z.string().uuid(),
+        dayOfWeek: z.coerce.number().int().min(0).max(7),
+        validTo: z.coerce.date().nullable().optional()
+      })
+      .strict(),
+    // Preview mode - jika true, hanya return info tanpa eksekusi
+    dryRun: z.boolean().optional()
+  })
+  .strict()
+export type UpdateScheduleWithTakeoverInput = z.infer<typeof updateScheduleWithTakeoverSchema>
+
 export const trackSchema = z.object({
   id: z.string().optional(),
   dormitoryId: z.string(),

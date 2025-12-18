@@ -5,7 +5,7 @@ import { DateTime } from 'luxon'
 import PDFDocument from 'pdfkit'
 
 import prisma from '@/lib/prisma'
-import { AbsenceStatus } from '@/generated/prisma'
+import { AbsenceStatus } from '@/generated/prisma/client'
 import { parseBoolean } from '@/lib/parseBoolean'
 
 // — tipe hasil laporan harian absensi GURU TANPA group kelas —

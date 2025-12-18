@@ -440,13 +440,11 @@ import type { NextRequest } from 'next/server'
 import PDFDocument from 'pdfkit'
 import JSZip from 'jszip'
 import slugify from 'slugify'
-
-import { PrismaClient } from '@/generated/prisma' // sesuai generator output Anda
+import prisma from '@/lib/prisma'
+// sesuai generator output Anda
 
 export const runtime = 'nodejs' // penting: gunakan node runtime (bukan edge)
 export const dynamic = 'force-dynamic' // agar tidak di-cache oleh Next otomatis
-
-const prisma = new PrismaClient()
 
 /**
  * Utility: buat Buffer dari PDF (per dormitory) dengan layout formal

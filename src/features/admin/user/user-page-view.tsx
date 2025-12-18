@@ -13,6 +13,9 @@ import { useCustomSearchParams } from '@/hooks/useCustomSearchParams'
 import { useUsers } from './user.query'
 import { DataTableWithParams } from '@/components/DataTableWithParams'
 import type { UserWithAllRelations } from './user.service'
+import { ActionError } from '@/utils/action-error'
+import { toast } from 'react-toastify'
+import { useConfirm } from '@/hooks/useConfirm'
 
 export default function UserPageView() {
   const [roles, setRoles] = useState<any[]>([])
@@ -20,6 +23,7 @@ export default function UserPageView() {
   const [permissions, setPermissions] = useState<any[]>([])
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<any>(null)
+  const confirm = useConfirm()
 
   const searchParams = useCustomSearchParams({
     defaultParams: filterUserSchema
@@ -61,12 +65,34 @@ export default function UserPageView() {
     setEditing(null)
   }
 
-  const handleDelete = async (userId: string) => {
-    if (confirm('Are you sure?')) {
-      await deleteUser(userId)
+  const handleDelete = async (data: UserWithAllRelations) => {
+    await confirm({
+      title: 'hapus user?',
+      description: `${data.name} akan dihapus?`,
+      confirmText: 'Simpan',
+      confirmColor: 'primary',
 
-      //   setUsers(prev => prev.filter(u => u.id !== userId))
-    }
+      // onConfirm opsional kalau mau ada pre-logic sebelum resolve:
+      onConfirm: async () => {
+        try {
+          await deleteUser(data.id)
+
+          toast.success('data berhasil dihapus')
+        } catch (err: any) {
+          if (err instanceof ActionError) {
+            // kalau kamu menyertakan issues dari server
+            // bisa tampilkan detail tertentu
+            toast.error(err.message || 'Gagal menghapus data!')
+          } else {
+            toast.error('Terjadi kesalahan tak terduga')
+          }
+
+          // kalau kamu ingin modal TIDAK “resolve true” saat gagal,
+          // boleh throw lagi biar ConfirmProvider menutup sebagai cancel:
+          // throw err
+        }
+      }
+    })
   }
 
   const columns = useMemo<ColumnDef<UserWithAllRelations>[]>(
@@ -109,7 +135,7 @@ export default function UserPageView() {
               <IconButton size='small' onClick={() => handleEdit(dorm)}>
                 <i className='tabler-edit text-green-400' />
               </IconButton>
-              <IconButton size='small' onClick={() => handleDelete(dorm.id)}>
+              <IconButton size='small' onClick={() => handleDelete(dorm)}>
                 <i className='tabler-trash text-red-400' />
               </IconButton>
             </div>

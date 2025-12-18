@@ -26,7 +26,7 @@ import CustomTextField from '@/@core/components/mui/TextField'
 
 // Custom Hooks & Types
 import { useAddLeadershipChairman, useAddLeadershipMember, useDetailLeadership, useLeadershipList } from './query'
-import type { Leadership } from '@/generated/prisma'
+import type { Leadership } from '@/generated/prisma/client'
 import type { AddLeadershipChairmanInput, AddLeadershipMemberInput } from './schemas/leadership.schema'
 import AddLeadershipMemberSchemaDialog from './components/add-leadership-member-dialog'
 import AddLeadershipChairmanDialog from './components/add-leadership-chairman-dialog'

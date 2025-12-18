@@ -25,7 +25,7 @@ import { toast } from 'react-toastify'
 
 import { usePermissionStore } from '@/store/permission'
 import { getStudentsFromTeacherSchedule } from './action'
-import { AbsenceStatus } from '@/generated/prisma'
+import { AbsenceStatus } from '@/generated/prisma/enums'
 import { useCreateAbsences, useUpdateAbsences } from '@/features/attandence/query'
 import type { CreateAbsencesInput, UpdateAbsencesInput } from '@/features/attandence/schemas/attendent-schema'
 import CustomTextField from '@/@core/components/mui/TextField'

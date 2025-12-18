@@ -3,7 +3,7 @@ import { DateTime } from 'luxon'
 
 import db from '@/lib/prisma'
 
-import { $Enums, HistoryStatus, Prisma } from '@/generated/prisma'
+import { $Enums, HistoryStatus, Prisma } from '@/generated/prisma/client'
 import {
   moveDormitorySchema,
   type ClassFormInput,
@@ -15,7 +15,8 @@ import {
   type SksOptionParams,
   type SubjectFormInput,
   type TrackFormSchema,
-  type TrackOptionParams
+  type TrackOptionParams,
+  type UpdateScheduleWithTakeoverInput
 } from './schemas/dormitory-schema'
 import type { APIError, APIPaginatedResult, APIResult } from '@/types/api-types'
 
@@ -97,6 +98,18 @@ export type CreateScheduleSuccess = {
         updatedAt: Date
       }
     | { wouldCloseFrom: Date; wouldCreateFrom: Date }
+    | {
+        preview: true
+        willClose: { id: string; info: string }[]
+        willCreate: {
+          teacherId: string
+          subjectId: string
+          classId: string
+          dayOfWeek: number
+          scheduleSlotId: string
+        }
+        effectiveFrom: Date
+      }
 }
 
 export type CreateScheduleError = APIError & {
@@ -1223,7 +1236,14 @@ export const updateSchedule = async (input: CreateScheduleInput): Promise<Create
     // Validasi konflik utk jadwal BARU
     const tConflict = await getTeacherConflictInfo(teacherId, dayOfWeek, scheduleSlotId, id, effFrom, effTo)
 
-    if (tConflict) return { success: false, error: tConflict.message, conflict: 'teacher' }
+    if (tConflict) {
+      return {
+        success: false,
+        error: tConflict.message,
+        conflict: 'teacher',
+        data: { conflictWithScheduleId: tConflict.scheduleId }
+      }
+    }
 
     const targetSlot = await db.scheduleSlot.findUnique({
       where: { id: scheduleSlotId },
@@ -1362,6 +1382,143 @@ export async function moveTeacherSchedule(input: MoveTeacherScheduleInput): Prom
     })
 
     return newSchedule
+  })
+
+  return { success: true, data: created }
+}
+
+/**
+ * UPDATE WITH TAKEOVER — tutup jadwal yang diedit DAN jadwal yang bentrok, buat jadwal baru.
+ * Digunakan saat update jadwal mengalami conflict dan user memilih untuk "takeover".
+ * Mendukung dryRun untuk preview sebelum eksekusi.
+ */
+export async function updateScheduleWithTakeover(
+  input: UpdateScheduleWithTakeoverInput
+): Promise<CreateScheduleResult> {
+  const { currentScheduleId, conflictScheduleId, to, dryRun } = input
+
+  // 1. Validate both schedules exist
+  const [current, conflict] = await Promise.all([
+    db.schedule.findUnique({
+      where: { id: currentScheduleId },
+      include: { subject: true, class: true, teacher: true, scheduleSlot: true }
+    }),
+    db.schedule.findUnique({
+      where: { id: conflictScheduleId },
+      include: { subject: true, class: true, teacher: true, scheduleSlot: true }
+    })
+  ])
+
+  if (!current) return { success: false, error: 'Jadwal yang diedit tidak ditemukan.' }
+  if (!conflict) return { success: false, error: 'Jadwal yang bentrok tidak ditemukan.' }
+
+  const effFrom = nowUtc()
+  const effTo = to.validTo ?? undefined
+
+  // 2. Validate no OTHER conflicts (besides the known current and conflict)
+  const targetSlot = await db.scheduleSlot.findUnique({
+    where: { id: to.scheduleSlotId },
+    select: { startTime: true, endTime: true }
+  })
+
+  if (!targetSlot) return { success: false, error: 'Schedule slot tidak ditemukan.' }
+
+  // Check teacher conflict dengan schedule lain
+  const otherTeacherConflict = await db.schedule.findFirst({
+    where: {
+      id: { notIn: [currentScheduleId, conflictScheduleId] },
+      teacherId: to.teacherId,
+      dayOfWeek: to.dayOfWeek,
+      ...rangeOverlapFilter(effFrom, effTo),
+      scheduleSlot: {
+        startTime: { lt: targetSlot.endTime },
+        endTime: { gt: targetSlot.startTime }
+      }
+    },
+    include: { teacher: true, subject: true, class: true }
+  })
+
+  if (otherTeacherConflict) {
+    return {
+      success: false,
+      error: `Ada konflik dengan jadwal lain: ${otherTeacherConflict.teacher.name} di ${otherTeacherConflict.class.name}.`,
+      conflict: 'teacher'
+    }
+  }
+
+  // Check class conflict dengan schedule lain
+  const otherClassConflict = await db.schedule.findFirst({
+    where: {
+      id: { notIn: [currentScheduleId, conflictScheduleId] },
+      classId: to.classId,
+      dayOfWeek: to.dayOfWeek,
+      ...rangeOverlapFilter(effFrom, effTo),
+      scheduleSlot: {
+        startTime: { lt: targetSlot.endTime },
+        endTime: { gt: targetSlot.startTime }
+      }
+    }
+  })
+
+  if (otherClassConflict) {
+    return { success: false, error: 'Kelas sudah memiliki pelajaran di waktu tersebut.', conflict: 'class' }
+  }
+
+  // 3. Dry-run: return preview
+  if (dryRun) {
+    return {
+      success: true,
+      data: {
+        preview: true,
+        willClose: [
+          {
+            id: current.id,
+            info: `${current.subject.name} - ${current.class.name} (${current.teacher.name}) jam ke ${current.scheduleSlot.slot}`
+          },
+          {
+            id: conflict.id,
+            info: `${conflict.subject.name} - ${conflict.class.name} (${conflict.teacher.name}) jam ke ${conflict.scheduleSlot.slot}`
+          }
+        ],
+        willCreate: {
+          teacherId: to.teacherId,
+          subjectId: to.subjectId,
+          classId: to.classId,
+          dayOfWeek: to.dayOfWeek,
+          scheduleSlotId: to.scheduleSlotId
+        },
+        effectiveFrom: effFrom
+      }
+    }
+  }
+
+  // 4. Execute in transaction
+  const created = await db.$transaction(async tx => {
+    // Close current schedule
+    await tx.schedule.update({
+      where: { id: currentScheduleId },
+      data: { validTo: oneSecondBefore(effFrom), active: false }
+    })
+
+    // Close conflict schedule
+    await tx.schedule.update({
+      where: { id: conflictScheduleId },
+      data: { validTo: oneSecondBefore(effFrom), active: false }
+    })
+
+    // Create new schedule
+    return tx.schedule.create({
+      data: {
+        classId: to.classId,
+        subjectId: to.subjectId,
+        teacherId: to.teacherId,
+        scheduleSlotId: to.scheduleSlotId,
+        dayOfWeek: to.dayOfWeek,
+        validFrom: effFrom,
+        validTo: effTo ?? null,
+        active: true
+      }
+    })
   })
 
   return { success: true, data: created }
