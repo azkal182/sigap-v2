@@ -30,7 +30,7 @@ import { usePermissionStore } from '@/store/permission'
 import CustomAutocomplete from '@/@core/components/mui/Autocomplete'
 import CustomTextField from '@/@core/components/mui/TextField'
 import { useSlotData } from '@/features/data/dormitory/dormitory.query'
-import { AbsenceStatus } from '@/generated/prisma'
+import { AbsenceStatus } from '@/generated/prisma/client'
 
 const ValidateStudentPageView = () => {
   const [slotId, setSlotId] = useState<string | ''>('')
