@@ -225,7 +225,7 @@ const TeacherPageView = () => {
     } else if (dialogMode === 'create') {
       createTeacher(data, {
         onSuccess: data => {
-          toast.success(`Pengajar ${data?.name} berhasil ditambahkan`)
+          toast.success(`Pengajar berhasil ditambahkan`)
           setDialogOpen(false)
         },
         onError: (error: any) => {
