@@ -58,6 +58,8 @@ export async function GET(req: NextRequest) {
       })
     }
 
+    // return NextResponse.json(data)
+
     // Kirim ke semua telegram recipients aktif
     const jsDate = luxonDate.toJSDate()
     const res = await sendReportToAllRecipients(data ?? [], jsDate)

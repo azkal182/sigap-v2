@@ -6,6 +6,7 @@ import prisma from '@/lib/prisma'
 // Struktur data untuk detail absensi siswa
 interface StudentAbsenceDetail {
   studentName: string
+  eadership: string | null
   absences: {
     slot: number
     subjectName: string
@@ -41,6 +42,7 @@ export async function getDailyReportByDormAndClass(
   timeZone: string,
   dormitoryId?: string
 ): Promise<DormitoryDailyReportData[]> {
+  const now = new Date()
   // 1. Tentukan rentang tanggal harian menggunakan Luxon
   const targetDateLuxon = DateTime.fromObject({ year, month, day }, { zone: timeZone })
   const startDate = targetDateLuxon.startOf('day').toJSDate()
@@ -66,6 +68,31 @@ export async function getDailyReportByDormAndClass(
       student: {
         select: {
           name: true,
+          // --- MENGAMBIL JABATAN YANG AKTIF SAAT INI ---
+          positionHistoryLeadership: {
+            where: {
+              termLeadership: {
+                startDate: { lte: now },
+                endDate: { gte: now }
+              }
+            },
+            select: {
+              role: true,
+              leadership: {
+                select: {
+                  name: true // Nama Organisasi (misal: OSIS)
+                }
+              },
+              termLeadership: {
+                select: {
+                  name: true, // Nama Periode (misal: 2024-2025)
+                  startDate: true,
+                  endDate: true
+                }
+              }
+            }
+          },
+          // --------------------------------------------
           dormitory: {
             select: {
               name: true
@@ -112,7 +139,7 @@ export async function getDailyReportByDormAndClass(
     }
   })
 
-  //   console.log(JSON.stringify(absences, null, 2))
+  console.log(JSON.stringify(absences, null, 2))
 
   // 3. Proses data untuk membuat struktur laporan hierarkis
   const report: Record<string, DormitoryDailyReportData> = {}
@@ -120,6 +147,12 @@ export async function getDailyReportByDormAndClass(
   absences.forEach(absence => {
     const student = absence.student
     const dormitoryName = student.dormitory!.name
+
+    // 1. Ambil data jabatan aktif (hasil filter query Prisma)
+    const activePosition = student.positionHistoryLeadership[0]
+    const isCommittee = !!activePosition // True jika ada jabatan aktif
+    const leadershipDisplay = activePosition ? `${activePosition.leadership.name}` : null
+    // const leadershipDisplay = activePosition ? `${activePosition.leadership.name} (${activePosition.role})` : null
 
     // Mengambil nama kelas dari entri history yang berstatus STUDYING
     const className = student.histories[0]?.class.name || 'Kelas Tidak Diketahui'
@@ -133,8 +166,16 @@ export async function getDailyReportByDormAndClass(
       }
     }
 
+    // report[dormitoryName].totalAbsences.total += 1
+    // report[dormitoryName].totalAbsences.students += 1
+
+    // 3. Update Counter (Membedakan Pengurus dan Santri Biasa)
     report[dormitoryName].totalAbsences.total += 1
-    report[dormitoryName].totalAbsences.students += 1
+    if (isCommittee) {
+      report[dormitoryName].totalAbsences.committee += 1
+    } else {
+      report[dormitoryName].totalAbsences.students += 1
+    }
 
     // Cari grup kelas yang sesuai di dalam asrama
     let classGroup = report[dormitoryName].classes.find(c => c.className === className)
@@ -155,6 +196,7 @@ export async function getDailyReportByDormAndClass(
     if (!studentDetail) {
       studentDetail = {
         studentName: student.name,
+        eadership: leadershipDisplay,
         absences: []
       }
       classGroup.students.push(studentDetail)

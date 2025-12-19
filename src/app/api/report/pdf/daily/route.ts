@@ -356,6 +356,7 @@ export async function GET() {
     const data = attendanceData // Menggunakan data dummy untuk contoh
 
     // 2. Panggil fungsi yang hanya membuat buffer
+    // @ts-ignore
     const pdfBuffer = await generatePdfBuffer(data)
 
     // 3. Buat nama file

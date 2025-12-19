@@ -18,6 +18,7 @@ type Absence = {
 
 type Student = {
   studentName: string
+  eadership: string | null
   absences: Absence[]
 }
 
@@ -287,7 +288,7 @@ function drawStudentTable(doc: PDFKit.PDFDocument, students: Student[]) {
   for (let i = 0; i < students.length; i++) {
     const s = students[i]
     const jamKe = s.absences.map(a => a.slot).join(', ')
-    const keterangan = s.absences[0]?.description || '-'
+    const keterangan = s.eadership || '-'
 
     const slots = new Set(s.absences.map(a => a.slot))
     const isAbsentAllDay = slots.has(1) && slots.has(2) && slots.has(3)
@@ -517,7 +518,7 @@ export const generatePdfBuffer = async (data: Dormitory[], date?: Date): Promise
 
       currentClass.students.forEach((student: Student, index: number) => {
         const jamKe = student.absences.map(a => a.slot).join(', ')
-        const keterangan = student.absences[0]?.description || '-'
+        const keterangan = student.eadership || '-'
 
         // --- PERUBAHAN DI SINI ---
         // 1. Cek apakah siswa alpa di jam ke-1, 2, dan 3

@@ -8,6 +8,7 @@ type Absence = {
 
 type Student = {
   studentName: string
+  eadership: string | null
   absences: Absence[]
 }
 
