@@ -78,7 +78,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '24.x'
+          node-version: '20.x'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v2
@@ -129,6 +129,8 @@ jobs:
           echo "REDIS_PORT=${{ secrets.REDIS_PORT }}" >> .env
           echo "REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}" >> .env
           echo "WHATSAPP_API_KEY=${{ secrets.WHATSAPP_API_KEY }}" >> .env
+          echo "WA_API_KEY=${{ secrets.WA_API_KEY }}" >> .env
+          echo "WA_ENDPOINT=${{ secrets.WA_ENDPOINT }}" >> .env
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -282,6 +284,8 @@ jobs:
           echo "REDIS_PORT=${{ secrets.REDIS_PORT }}" >> .env
           echo "REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}" >> .env
           echo "WHATSAPP_API_KEY=${{ secrets.WHATSAPP_API_KEY }}" >> .env
+          echo "WA_API_KEY=${{ secrets.WA_API_KEY }}" >> .env
+          echo "WA_ENDPOINT=${{ secrets.WA_ENDPOINT }}" >> .env
 
           # Install dependensi
           pnpm install --production
