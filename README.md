@@ -146,6 +146,14 @@ TELEGRAM_CHAT_ID=
 REDIS_HOST=
 REDIS_PORT=6379
 REDIS_PASSWORD=
+
+# ----------------------------
+# WHATSAPP CONFIGURATION
+# ----------------------------
+
+WA_API_KEY=
+WA_ENDPOINT=
+
 ```
 
 - Variabel seperti `NEXT_PUBLIC_API_BASE_URL` dapat digunakan di sisi klien.
