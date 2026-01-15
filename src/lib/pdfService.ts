@@ -691,7 +691,8 @@ export const sendPdfToWhatsApp = async (
   const fileName = `Laporan_Absensi_${luxonDate.toFormat('dd-MM-yyyy')}.pdf`
   const {
     // endpoint = process.env.WA_ENDPOINT || 'http://165.22.106.176:3030/wa_azkal/messages/send/media-buffer',
-    endpoint = process.env.WA_ENDPOINT || 'http://165.22.106.176:1111/send/file',
+    endpoint = process.env.WA_ENDPOINT ||
+      'https://wa-multi-session.amtsilatipusat.com/api/v1/sessions/8989f1f3-9727-4e44-8951-068ddd38bfb6/send/document',
     apiKey = process.env.WA_API_KEY || process.env.WHATSAPP_API_KEY,
     // filename = `Laporan_Absensi_${format(date, 'dd-MM-yyyy', { locale: id })}.pdf`,
     filename = fileName,
@@ -703,7 +704,8 @@ export const sendPdfToWhatsApp = async (
 
   //   @ts-ignore
   //   const pdfBlob = new Blob([pdfBuffer], { type: 'application/pdf' })
-  const file = new File([pdfBuffer], filename, { type: 'application/pdf' })
+  //   const file = new File([pdfBuffer], filename, { type: 'application/pdf' })
+  const file = pdfBuffer.toString('base64')
 
   // Worker untuk kirim WA ke satu JID (punya retry/backoff)
   const sendToJid = async (jid: string) => {
@@ -720,15 +722,26 @@ export const sendPdfToWhatsApp = async (
         // formData.append('caption', caption)
         // formData.append('file', pdfBlob, filename)
 
-        formData.append('phone', jid)
+        formData.append('to', jid)
         // formData.append('phone', '120363422244170266@g.us')
         formData.append('caption', caption)
-        formData.append('file', file)
+        formData.append('document', file)
+        formData.append('filename', filename)
+
+        console.log(jid)
 
         const res = await fetch(endpoint, {
           method: 'POST',
-          headers: { 'x-api-key': apiKey },
-          body: formData
+          headers: { 'x-api-key': apiKey, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: '6287833372003',
+            document: file,
+            //   "document_url": "https://...",
+            filename: filename,
+            caption: caption,
+            mime_type: 'application/pdf'
+          })
+          //   body: formData
         })
 
         const result = await res.json().catch(() => ({}))

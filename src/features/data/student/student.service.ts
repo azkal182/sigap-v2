@@ -32,6 +32,13 @@ export type StudentItem = {
   isAheadOfSchedule?: boolean | null
   histories?: StudentHistory[]
   sks?: sksItem[]
+  sksByTrack?: {
+    trackId: string
+    trackName: string | null
+    sks: sksItem[]
+    totalSks: number
+    passedCount: number
+  }[]
   totalSks: number
   passedCount: number
   dormitoryRoom: string | null
@@ -510,6 +517,7 @@ export async function getStudentOption(dormitoryIds?: string[]): Promise<
       id: string
       name: string
       trackId: string | null
+      dormitoryId: string | null
       disabled?: boolean
     }[]
   >
@@ -547,6 +555,7 @@ export async function getStudentOption(dormitoryIds?: string[]): Promise<
         const studyingHistory = s.histories.find(h => h.status === 'STUDYING')
         const className = studyingHistory?.class?.name
         const dormName = studyingHistory?.class?.dormitory?.name
+        const dormitoryId = studyingHistory?.class?.dormitory?.id
         const trackName = studyingHistory?.class?.track?.name
         const trackId = studyingHistory?.class?.track?.id
         const isAssigned = Boolean(className || dormName)
@@ -560,6 +569,7 @@ export async function getStudentOption(dormitoryIds?: string[]): Promise<
           id: s.id,
           name: isAssigned ? nameParts.join(' | ') : `${s.name} | ${s.regency?.name} | ${s.province?.name}`,
           trackId: trackId || null,
+          dormitoryId: dormitoryId || null,
           disabled: isAssigned
         }
       })
@@ -620,6 +630,36 @@ export async function getStudentDetail(id: string): Promise<StudentItem | null> 
       dormitory: {
         select: {
           name: true
+        }
+      },
+      testRegistration: {
+        select: {
+          id: true,
+          sksId: true,
+          scheduledAt: true,
+          status: true,
+          createdAt: true,
+          test: {
+            select: {
+              score: true,
+              passed: true,
+              attemptNumber: true
+            }
+          },
+          sks: {
+            select: {
+              id: true,
+              name: true,
+              passingGrade: true,
+              trackId: true,
+              Track: {
+                select: {
+                  id: true,
+                  name: true
+                }
+              }
+            }
+          }
         }
       },
       histories: {
@@ -721,6 +761,75 @@ export async function getStudentDetail(id: string): Promise<StudentItem | null> 
   const currentHistory = student.histories[0]
   const { track } = currentHistory.class
 
+  const historyTrackIds = student.histories.map(h => h.class.track.id)
+  const registrationTrackIds = student.testRegistration
+    .map(r => r.sks.trackId)
+    .filter((v): v is string => typeof v === 'string' && v.length > 0)
+
+  const uniqueTrackIds = Array.from(new Set([...historyTrackIds, ...registrationTrackIds]))
+
+  const tracksForSks = await db.track.findMany({
+    where: {
+      id: { in: uniqueTrackIds }
+    },
+    select: {
+      id: true,
+      name: true,
+      sks: {
+        select: {
+          id: true,
+          name: true,
+          passingGrade: true,
+          testRegistration: {
+            where: {
+              studentId: id
+            },
+            orderBy: {
+              createdAt: 'desc'
+            },
+            take: 1,
+            include: {
+              test: true
+            }
+          }
+        }
+      }
+    }
+  })
+
+  const sksByTrack = tracksForSks.map(t => {
+    const sks = t.sks.map(sksItem => {
+      const registration = sksItem.testRegistration[0]
+      const score = registration?.test?.score ?? null
+      const passed = registration?.test?.passed ?? false
+
+      let status = 'Belum Daftar'
+
+      if (registration) {
+        status = registration.test ? (passed ? 'Lulus' : 'Tidak Lulus') : 'Menunggu Tes'
+      }
+
+      return {
+        subjectName: sksItem.name,
+        passingGrade: sksItem.passingGrade ?? 0,
+        score,
+        passed,
+        status
+      }
+    })
+
+    const totalSks = sks.length
+    const passedCount = sks.filter(item => item.passed).length
+
+    return {
+      trackId: t.id,
+      trackName: t.name,
+      sks,
+      totalSks,
+      passedCount
+    }
+  })
+
   // Persiapan untuk SKS
   const sksList = track.sks.map(sksItem => {
     const registration = sksItem.testRegistration[0] // Ambil pendaftaran pertama yang ditemukan
@@ -800,6 +909,7 @@ export async function getStudentDetail(id: string): Promise<StudentItem | null> 
     daysLeft,
     isAheadOfSchedule: daysLeft < 0,
     sks: sksList,
+    sksByTrack,
     totalSks,
     passedCount,
     histories

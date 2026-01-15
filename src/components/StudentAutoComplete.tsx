@@ -275,6 +275,7 @@ export type StudentOptions = {
   id: string
   name: string
   trackId: string | null
+  dormitoryId: string | null
   disabled?: boolean
 }
 

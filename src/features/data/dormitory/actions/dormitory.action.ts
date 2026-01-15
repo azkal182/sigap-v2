@@ -13,6 +13,7 @@ import {
   getDormitoriesFilter,
   getDormitoryDetail,
   getSksByTrackId,
+  getSksAdminByTrackId,
   getSlotOption,
   getSubjectByTrackId,
   getSubjectOptionByTrackId,
@@ -23,11 +24,13 @@ import {
   updateSchedule,
   getSksOption,
   getTrackOption,
+  softDeleteSks,
   updateClass,
   updateSubject,
   moveTeacherSchedule,
   moveDormitory,
-  updateScheduleWithTakeover
+  updateScheduleWithTakeover,
+  updateSksVersioned
 } from './../dormitory.service'
 
 import {
@@ -40,6 +43,7 @@ import {
   filterDormitorySchema,
   moveDormitorySchema,
   moveTeacherScheduleSchema,
+  sksAdminParamsSchema,
   sksOptionSchema,
   subjectFormSchema,
   trackOptionSchema,
@@ -68,6 +72,7 @@ import type {
   DormitoryDetailResponse,
   SimpleResponse,
   SksResponse,
+  SksAdminResponse,
   SlotOptionResponse,
   SubjectListResponse,
   SubjectOptionResponse,
@@ -80,6 +85,51 @@ import { moveStudentsWithinTrack, promoteStudentsToTrack } from '../class-transf
 
 export async function getDormitories(params: FilterDormitoryParams) {
   return validateAndRun(filterDormitorySchema, params, getDormitoriesFilter)
+}
+
+export async function getSksAdminByTrackIdAction(params: unknown) {
+  return validateAndRun(sksAdminParamsSchema, params, getSksAdminByTrackId)
+}
+
+export async function updateSksVersionedAction(
+  data: CreateSksInput
+): Promise<SimpleResponse<{ id: string; name: string }>> {
+  try {
+    const validated = CreateSksSchema.safeParse(data)
+
+    if (!validated.data) {
+      return {
+        success: false,
+        error: 'validation error'
+      }
+    }
+
+    const { id, trackId, name, sksKey, validFrom, validTo } = validated.data
+
+    if (!id) {
+      return { success: false, error: 'id wajib diisi untuk update' }
+    }
+
+    if (!validFrom) {
+      return { success: false, error: 'validFrom wajib diisi untuk update' }
+    }
+
+    return updateSksVersioned({ id, trackId, name, sksKey, validFrom, validTo })
+  } catch (error) {
+    const message = handleServerError('Gagal memperbarui SKS', error)
+
+    return { success: false, error: message }
+  }
+}
+
+export async function softDeleteSksAction(id: string): Promise<SimpleResponse<null>> {
+  try {
+    return softDeleteSks(id)
+  } catch (error) {
+    const message = handleServerError('Gagal menghapus SKS', error)
+
+    return { success: false, error: message }
+  }
 }
 
 export async function getDormitoryList() {
@@ -265,9 +315,9 @@ export async function createSksAction(data: CreateSksInput): Promise<SimpleRespo
       }
     }
 
-    const { trackId, name } = validated.data
+    const { trackId, name, validFrom, validTo } = validated.data
 
-    return createSks({ trackId, name })
+    return createSks({ trackId, name, validFrom, validTo })
   } catch (error) {
     const message = handleServerError('Gagal menambahkan Pelajaran baru', error)
 

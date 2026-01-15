@@ -15,6 +15,7 @@ import {
   getSubjectByTrackIdAction,
   getSksByTrackIdAction,
   createSksAction,
+  getSksAdminByTrackIdAction,
   assignStudentToClassAction,
   createScheduleAction,
   getSubjectOptionByTrackIdAction,
@@ -24,6 +25,9 @@ import {
   updateScheduleSlotAction,
   updateScheduleAction,
   getSksOptionAction,
+  softDeleteSksAction,
+  updateSksVersionedAction,
+  getTrackOptionAction,
   updateClassAction,
   updateSubjectAction,
   handleClassTransferAction,
@@ -35,6 +39,8 @@ import type {
   ClassFormInput,
   CreateScheduleInput,
   CreateScheduleSlotInput,
+  CreateSksInput,
+  CreateSubjectInput,
   FilterDormitoryParams,
   MoveDormitoryInput,
   MoveTeacherScheduleInput,
@@ -63,6 +69,28 @@ export const useDormitory = (params: FilterDormitoryParams, isValid: boolean) =>
       }
     },
     enabled: isValid
+  })
+}
+
+export const useSksAdmin = (trackId: string) => {
+  return useSksAdminWithFilter({ trackId, includeAll: false })
+}
+
+export const useSksAdminWithFilter = (params: { trackId: string; includeAll: boolean }) => {
+  return useQuery({
+    queryKey: ['sks_admin', params.trackId, params.includeAll],
+    queryFn: async () => {
+      const res = await getSksAdminByTrackIdAction(params)
+
+      if (!res.success) {
+        throw new ActionError(res.error, res.issues)
+      }
+
+      return {
+        data: res.data
+      }
+    },
+    enabled: !!params.trackId
   })
 }
 
@@ -279,8 +307,8 @@ export const useCreateSks = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ name, trackId }: { name: string; trackId: string }) => {
-      const res = await createSksAction({ name, trackId })
+    mutationFn: async (data: CreateSksInput) => {
+      const res = await createSksAction(data)
 
       if (!res.success) throw new ActionError(res.error, res.issues)
 
@@ -289,6 +317,54 @@ export const useCreateSks = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({
         predicate: query => query.queryKey?.[0] === 'sks'
+      })
+
+      queryClient.invalidateQueries({
+        predicate: query => query.queryKey?.[0] === 'sks_admin'
+      })
+    }
+  })
+}
+
+export const useUpdateSksVersioned = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (data: CreateSksInput) => {
+      const res = await updateSksVersionedAction(data)
+
+      if (!res.success) throw new ActionError(res.error, res.issues)
+
+      return res.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        predicate: query => query.queryKey?.[0] === 'sks'
+      })
+      queryClient.invalidateQueries({
+        predicate: query => query.queryKey?.[0] === 'sks_admin'
+      })
+    }
+  })
+}
+
+export const useSoftDeleteSks = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await softDeleteSksAction(id)
+
+      if (!res.success) throw new ActionError(res.error, res.issues)
+
+      return res.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        predicate: query => query.queryKey?.[0] === 'sks'
+      })
+      queryClient.invalidateQueries({
+        predicate: query => query.queryKey?.[0] === 'sks_admin'
       })
     }
   })
@@ -572,8 +648,10 @@ export const useUpdateScheduleSlot = () => {
 }
 
 export const useSksOption = (params: SksOptionParams) => {
+  const dateKey = params.date ? new Date(params.date).toISOString().slice(0, 10) : ''
+
   return useQuery({
-    queryKey: ['sks_option', params.trackId],
+    queryKey: ['sks_option', params.trackId, dateKey],
     queryFn: async () => {
       const res = await getSksOptionAction(params)
 

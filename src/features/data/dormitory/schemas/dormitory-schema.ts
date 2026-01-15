@@ -25,8 +25,18 @@ export const CreateSubjectSchema = z.object({
 export const CreateSksSchema = z.object({
   name: z.string().min(3, 'Nama minimal 3 karakter'),
   trackId: z.string(),
-  id: z.string().optional()
+  id: z.string().optional(),
+  sksKey: z.string().optional(),
+  validFrom: z.coerce.date().optional(),
+  validTo: z.coerce.date().nullable().optional()
 })
+
+export const sksAdminParamsSchema = z.object({
+  trackId: z.string(),
+  includeAll: z.boolean().optional().default(false)
+})
+
+export type SksAdminParams = z.infer<typeof sksAdminParamsSchema>
 
 export const AssignStudentToClassSchema = z.object({
   classId: z.string(),
@@ -168,7 +178,8 @@ export const createScheduleSlotSchema = z.object({
 })
 
 export const sksOptionSchema = z.object({
-  trackId: z.string().min(1, 'ID asrama wajib diisi')
+  trackId: z.string().min(1, 'ID asrama wajib diisi'),
+  date: z.coerce.date().optional()
 })
 
 export const trackOptionSchema = z.object({

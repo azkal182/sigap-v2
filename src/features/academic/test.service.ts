@@ -21,6 +21,8 @@ type TestRegistrationListResult = Prisma.TestRegistrationGetPayload<{
   }
 }>
 
+type SaveTestResult = Prisma.TestGetPayload<Prisma.TestCreateArgs>
+
 export async function getTestRegistrationsByDormitory(
   params: RegistrationListParams
 ): Promise<APIResult<TestRegistrationListResult[]>> {
@@ -85,6 +87,82 @@ export async function getTestRegistrationsByDormitory(
     }
   } catch (error) {
     const message = handleServerError('Gagal mengambil data test registration:', error)
+
+    return { success: false, error: message }
+  }
+}
+
+export async function saveManualSksScore(input: {
+  studentId: string
+  sksId: string
+  scheduledAt: Date
+  score: number
+}): Promise<APIResult<SaveTestResult>> {
+  const { studentId, sksId, scheduledAt, score } = input
+
+  try {
+    const dt = DateTime.fromJSDate(scheduledAt, { zone: 'Asia/Jakarta' })
+    const start = dt.startOf('day').toJSDate()
+    const end = dt.endOf('day').toJSDate()
+
+    const registration = await prisma.testRegistration.findFirst({
+      where: {
+        studentId,
+        sksId,
+        scheduledAt: {
+          gte: start,
+          lte: end
+        }
+      },
+      include: {
+        test: true
+      }
+    })
+
+    const reg =
+      registration ??
+      (await prisma.testRegistration.create({
+        data: {
+          studentId,
+          sksId,
+          scheduledAt,
+          status: 'COMPLETED'
+        },
+        include: { test: true }
+      }))
+
+    if (reg.status !== 'COMPLETED') {
+      await prisma.testRegistration.update({
+        where: { id: reg.id },
+        data: { status: 'COMPLETED' }
+      })
+    }
+
+    const attemptNumber = reg.test?.attemptNumber ?? (await getAttemptNumber(studentId, sksId))
+    const kkm = await getKKM(sksId)
+    const passed = score >= kkm
+
+    const result = await prisma.test.upsert({
+      where: { registrationId: reg.id },
+      create: {
+        registrationId: reg.id,
+        score,
+        passed,
+        attemptNumber
+      },
+      update: {
+        score,
+        passed
+      }
+    })
+
+    return {
+      success: true,
+      data: result,
+      message: 'berhasil menyimpan nilai'
+    }
+  } catch (error) {
+    const message = handleServerError('Terjadi kesalahan saat input nilai:', error)
 
     return { success: false, error: message }
   }
@@ -176,8 +254,6 @@ async function getKKM(sksId: string): Promise<number> {
   return result?.passingGrade ?? 0
 }
 
-type SaveTestResult = Prisma.TestGetPayload<Prisma.TestCreateArgs>
-
 export async function saveTestResult(input: {
   registrationId: string
   score: number
@@ -189,6 +265,9 @@ export async function saveTestResult(input: {
     const registration = await prisma.testRegistration.findFirst({
       where: {
         id: registrationId
+      },
+      include: {
+        test: true
       }
     })
 
@@ -203,16 +282,22 @@ export async function saveTestResult(input: {
       }
     })
 
-    const attemptNumber = await getAttemptNumber(registration.studentId, registration.sksId)
+    const attemptNumber =
+      registration.test?.attemptNumber ?? (await getAttemptNumber(registration.studentId, registration.sksId))
     const kkm = await getKKM(registration.sksId)
     const passed = score >= kkm
 
-    const result = await prisma.test.create({
-      data: {
+    const result = await prisma.test.upsert({
+      where: { registrationId: registration.id },
+      create: {
         registrationId: registration.id,
         score,
         passed,
         attemptNumber // pakai jumlah pendaftaran
+      },
+      update: {
+        score,
+        passed
       }
     })
 

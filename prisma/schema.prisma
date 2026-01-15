@@ -310,6 +310,18 @@ model Sks {
     trackId          String?
     passingGrade     Int?               @default(0)
     testRegistration TestRegistration[]
+
+    sksKey String?
+
+    validFrom DateTime @default(now())
+    validTo   DateTime?
+    deletedAt DateTime?
+
+    @@index([trackId])
+    @@index([trackId, sksKey])
+    @@index([trackId, validFrom])
+    @@index([trackId, validTo])
+    @@index([trackId, deletedAt])
 }
 
 model TestRegistration {

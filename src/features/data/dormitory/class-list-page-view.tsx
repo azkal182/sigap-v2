@@ -14,6 +14,8 @@ import {
   DialogTitle,
   Grid,
   IconButton,
+  FormControlLabel,
+  Switch,
   Paper,
   Table,
   TableBody,
@@ -35,10 +37,12 @@ import {
   useCreateSks,
   useCreateSubject,
   useDormitodyDetail,
-  useSks,
+  useSoftDeleteSks,
+  useSksAdminWithFilter,
   useSubject,
   useTrackDetail,
   useUpdateClass,
+  useUpdateSksVersioned,
   useUpdateSubject
 } from './dormitory.query'
 import ClassFormDialog, { type ClassFormValues } from './components/class-dialog'
@@ -63,17 +67,21 @@ const slotData: Slot[] = [
 ]
 
 const ClassListPageView = ({ trackId, dormitoryId }: { trackId: string; dormitoryId: string }) => {
+  const [showAllSksVersions, setShowAllSksVersions] = useState(false)
+
   const { data, isLoading } = useClass(dormitoryId, trackId)
   const { mutate: createClass } = useCreateClass()
   const { mutate: updateClass } = useUpdateClass()
   const { data: dormitoryDetail } = useDormitodyDetail(dormitoryId)
   const { data: trackDetail } = useTrackDetail(trackId)
   const { data: dataSubject } = useSubject(trackId)
-  const { data: dataSks } = useSks(trackId)
+  const { data: dataSks } = useSksAdminWithFilter({ trackId, includeAll: showAllSksVersions })
 
   const { mutate: createSubject } = useCreateSubject()
   const { mutate: updateSubject } = useUpdateSubject()
   const { mutate: createSks } = useCreateSks()
+  const { mutate: updateSks } = useUpdateSksVersioned()
+  const { mutate: softDeleteSks } = useSoftDeleteSks()
 
   const [dialogSLotopen, setDialogSlotOpen] = useState(false)
   const [slotInput, setSlotInput] = useState('')
@@ -179,26 +187,47 @@ const ClassListPageView = ({ trackId, dormitoryId }: { trackId: string; dormitor
   const handleSubmitSks = (form: CreateSksInput) => {
     if (sksDialog.mode === 'create') {
       createSks(
-        { name: form.name, trackId },
+        { name: form.name, trackId, validFrom: form.validFrom, validTo: form.validTo },
         {
           onSuccess: () => {
             toast.success('SKS berhasil dibuat!')
             closeSksDialog()
           },
           onError: (error: any) => {
-            toast.error('Gagal membuat SKS')
+            toast.error(error.message ?? 'Gagal membuat SKS')
             console.error(error)
           }
         }
       )
     } else if (sksDialog.mode === 'edit' && form.id) {
-      alert(form.id)
+      updateSks(
+        {
+          id: form.id,
+          name: form.name,
+          sksKey: form.sksKey,
+          trackId,
+          validFrom: form.validFrom,
+          validTo: form.validTo
+        },
+        {
+          onSuccess: () => {
+            toast.success('SKS berhasil diperbaharui!')
+            closeSksDialog()
+          },
+          onError: (error: any) => {
+            toast.error(error.message ?? 'Gagal memperbaharui SKS')
+            console.error(error)
+          }
+        }
+      )
     }
   }
 
   const handleChangeTab = (_: React.SyntheticEvent, newValue: string) => {
     setActiveTab(newValue)
   }
+
+  const sksRows = dataSks?.data ?? []
 
   return (
     <Card className='p-4'>
@@ -331,6 +360,17 @@ const ClassListPageView = ({ trackId, dormitoryId }: { trackId: string; dormitor
 
         {/* Tab 3: Daftar SKS */}
         <TabPanel value='3'>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={showAllSksVersions}
+                onChange={e => setShowAllSksVersions(e.target.checked)}
+                name='showAllSksVersions'
+              />
+            }
+            label='Tampilkan semua versi (termasuk yang sudah berakhir / terhapus)'
+          />
+
           <Button variant='contained' className='mb-4' onClick={() => openSksDialog('create')}>
             Tambah SKS
           </Button>
@@ -340,20 +380,48 @@ const ClassListPageView = ({ trackId, dormitoryId }: { trackId: string; dormitor
                 <TableRow>
                   <TableCell className='w-6'>NO</TableCell>
                   <TableCell>JENIS SKS</TableCell>
+                  <TableCell>BERLAKU MULAI</TableCell>
+                  <TableCell>BERLAKU SAMPAI</TableCell>
+                  <TableCell>DIHAPUS</TableCell>
                   <TableCell>AKSI</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {dataSks?.data?.map((item, i) => (
+                {sksRows.map((item, i) => (
                   <TableRow key={i}>
                     <TableCell>{i + 1}</TableCell>
                     <TableCell>{item.name}</TableCell>
+                    <TableCell>{new Date(item.validFrom).toLocaleDateString('id-ID')}</TableCell>
+                    <TableCell>{item.validTo ? new Date(item.validTo).toLocaleDateString('id-ID') : '-'}</TableCell>
+                    <TableCell>{item.deletedAt ? new Date(item.deletedAt).toLocaleDateString('id-ID') : '-'}</TableCell>
                     <TableCell>
                       <div className='flex gap-2'>
-                        <IconButton size='small'>
+                        <IconButton
+                          size='small'
+                          onClick={() =>
+                            openSksDialog('edit', {
+                              id: item.id,
+                              name: item.name,
+                              sksKey: item.sksKey,
+                              trackId,
+                              validFrom: item.validFrom,
+                              validTo: item.validTo
+                            })
+                          }
+                          disabled={!!item.deletedAt}
+                        >
                           <i className='tabler-edit text-green-400' />
                         </IconButton>
-                        <IconButton size='small'>
+                        <IconButton
+                          size='small'
+                          onClick={() =>
+                            softDeleteSks(item.id, {
+                              onSuccess: () => toast.success('SKS berhasil dihapus'),
+                              onError: (error: any) => toast.error(error.message ?? 'Gagal menghapus SKS')
+                            })
+                          }
+                          disabled={!!item.deletedAt}
+                        >
                           <i className='tabler-trash text-red-400' />
                         </IconButton>
                       </div>

@@ -12,6 +12,7 @@ import {
   type FilterDormitoryParams,
   type MoveDormitoryInput,
   type MoveTeacherScheduleInput,
+  type SksAdminParams,
   type SksOptionParams,
   type SubjectFormInput,
   type TrackFormSchema,
@@ -27,6 +28,260 @@ export type DormitoryItem = {
   name: string
   gender: GenderType | null
   level: number | null | undefined
+}
+
+export type SksAdminItem = {
+  id: string
+  name: string
+  sksKey: string | null
+  validFrom: Date
+  validTo: Date | null
+  deletedAt: Date | null
+}
+
+export type SksAdminResponse = APIResult<SksAdminItem[]>
+
+export const getSksAdminByTrackId = async (params: SksAdminParams): Promise<SksAdminResponse> => {
+  try {
+    const now = new Date()
+
+    const whereClause: Prisma.SksWhereInput = params.includeAll
+      ? {
+          trackId: params.trackId
+        }
+      : {
+          trackId: params.trackId,
+          deletedAt: null,
+          validFrom: { lte: now },
+          OR: [{ validTo: null }, { validTo: { gte: now } }]
+        }
+
+    const data = await db.sks.findMany({
+      where: whereClause,
+      select: {
+        id: true,
+        name: true,
+        sksKey: true,
+        validFrom: true,
+        validTo: true,
+        deletedAt: true
+      },
+      orderBy: [{ name: 'asc' }, { validFrom: 'asc' }]
+    })
+
+    return {
+      success: true,
+      data
+    }
+  } catch (error: unknown) {
+    console.error('getSksAdminByTrackId failed:', error)
+
+    if (error instanceof Error) {
+      return {
+        success: false,
+        error: error.message
+      }
+    }
+
+    return {
+      success: false,
+      error: 'Gagal mengambil daftar SKS'
+    }
+  }
+}
+
+const FAR_FUTURE_DATE = new Date('9999-12-31T23:59:59.999Z')
+
+function oneMsBefore(t: Date) {
+  return new Date(t.getTime() - 1)
+}
+
+function oneMsAfter(t: Date) {
+  return new Date(t.getTime() + 1)
+}
+
+function rangesOverlap(aFrom: Date, aTo: Date | null, bFrom: Date, bTo: Date | null) {
+  const aEnd = aTo ?? FAR_FUTURE_DATE
+  const bEnd = bTo ?? FAR_FUTURE_DATE
+  return aFrom <= bEnd && bFrom <= aEnd
+}
+
+export async function updateSksVersioned(input: {
+  id: string
+  trackId: string
+  name: string
+  sksKey?: string
+  validFrom: Date
+  validTo?: Date | null
+}): Promise<SimpleResponse<{ id: string; name: string }>> {
+  try {
+    const { id, trackId, name, validFrom, validTo } = input
+
+    const current = await db.sks.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        sksKey: true,
+        trackId: true,
+        passingGrade: true,
+        validFrom: true,
+        validTo: true,
+        deletedAt: true
+      }
+    })
+
+    if (!current) {
+      return { success: false, error: 'SKS tidak ditemukan' }
+    }
+
+    if (current.deletedAt) {
+      return { success: false, error: 'SKS sudah dihapus' }
+    }
+
+    if (validTo && validTo < validFrom) {
+      return { success: false, error: 'validTo tidak boleh lebih kecil dari validFrom' }
+    }
+
+    // Pastikan trackId konsisten
+    if (current.trackId && current.trackId !== trackId) {
+      return { success: false, error: 'trackId tidak sesuai dengan SKS yang diedit' }
+    }
+
+    // Stable logical key: prefer input.sksKey (from UI hidden), else existing sksKey, else fallback to current name (legacy rows)
+    const logicalKey = input.sksKey ?? current.sksKey ?? current.name
+
+    // Ambil versi lain untuk logical SKS yang sama (trackId + sksKey)
+    const siblings = await db.sks.findMany({
+      where: {
+        trackId,
+        sksKey: logicalKey,
+        deletedAt: null,
+        NOT: { id }
+      },
+      select: {
+        id: true,
+        name: true,
+        sksKey: true,
+        trackId: true,
+        passingGrade: true,
+        validFrom: true,
+        validTo: true
+      },
+      orderBy: { validFrom: 'asc' }
+    })
+
+    const overlaps = siblings.filter(s => rangesOverlap(s.validFrom, s.validTo, validFrom, validTo ?? null))
+    if (overlaps.length > 1) {
+      return { success: false, error: 'Konflik versi SKS lebih dari satu. Data versi SKS tidak konsisten.' }
+    }
+
+    const overlapping = overlaps[0] ?? null
+
+    const currentOverlapsNew = rangesOverlap(current.validFrom, current.validTo, validFrom, validTo ?? null)
+
+    const created = await db.$transaction(async tx => {
+      // 1) Close current version only if it overlaps the new version range
+      if (currentOverlapsNew) {
+        await tx.sks.update({
+          where: { id },
+          data: {
+            validTo: oneMsBefore(validFrom)
+          }
+        })
+      }
+
+      // 2) Jika ada versi lain yang overlap, split: close bagian awal, dan buat tail kalau perlu
+      if (overlapping) {
+        await tx.sks.update({
+          where: { id: overlapping.id },
+          data: {
+            validTo: oneMsBefore(validFrom)
+          }
+        })
+
+        const overlappingEnd = overlapping.validTo ?? null
+        const newEnd = validTo ?? null
+
+        const shouldCreateTail =
+          overlappingEnd !== null &&
+          newEnd !== null &&
+          (newEnd === null ? true : overlappingEnd > newEnd) &&
+          // tail mulai setelah newEnd (atau setelah validFrom jika newEnd null)
+          true
+
+        if (shouldCreateTail) {
+          const tailFrom = oneMsAfter(newEnd)
+          const tailTo = overlappingEnd
+
+          await tx.sks.create({
+            data: {
+              trackId: overlapping.trackId ?? trackId,
+              name: overlapping.name,
+              passingGrade: overlapping.passingGrade,
+              validFrom: tailFrom,
+              validTo: tailTo,
+              deletedAt: null
+            }
+          })
+        }
+      }
+
+      // 3) Create new version
+      const newVersion = await tx.sks.create({
+        data: {
+          trackId,
+          name,
+          sksKey: logicalKey,
+          passingGrade: current.passingGrade,
+          validFrom,
+          validTo: validTo ?? null,
+          deletedAt: null
+        },
+        select: {
+          id: true,
+          name: true
+        }
+      })
+
+      return newVersion
+    })
+
+    return {
+      success: true,
+      data: created
+    }
+  } catch (error: unknown) {
+    return {
+      success: false,
+      error: 'Gagal memperbarui SKS'
+    }
+  }
+}
+
+export async function softDeleteSks(id: string): Promise<SimpleResponse<null>> {
+  try {
+    const existing = await db.sks.findUnique({ where: { id }, select: { id: true, deletedAt: true } })
+
+    if (!existing) {
+      return { success: false, error: 'SKS tidak ditemukan' }
+    }
+
+    if (existing.deletedAt) {
+      return { success: true, data: null }
+    }
+
+    await db.sks.update({
+      where: { id },
+      data: {
+        deletedAt: new Date()
+      }
+    })
+
+    return { success: true, data: null }
+  } catch (error: unknown) {
+    return { success: false, error: 'Gagal menghapus SKS' }
+  }
 }
 
 export type DormitoryResponse = APIPaginatedResult<DormitoryItem[]>
@@ -679,9 +934,18 @@ export async function createSubject({
       data: subjectInstance
     }
   } catch (error: unknown) {
+    console.error('createSks failed:', error)
+
+    if (error instanceof Error) {
+      return {
+        success: false,
+        error: error.message
+      }
+    }
+
     return {
       success: false,
-      error: 'Gagal menambahkan kelas baru'
+      error: 'Gagal membuat SKS'
     }
   }
 }
@@ -740,8 +1004,16 @@ export async function getClassDetailById(classId: string): Promise<ClassDetailRe
 
 export const getSksByTrackId = async (trackId: string): Promise<SksResponse> => {
   try {
+    const now = new Date()
+    const whereClause: Prisma.SksWhereInput = {
+      trackId,
+      deletedAt: null,
+      validFrom: { lte: now },
+      OR: [{ validTo: null }, { validTo: { gte: now } }]
+    }
+
     const data = await db.sks.findMany({
-      where: { trackId },
+      where: whereClause,
       select: {
         id: true,
         name: true
@@ -753,19 +1025,32 @@ export const getSksByTrackId = async (trackId: string): Promise<SksResponse> => 
       data
     }
   } catch (error: unknown) {
+    console.error('getSksByTrackId failed:', error)
+
+    if (error instanceof Error) {
+      return {
+        success: false,
+        error: error.message
+      }
+    }
+
     return {
       success: false,
-      error: 'Gagal menambahkan kelas baru'
+      error: 'Gagal mengambil daftar SKS'
     }
   }
 }
 
 export async function createSks({
   name,
-  trackId
+  trackId,
+  validFrom,
+  validTo
 }: {
   name: string
   trackId: string
+  validFrom?: Date
+  validTo?: Date | null
 }): Promise<SimpleResponse<{ id: string; name: string }>> {
   try {
     const track = await db.track.findUnique({ where: { id: trackId } })
@@ -780,7 +1065,11 @@ export async function createSks({
     const subjectInstance = await db.sks.create({
       data: {
         name,
-        trackId
+        trackId,
+        sksKey: name,
+        validFrom: validFrom ?? new Date(),
+        validTo: validTo ?? null,
+        deletedAt: null
       },
       select: {
         id: true,
@@ -1790,10 +2079,16 @@ export const updateScheduleSlot = async (
 
 export const getSksOption = async (params: SksOptionParams): Promise<APIResult<{ id: string; name: string }[]>> => {
   try {
+    const date = params.date ?? new Date()
+    const whereClause: Prisma.SksWhereInput = {
+      trackId: params.trackId,
+      deletedAt: null,
+      validFrom: { lte: date },
+      OR: [{ validTo: null }, { validTo: { gte: date } }]
+    }
+
     const result = await db.sks.findMany({
-      where: {
-        trackId: params.trackId
-      },
+      where: whereClause,
       select: {
         id: true,
         name: true
@@ -1805,9 +2100,18 @@ export const getSksOption = async (params: SksOptionParams): Promise<APIResult<{
       data: result
     }
   } catch (error) {
+    console.error('getSksOption failed:', error)
+
+    if (error instanceof Error) {
+      return {
+        success: false,
+        error: error.message
+      }
+    }
+
     return {
       success: false,
-      error: 'Failed to get slot.'
+      error: 'Gagal mengambil daftar SKS'
     }
   }
 }

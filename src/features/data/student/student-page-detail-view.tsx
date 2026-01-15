@@ -338,26 +338,74 @@ export default function StudentPageDetailView({ id }: { id: string }) {
           </form>
         </CardContent>
       </Card>
-      {studentDetail?.sks && studentDetail?.sks.length > 0 ? (
+      {studentDetail?.sksByTrack && studentDetail?.sksByTrack.length > 0 ? (
         <Card>
           <CardHeader title='SKS Santri' />
 
           <Divider />
           <CardContent>
-            <div className='flex items-center gap-3'>
-              <div className='is-full'>
-                <LinearProgress
-                  className='h-3'
-                  variant='determinate'
-                  value={
-                    studentDetail?.totalSks ? ((studentDetail?.passedCount ?? 0) / studentDetail.totalSks) * 100 : 0
-                  }
-                />
+            {studentDetail.sksByTrack.map(group => (
+              <div key={group.trackId} className='mb-6'>
+                <Typography variant='h6' className='mb-2'>
+                  {group.trackName ?? 'Track'}
+                </Typography>
+                <div className='flex items-center gap-3 mb-3'>
+                  <div className='is-full'>
+                    <LinearProgress
+                      className='h-3'
+                      variant='determinate'
+                      value={group.totalSks ? ((group.passedCount ?? 0) / group.totalSks) * 100 : 0}
+                    />
+                  </div>
+                  <Typography variant='body2' color='text.secondary' className='font-medium text-nowrap'>
+                    {group.passedCount} / {group.totalSks}
+                  </Typography>
+                </div>
+                <TableContainer component={Paper}>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>No</TableCell>
+                        <TableCell>SKS</TableCell>
+                        <TableCell>Nilai</TableCell>
+                        <TableCell>Status</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {group.sks.map((item, index) => (
+                        <TableRow key={index}>
+                          <TableCell>{index + 1}</TableCell>
+                          <TableCell>{item.subjectName}</TableCell>
+                          <TableCell>{item.score}</TableCell>
+                          <TableCell>
+                            <Chip
+                              label={item.status}
+                              color={
+                                item.status === 'Lulus'
+                                  ? 'success'
+                                  : item.status === 'Tidak Lulus'
+                                    ? 'error'
+                                    : item.status === 'Menunggu Tes'
+                                      ? 'warning'
+                                      : 'default'
+                              }
+                              size='small'
+                            />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
               </div>
-              <Typography variant='body2' color='text.secondary' className='font-medium text-nowrap'>
-                {studentDetail?.passedCount} / {studentDetail?.totalSks}
-              </Typography>
-            </div>
+            ))}
+          </CardContent>
+        </Card>
+      ) : studentDetail?.sks && studentDetail?.sks.length > 0 ? (
+        <Card>
+          <CardHeader title='SKS Santri' />
+          <Divider />
+          <CardContent>
             <TableContainer component={Paper}>
               <Table>
                 <TableHead>

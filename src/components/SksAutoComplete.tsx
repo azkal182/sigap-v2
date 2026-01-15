@@ -20,6 +20,7 @@ type Props = {
   label?: string
   disabled?: boolean
   trackId: string
+  date?: Date | null
 }
 
 export default function SksAutocomplete({
@@ -29,9 +30,10 @@ export default function SksAutocomplete({
   helperText,
   label = 'Pilih Sks',
   disabled,
-  trackId
+  trackId,
+  date
 }: Props) {
-  const { data, isLoading } = useSksOption({ trackId })
+  const { data, isLoading } = useSksOption({ trackId, date: date ?? undefined })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const options = data?.data || []
 

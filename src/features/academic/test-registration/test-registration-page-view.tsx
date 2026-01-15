@@ -23,16 +23,20 @@ import { toast } from 'react-toastify'
 import { DateTime } from 'luxon'
 
 import FormRegistrationDialog from './components/form-registration-dialog'
-import type { TestRegistrationInput } from '../test-schema'
-import { useRegistrationList, useRegistrationTest } from '../query'
+import FormManualScoreDialog from './components/form-manual-score-dialog'
+import type { ManualSksScoreInput, TestRegistrationInput } from '../test-schema'
+import { useManualSksScore, useRegistrationList, useRegistrationTest, useSaveTestResult } from '../query'
 import { usePermissionStore } from '@/store/permission'
 import AppReactDatepicker from '@/lib/styles/AppReactDatepicker'
 import CustomTextField from '@/@core/components/mui/TextField'
 
 const TestRegistrationView = () => {
   const [open, setOpen] = useState(false)
+  const [openManual, setOpenManual] = useState(false)
   const { allowedDormitoryIds } = usePermissionStore()
   const { mutate: registrationTest } = useRegistrationTest()
+  const { mutate: saveTestResult } = useSaveTestResult()
+  const { mutate: saveManualSksScore } = useManualSksScore()
   const [date, setDate] = useState<Date>(new Date())
   const { data } = useRegistrationList({ date, dormitoryIds: allowedDormitoryIds })
 
@@ -63,6 +67,9 @@ const TestRegistrationView = () => {
   const openDialog = () => setOpen(true)
   const closeDialog = () => setOpen(false)
 
+  const openManualDialog = () => setOpenManual(true)
+  const closeManualDialog = () => setOpenManual(false)
+
   const handleInputScore = useCallback(
     (id: string, name: string, trackName: string, sksName: string, passingGrade: number) => {
       setSelectedStudent({ id, name, trackName, sksName, passingGrade })
@@ -84,12 +91,36 @@ const TestRegistrationView = () => {
       return
     }
 
-    // console.log('Simpan nilai untuk:', selectedStudent?.id, 'nilai:', score)
+    if (!selectedStudent?.id) {
+      toast.error('Registrasi tes tidak ditemukan')
 
-    // TODO: panggil API simpan nilai
+      return
+    }
 
-    toast.success(`Nilai ${score} berhasil disimpan untuk ${selectedStudent?.name}`)
-    handleCloseScoreDialog()
+    saveTestResult(
+      { registrationId: selectedStudent.id, score: Number(score) },
+      {
+        onSuccess: res => {
+          toast.success(res.message ?? `Nilai ${score} berhasil disimpan untuk ${selectedStudent?.name}`)
+          handleCloseScoreDialog()
+        },
+        onError: (error: any) => {
+          toast.error(error.message)
+        }
+      }
+    )
+  }
+
+  const handleSubmitManualScore = (input: ManualSksScoreInput) => {
+    saveManualSksScore(input, {
+      onSuccess: res => {
+        toast.success(res.message ?? 'Berhasil menyimpan nilai manual')
+        closeManualDialog()
+      },
+      onError: (error: any) => {
+        toast.error(error.message)
+      }
+    })
   }
 
   return (
@@ -113,6 +144,10 @@ const TestRegistrationView = () => {
 
           <Button onClick={openDialog} variant='contained' className='w-full sm:w-auto'>
             Registrasi
+          </Button>
+
+          <Button onClick={openManualDialog} variant='contained' className='w-full sm:w-auto'>
+            Input Nilai Manual
           </Button>
 
           <Button variant='contained' className='w-full sm:w-auto'>
@@ -266,6 +301,8 @@ const TestRegistrationView = () => {
       </Dialog>
 
       <FormRegistrationDialog open={open} onSubmit={handleSubmit} onClose={closeDialog} />
+
+      <FormManualScoreDialog open={openManual} onSubmit={handleSubmitManualScore} onClose={closeManualDialog} />
     </div>
   )
 }

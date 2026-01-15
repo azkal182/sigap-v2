@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 
 import FormDialog from '@/components/form-dialog'
 import CustomTextField from '@/@core/components/mui/TextField'
+import AppReactDatepicker from '@/lib/styles/AppReactDatepicker'
 import type { CreateSksInput } from '../schemas/dormitory-schema'
 import { CreateSksSchema } from '../schemas/dormitory-schema'
 
@@ -38,7 +39,9 @@ const SksFormDialog: React.FC<SksFormDialogProps> = ({
     defaultValues: {
       id: '',
       name: '',
-      trackId: ''
+      trackId: '',
+      validFrom: undefined,
+      validTo: null
     }
   })
 
@@ -47,7 +50,9 @@ const SksFormDialog: React.FC<SksFormDialogProps> = ({
       reset({
         id: defaultValues.id ?? '',
         name: defaultValues.name ?? '',
-        trackId: trackId
+        trackId: trackId,
+        validFrom: defaultValues.validFrom ?? undefined,
+        validTo: defaultValues.validTo ?? null
       })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -89,6 +94,35 @@ const SksFormDialog: React.FC<SksFormDialogProps> = ({
             InputProps={{
               className: 'rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500'
             }}
+          />
+        )}
+      />
+
+      <Controller
+        name='validFrom'
+        control={control}
+        render={({ field }) => (
+          <AppReactDatepicker
+            selected={field.value ?? null}
+            onChange={date => field.onChange(date ?? undefined)}
+            dateFormat='yyyy-MM-dd'
+            customInput={<CustomTextField label='Berlaku Mulai' fullWidth margin='dense' error={!!errors.validFrom} />}
+          />
+        )}
+      />
+
+      <Controller
+        name='validTo'
+        control={control}
+        render={({ field }) => (
+          <AppReactDatepicker
+            selected={field.value ?? null}
+            onChange={date => field.onChange(date ?? null)}
+            isClearable
+            dateFormat='yyyy-MM-dd'
+            customInput={
+              <CustomTextField label='Berlaku Sampai (opsional)' fullWidth margin='dense' error={!!errors.validTo} />
+            }
           />
         )}
       />
