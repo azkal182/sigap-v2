@@ -62,7 +62,7 @@ export const generatePdfBufferPdfkit = async (data: Dormitory[], date: Date): Pr
   const doc = new PDFDocument({
     size: 'A4',
     margins: { top: 40, bottom: 40, left: 40, right: 40 },
-    bufferPages: true
+    bufferPages: true,
   })
 
   const chunks: Buffer[] = []
@@ -82,7 +82,7 @@ export const generatePdfBufferPdfkit = async (data: Dormitory[], date: Date): Pr
 
   const totalPengurus = data.reduce(
     (sum, d) => sum + d.totalAbsences.committee, // atau cara lain hitung pengurus
-    0
+    0,
   )
 
   addSummary(doc, { totalAsrama, totalSiswa, totalPengurus })
@@ -243,7 +243,7 @@ function addDormitoryHeader(doc: PDFKit.PDFDocument, dorm: Dormitory) {
       `Total Alfa: ${dorm.totalAbsences.total} ` +
         `(Pengurus: ${dorm.totalAbsences.committee}, ` +
         `Santri: ${dorm.totalAbsences.students})`,
-      { width: contentWidth, align: 'left' }
+      { width: contentWidth, align: 'left' },
     )
 
   doc.fillColor('black')
@@ -296,7 +296,7 @@ function drawStudentTable(doc: PDFKit.PDFDocument, students: Student[]) {
     drawRow(
       [(i + 1).toString(), s.studentName, jamKe, keterangan],
       widths,
-      isAbsentAllDay ? { textColor: absentText, fillColor: absentFill, bold: true } : { textColor: rowText }
+      isAbsentAllDay ? { textColor: absentText, fillColor: absentFill, bold: true } : { textColor: rowText },
     )
   }
 
@@ -320,7 +320,7 @@ function drawStudentTable(doc: PDFKit.PDFDocument, students: Student[]) {
     for (let ci = 0; ci < headers.length; ci++) {
       doc.text(headers[ci], x + 6, startY + 6, {
         width: widths[ci] - 12,
-        align: ci === 0 ? 'center' : 'left'
+        align: ci === 0 ? 'center' : 'left',
       })
 
       if (ci < headers.length - 1) {
@@ -341,7 +341,7 @@ function drawStudentTable(doc: PDFKit.PDFDocument, students: Student[]) {
   function drawRow(
     texts: string[],
     widths: number[],
-    style: { textColor: string; fillColor?: string; bold?: boolean }
+    style: { textColor: string; fillColor?: string; bold?: boolean },
   ) {
     const padV = 4
 
@@ -354,8 +354,8 @@ function drawStudentTable(doc: PDFKit.PDFDocument, students: Student[]) {
         .fontSize(10)
         .heightOfString(t, {
           width: widths[i] - 12,
-          align: i === 0 ? 'center' : 'left'
-        })
+          align: i === 0 ? 'center' : 'left',
+        }),
     )
 
     const rowH = Math.max(...heights) + padV * 2
@@ -383,7 +383,7 @@ function drawStudentTable(doc: PDFKit.PDFDocument, students: Student[]) {
         .fontSize(10)
         .text(texts[i], x + 6, y + padV, {
           width: widths[i] - 12,
-          align: i === 0 ? 'center' : 'left'
+          align: i === 0 ? 'center' : 'left',
         })
 
       if (i < texts.length - 1) {
@@ -429,7 +429,7 @@ function addFooterLastPage(doc: PDFKit.PDFDocument) {
   doc.font('Helvetica').fontSize(9).fillColor('black')
   doc.text('Dokumen ini dibuat secara otomatis oleh Sistem Informasi Akademik', left, footerTopY + 10, {
     width: contentWidth,
-    align: 'left'
+    align: 'left',
   })
 
   const timestamp = DateTime.now().setZone('Asia/Jakarta').toFormat('dd/MM/yyyy HH:mm:ss') + ' WIB'
@@ -472,7 +472,7 @@ export const generatePdfBuffer = async (data: Dormitory[], date?: Date): Promise
   const docDefinition: TDocumentDefinitions = {
     content: [
       { text: 'LAPORAN ABSENSI SANTRI', style: 'header', margin: [0, 0, 0, 0] },
-      { text: formattedDate, style: 'header', margin: [0, 0, 0, 10] }
+      { text: formattedDate, style: 'header', margin: [0, 0, 0, 10] },
     ] as Content[],
     styles: {
       header: { fontSize: 18, bold: true, alignment: 'center', color: '#2c3e50' },
@@ -487,24 +487,24 @@ export const generatePdfBuffer = async (data: Dormitory[], date?: Date): Promise
         fontSize: 10,
         color: '#c0392b', // Warna teks sedikit lebih gelap
         fillColor: '#f2dede', // Warna latar belakang merah muda
-        bold: true
-      }
+        bold: true,
+      },
     },
     pageOrientation: 'portrait',
-    pageMargins: [40, 40, 40, 40]
+    pageMargins: [40, 40, 40, 40],
   }
 
   data.forEach((dormitory: Dormitory, dormitoryIndex: number) => {
     ;(docDefinition.content as Content[]).push({
       text: `Asrama ${dormitory.dormitoryName}\nTotal Alfa: ${dormitory.totalAbsences.total} (Pengurus: ${dormitory.totalAbsences.committee}, Santri: ${dormitory.totalAbsences.students})`,
       style: 'asramaHeader',
-      margin: [0, 20, 0, 10]
+      margin: [0, 20, 0, 10],
     })
 
     dormitory.classes.forEach((currentClass: Class) => {
       ;(docDefinition.content as Content[]).push({
         text: `Kelas: ${currentClass.className}${currentClass.instructor ? ` - ${currentClass.instructor}` : ''}`,
-        style: 'kelasHeader'
+        style: 'kelasHeader',
       })
 
       const tableBody: (ContentText | ContentTable)[][] = [
@@ -512,8 +512,8 @@ export const generatePdfBuffer = async (data: Dormitory[], date?: Date): Promise
           { text: 'No', style: 'tableHeader' },
           { text: 'Nama', style: 'tableHeader' },
           { text: 'Jam Ke', style: 'tableHeader' },
-          { text: 'Keterangan', style: 'tableHeader' }
-        ]
+          { text: 'Keterangan', style: 'tableHeader' },
+        ],
       ]
 
       currentClass.students.forEach((student: Student, index: number) => {
@@ -533,14 +533,14 @@ export const generatePdfBuffer = async (data: Dormitory[], date?: Date): Promise
           { text: (index + 1).toString(), style: rowStyle },
           { text: student.studentName, style: rowStyle },
           { text: jamKe, style: rowStyle },
-          { text: keterangan, style: rowStyle }
+          { text: keterangan, style: rowStyle },
         ])
       })
       ;(docDefinition.content as Content[]).push({
         table: {
           headerRows: 1,
           widths: ['auto', '*', 'auto', 150],
-          body: tableBody
+          body: tableBody,
         },
         layout: {
           hLineWidth: i => (i === 0 ? 1 : 0.5),
@@ -548,8 +548,8 @@ export const generatePdfBuffer = async (data: Dormitory[], date?: Date): Promise
           hLineColor: () => '#95a5a6',
           vLineColor: () => '#95a5a6',
           paddingTop: i => (i === 0 ? 4 : 2),
-          paddingBottom: i => (i === 0 ? 4 : 2)
-        }
+          paddingBottom: i => (i === 0 ? 4 : 2),
+        },
       } as ContentTable)
     })
 
@@ -597,7 +597,7 @@ export const sendPdfToTelegram = async (pdfBuffer: Buffer, caption: string, tele
 
         const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN_REPORT}/sendDocument`, {
           method: 'POST',
-          body: formData
+          body: formData,
         })
 
         const result = await response.json()
@@ -640,7 +640,7 @@ export const generateAndSendReport = async (data: Dormitory[], telegramId: strin
     const alfaSummary = data
       .map(
         dormitory =>
-          `*${dormitory.dormitoryName}* : ${dormitory.totalAbsences.total} (Pengurus: ${dormitory.totalAbsences.committee}, Santri: ${dormitory.totalAbsences.students})`
+          `*${dormitory.dormitoryName}* : ${dormitory.totalAbsences.total} (Pengurus: ${dormitory.totalAbsences.committee}, Santri: ${dormitory.totalAbsences.students})`,
       )
       .join('\n')
 
@@ -663,7 +663,7 @@ const buildCaption = (data: Dormitory[], date?: Date) => {
   const alfaSummary = data
     .map(
       dormitory =>
-        `*${dormitory.dormitoryName}* : ${dormitory.totalAbsences.total} (Pengurus: ${dormitory.totalAbsences.committee}, Santri: ${dormitory.totalAbsences.students})`
+        `*${dormitory.dormitoryName}* : ${dormitory.totalAbsences.total} (Pengurus: ${dormitory.totalAbsences.committee}, Santri: ${dormitory.totalAbsences.students})`,
     )
     .join('\n')
 
@@ -685,7 +685,7 @@ export const sendPdfToWhatsApp = async (
   caption: string,
   whatsappJids: string[],
   opts: SendWAOptions = {},
-  date: Date
+  date: Date,
 ) => {
   const luxonDate = DateTime.fromJSDate(date, { zone: 'Asia/Jakarta' })
   const fileName = `Laporan_Absensi_${luxonDate.toFormat('dd-MM-yyyy')}.pdf`
@@ -697,7 +697,7 @@ export const sendPdfToWhatsApp = async (
     // filename = `Laporan_Absensi_${format(date, 'dd-MM-yyyy', { locale: id })}.pdf`,
     filename = fileName,
 
-    mediaType = 'document'
+    mediaType = 'document',
   } = opts
 
   if (!apiKey) throw new Error('WA API key tidak ditemukan. Set WA_API_KEY/WHATSAPP_API_KEY di env.')
@@ -734,13 +734,14 @@ export const sendPdfToWhatsApp = async (
           method: 'POST',
           headers: { 'x-api-key': apiKey, 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            to: '6287833372003',
+            // to: '6287833372003',
+            to: jid,
             document: file,
             //   "document_url": "https://...",
             filename: filename,
             caption: caption,
-            mime_type: 'application/pdf'
-          })
+            mime_type: 'application/pdf',
+          }),
           //   body: formData
         })
 
@@ -795,7 +796,7 @@ export const generateAndSendReportBoth = async (
     whatsappJids?: string[]
   },
   date: Date,
-  waOpts?: SendWAOptions
+  waOpts?: SendWAOptions,
 ) => {
   try {
     // 1. Generate PDF sekali saja
@@ -836,7 +837,7 @@ export const generateAndSendReportToWhatsApp = async (
   data: Dormitory[],
   whatsappJids: string[],
   date: Date,
-  waOpts?: SendWAOptions
+  waOpts?: SendWAOptions,
 ) => {
   try {
     const pdfBuffer = await generatePdfBuffer(data, date)
