@@ -54,6 +54,7 @@ type Leadership = {
 }
 
 export type sksItem = {
+  sksId: string
   subjectName: string
   passingGrade: number
   score: number | null
@@ -86,15 +87,15 @@ export async function generateWilayahValidationSummary(): Promise<WilayahValidat
       provinceId: true,
       regencyId: true,
       districtId: true,
-      villageId: true
-    }
+      villageId: true,
+    },
   })
 
   const counters: Record<'province' | 'regency' | 'district' | 'village', number> = {
     province: 0,
     regency: 0,
     district: 0,
-    village: 0
+    village: 0,
   }
 
   for (const student of students) {
@@ -110,7 +111,7 @@ export async function generateWilayahValidationSummary(): Promise<WilayahValidat
     result.push({
       level: 'province',
       missingCount: counters.province,
-      message: `${counters.province} santri tidak mempunyai Provinsi`
+      message: `${counters.province} santri tidak mempunyai Provinsi`,
     })
   }
 
@@ -118,7 +119,7 @@ export async function generateWilayahValidationSummary(): Promise<WilayahValidat
     result.push({
       level: 'regency',
       missingCount: counters.regency,
-      message: `${counters.regency} santri tidak mempunyai Kabupaten/Kota`
+      message: `${counters.regency} santri tidak mempunyai Kabupaten/Kota`,
     })
   }
 
@@ -126,7 +127,7 @@ export async function generateWilayahValidationSummary(): Promise<WilayahValidat
     result.push({
       level: 'district',
       missingCount: counters.district,
-      message: `${counters.district} santri tidak mempunyai Kecamatan`
+      message: `${counters.district} santri tidak mempunyai Kecamatan`,
     })
   }
 
@@ -134,7 +135,7 @@ export async function generateWilayahValidationSummary(): Promise<WilayahValidat
     result.push({
       level: 'village',
       missingCount: counters.village,
-      message: `${counters.village} santri tidak mempunyai Desa/Kelurahan`
+      message: `${counters.village} santri tidak mempunyai Desa/Kelurahan`,
     })
   }
 
@@ -152,7 +153,7 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
       dormitoryId = '',
       sortBy = 'name',
       sortOrder = 'asc',
-      dormitoryIds = []
+      dormitoryIds = [],
     } = options
 
     const skip = (page - 1) * limit
@@ -166,9 +167,9 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
               {
                 OR: [
                   { name: { contains: search, mode: Prisma.QueryMode.insensitive }, status: StudentStatus.ACTIVE },
-                  { nis: { contains: search, mode: Prisma.QueryMode.insensitive }, status: StudentStatus.ACTIVE }
-                ]
-              }
+                  { nis: { contains: search, mode: Prisma.QueryMode.insensitive }, status: StudentStatus.ACTIVE },
+                ],
+              },
             ]
           : []),
 
@@ -179,10 +180,10 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
                 histories: {
                   some: {
                     status: HistoryStatus.STUDYING,
-                    classId: classId // pastikan classId sesuai tipe
-                  }
-                }
-              }
+                    classId: classId, // pastikan classId sesuai tipe
+                  },
+                },
+              },
             ]
           : []),
 
@@ -194,11 +195,11 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
                   some: {
                     status: HistoryStatus.STUDYING,
                     class: {
-                      trackId
-                    }
-                  }
-                }
-              }
+                      trackId,
+                    },
+                  },
+                },
+              },
             ]
           : []),
 
@@ -209,10 +210,10 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
                 dormitoryHistories: {
                   some: {
                     dormitoryId: dormitoryId,
-                    endDate: null
-                  }
-                }
-              }
+                    endDate: null,
+                  },
+                },
+              },
             ]
           : []),
         ...(dormitoryIds.length > 0
@@ -222,15 +223,15 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
                 dormitoryHistories: {
                   some: {
                     dormitoryId: {
-                      in: dormitoryIds
+                      in: dormitoryIds,
                     },
-                    endDate: null
-                  }
-                }
-              }
+                    endDate: null,
+                  },
+                },
+              },
             ]
-          : [])
-      ]
+          : []),
+      ],
     }
 
     const total = await db.student.count({ where: whereCondition })
@@ -261,32 +262,32 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
           where: {
             termLeadership: {
               startDate: { lte: new Date() }, // Kurang dari atau sama dengan tanggal sekarang
-              endDate: { gte: new Date() }
-            }
+              endDate: { gte: new Date() },
+            },
           },
           select: {
             role: true,
             leadership: {
               select: {
-                name: true
-              }
-            }
-          }
+                name: true,
+              },
+            },
+          },
         },
         formalClass: {
           select: {
             id: true,
-            name: true
-          }
+            name: true,
+          },
         },
         dormitoryRoom: {
           select: {
             id: true,
-            name: true
-          }
+            name: true,
+          },
         },
         dormitory: {
-          select: { name: true }
+          select: { name: true },
         },
         histories: {
           // Mengambil hanya satu histori terbaru yang berstatus 'STUDYING'
@@ -310,28 +311,28 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
                         testRegistration: {
                           // Ambil satu pendaftaran dengan attemptNumber tertinggi
                           where: {
-                            status: RegistrationStatus.COMPLETED
+                            status: RegistrationStatus.COMPLETED,
                           },
                           orderBy: {
-                            test: { attemptNumber: 'desc' }
+                            test: { attemptNumber: 'desc' },
                           },
                           take: 1, // Mengambil hanya 1 data tertinggi
                           include: {
-                            test: true
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
+                            test: true,
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
         village: true,
         district: true,
         regency: true,
-        province: true
+        province: true,
 
         // village: {
         //   select: {
@@ -357,7 +358,7 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
         //     }
         //   }
         // }
-      }
+      },
     })
 
     // console.log({
@@ -408,7 +409,7 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
           leadership: leadership
             ? {
                 name: leadership.leadership.name,
-                status: leadership.role
+                status: leadership.role,
               }
             : null,
           ttl:
@@ -416,9 +417,9 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
               ? `${s.placeOfBirth}, ${new Date(s.dateOfBirth).toLocaleDateString('id-ID', {
                   year: 'numeric',
                   month: 'long',
-                  day: 'numeric'
+                  day: 'numeric',
                 })}`
-              : null
+              : null,
         }
 
         if (history) {
@@ -440,7 +441,7 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
               passingGrade: sksItem.passingGrade ?? 0,
               score,
               passed,
-              status
+              status,
             }
           })
 
@@ -458,7 +459,7 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
             daysLeft,
             isAheadOfSchedule: daysLeft !== null ? daysLeft < 0 : null,
             totalSks,
-            passedCount
+            passedCount,
           }
         }
 
@@ -471,7 +472,7 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
           daysLeft,
           isAheadOfSchedule: daysLeft !== null ? daysLeft < 0 : null,
           totalSks: 0,
-          passedCount: 0
+          passedCount: 0,
         }
       })
       .sort((a, b) => {
@@ -501,8 +502,8 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
         limit,
         totalPages,
         hasNext: page < totalPages,
-        hasPrev: page > 1
-      }
+        hasPrev: page > 1,
+      },
     }
   } catch (error) {
     const message = handleServerError('Terjadi kesalahan saat mengambil santri.', error)
@@ -534,19 +535,19 @@ export async function getStudentOption(dormitoryIds?: string[]): Promise<
         province: true,
         histories: {
           where: {
-            status: 'STUDYING'
+            status: 'STUDYING',
           },
 
           include: {
             class: {
               include: {
                 dormitory: true,
-                track: true
-              }
-            }
-          }
-        }
-      }
+                track: true,
+              },
+            },
+          },
+        },
+      },
     })
 
     return {
@@ -570,9 +571,9 @@ export async function getStudentOption(dormitoryIds?: string[]): Promise<
           name: isAssigned ? nameParts.join(' | ') : `${s.name} | ${s.regency?.name} | ${s.province?.name}`,
           trackId: trackId || null,
           dormitoryId: dormitoryId || null,
-          disabled: isAssigned
+          disabled: isAssigned,
         }
-      })
+      }),
     }
   } catch (error) {
     const message = handleServerError('Terjadi kesalahan saat mengambil santri.', error)
@@ -587,7 +588,7 @@ export async function getStudentDetail(id: string): Promise<StudentItem | null> 
   const student = await db.student.findFirst({
     where: {
       id,
-      status: StudentStatus.ACTIVE
+      status: StudentStatus.ACTIVE,
     },
     select: {
       id: true,
@@ -603,34 +604,34 @@ export async function getStudentDetail(id: string): Promise<StudentItem | null> 
         where: {
           termLeadership: {
             startDate: { lte: new Date() }, // Kurang dari atau sama dengan tanggal sekarang
-            endDate: { gte: new Date() }
-          }
+            endDate: { gte: new Date() },
+          },
         },
         select: {
           role: true,
           leadership: {
             select: {
-              name: true
-            }
-          }
-        }
+              name: true,
+            },
+          },
+        },
       },
       dormitoryRoom: {
         select: {
           id: true,
-          name: true
-        }
+          name: true,
+        },
       },
       formalClass: {
         select: {
           id: true,
-          name: true
-        }
+          name: true,
+        },
       },
       dormitory: {
         select: {
-          name: true
-        }
+          name: true,
+        },
       },
       testRegistration: {
         select: {
@@ -643,8 +644,8 @@ export async function getStudentDetail(id: string): Promise<StudentItem | null> 
             select: {
               score: true,
               passed: true,
-              attemptNumber: true
-            }
+              attemptNumber: true,
+            },
           },
           sks: {
             select: {
@@ -655,16 +656,16 @@ export async function getStudentDetail(id: string): Promise<StudentItem | null> 
               Track: {
                 select: {
                   id: true,
-                  name: true
-                }
-              }
-            }
-          }
-        }
+                  name: true,
+                },
+              },
+            },
+          },
+        },
       },
       histories: {
         orderBy: {
-          startDate: 'desc' // Ambil histori terbaru lebih dulu
+          startDate: 'desc', // Ambil histori terbaru lebih dulu
         },
         select: {
           startDate: true,
@@ -689,28 +690,28 @@ export async function getStudentDetail(id: string): Promise<StudentItem | null> 
                       testRegistration: {
                         // Ambil satu pendaftaran dengan attemptNumber tertinggi
                         where: {
-                          studentId: id
+                          studentId: id,
 
                           //   status: RegistrationStatus.COMPLETED
                         },
 
                         orderBy: {
-                          createdAt: 'desc'
+                          createdAt: 'desc',
                         },
                         take: 1, // Mengambil hanya 1 data tertinggi
                         include: {
-                          test: true
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
+                          test: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
   })
 
   if (!student) {
@@ -739,7 +740,7 @@ export async function getStudentDetail(id: string): Promise<StudentItem | null> 
       leadership: leadership
         ? {
             name: leadership.leadership.name,
-            status: leadership.role
+            status: leadership.role,
           }
         : null,
       ttl:
@@ -753,7 +754,7 @@ export async function getStudentDetail(id: string): Promise<StudentItem | null> 
       sks: [],
       totalSks: 0,
       passedCount: 0,
-      histories: []
+      histories: [],
     }
   }
 
@@ -770,7 +771,10 @@ export async function getStudentDetail(id: string): Promise<StudentItem | null> 
 
   const tracksForSks = await db.track.findMany({
     where: {
-      id: { in: uniqueTrackIds }
+      id: { in: uniqueTrackIds },
+    },
+    orderBy: {
+      level: 'asc',
     },
     select: {
       id: true,
@@ -782,19 +786,19 @@ export async function getStudentDetail(id: string): Promise<StudentItem | null> 
           passingGrade: true,
           testRegistration: {
             where: {
-              studentId: id
+              studentId: id,
             },
             orderBy: {
-              createdAt: 'desc'
+              createdAt: 'desc',
             },
             take: 1,
             include: {
-              test: true
-            }
-          }
-        }
-      }
-    }
+              test: true,
+            },
+          },
+        },
+      },
+    },
   })
 
   const sksByTrack = tracksForSks.map(t => {
@@ -810,11 +814,12 @@ export async function getStudentDetail(id: string): Promise<StudentItem | null> 
       }
 
       return {
+        sksId: sksItem.id,
         subjectName: sksItem.name,
         passingGrade: sksItem.passingGrade ?? 0,
         score,
         passed,
-        status
+        status,
       }
     })
 
@@ -826,7 +831,7 @@ export async function getStudentDetail(id: string): Promise<StudentItem | null> 
       trackName: t.name,
       sks,
       totalSks,
-      passedCount
+      passedCount,
     }
   })
 
@@ -843,11 +848,12 @@ export async function getStudentDetail(id: string): Promise<StudentItem | null> 
     }
 
     return {
+      sksId: sksItem.id,
       subjectName: sksItem.name,
       passingGrade: sksItem.passingGrade ?? 0,
       score,
       passed,
-      status
+      status,
     }
   })
 
@@ -873,7 +879,7 @@ export async function getStudentDetail(id: string): Promise<StudentItem | null> 
       dormitoryName: h.dormNameAtThatTime,
       trackName: h.trackNameAtThatTime,
       status: h.status,
-      trackDuration
+      trackDuration,
     }
   })
 
@@ -900,7 +906,7 @@ export async function getStudentDetail(id: string): Promise<StudentItem | null> 
     leadership: leadership
       ? {
           name: leadership.leadership.name,
-          status: leadership.role
+          status: leadership.role,
         }
       : null,
     ttl,
@@ -912,7 +918,7 @@ export async function getStudentDetail(id: string): Promise<StudentItem | null> 
     sksByTrack,
     totalSks,
     passedCount,
-    histories
+    histories,
   }
 }
 
@@ -940,7 +946,7 @@ export async function addStudent(input: StudentFormInput): Promise<
       villageId,
       districtId,
       regencyId,
-      provinceId
+      provinceId,
     } = input
 
     const studentExist = await db.student.findUnique({ where: { nis } })
@@ -954,7 +960,7 @@ export async function addStudent(input: StudentFormInput): Promise<
       const dorm = dormitoryId
         ? await tx.dormitory.findUnique({
             where: { id: dormitoryId },
-            select: { id: true, name: true }
+            select: { id: true, name: true },
           })
         : null
 
@@ -977,12 +983,12 @@ export async function addStudent(input: StudentFormInput): Promise<
           districtId,
           regencyId,
           provinceId,
-          ...(dormitoryId && { dormitoryId })
+          ...(dormitoryId && { dormitoryId }),
         },
         select: {
           id: true,
-          name: true
-        }
+          name: true,
+        },
       })
 
       // 2) jika ada dormitoryId, catat ke DormitoryHistory
@@ -993,8 +999,8 @@ export async function addStudent(input: StudentFormInput): Promise<
             dormitoryId: dormitoryId,
             startDate: new Date(),
             status: 'ACTIVE', // enum DormitoryStatus
-            dormNameAtThatTime: dorm!.name
-          }
+            dormNameAtThatTime: dorm!.name,
+          },
         })
       }
 

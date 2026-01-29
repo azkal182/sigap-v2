@@ -21,7 +21,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Typography
+  Typography,
 } from '@mui/material'
 
 import { toast } from 'react-toastify'
@@ -33,7 +33,7 @@ import {
   useUpdateTrack,
   useRemoveTrackFromDormitory,
   useSlotOption,
-  useSlotData
+  useSlotData,
 } from './dormitory.query'
 import type { CreateScheduleSlotInput, TrackFormSchema } from './schemas/dormitory-schema'
 
@@ -49,7 +49,7 @@ type Slot = {
 const slotData: Slot[] = [
   { id: 1, slot: 'A1', start: '08:00', end: '10:00' },
   { id: 2, slot: 'B2', start: '10:30', end: '12:30' },
-  { id: 3, slot: 'C3', start: '13:00', end: '15:00' }
+  { id: 3, slot: 'C3', start: '13:00', end: '15:00' },
 ]
 
 // ✅ Perbarui interface Track agar sesuai dengan data yang baru
@@ -89,7 +89,7 @@ const DormitoryDetailPageView: React.FC<DormitoryDetailPageViewProps> = ({ id })
   const handleOpenCreateScheduleSlot = () => {
     setDialogSlotMode('create')
     setEditingSchedulSlot({
-      dormitoryId: id
+      dormitoryId: id,
     })
 
     setDialogSlotOpen(true)
@@ -102,7 +102,7 @@ const DormitoryDetailPageView: React.FC<DormitoryDetailPageViewProps> = ({ id })
       dormitoryId: id,
       slot: slot.slot,
       endTime: slot.endTime,
-      startTime: slot.startTime
+      startTime: slot.startTime,
     })
     setDialogSlotOpen(true)
   }
@@ -112,7 +112,7 @@ const DormitoryDetailPageView: React.FC<DormitoryDetailPageViewProps> = ({ id })
     setEditingTrack({
       name: '',
       level: null,
-      dormitoryId: id
+      dormitoryId: id,
     })
     setDialogOpen(true)
   }
@@ -125,7 +125,7 @@ const DormitoryDetailPageView: React.FC<DormitoryDetailPageViewProps> = ({ id })
       name: track.name,
       targetDays: track.targetDays,
       level: track.level,
-      dormitoryId: id
+      dormitoryId: id,
     })
     setDialogOpen(true)
   }
@@ -143,7 +143,7 @@ const DormitoryDetailPageView: React.FC<DormitoryDetailPageViewProps> = ({ id })
           name: form.name,
           targetDays: form.targetDays,
           level: form.level,
-          dormitoryId: id // Asumsikan 'id' adalah id asrama saat ini
+          dormitoryId: id, // Asumsikan 'id' adalah id asrama saat ini
         },
         {
           onSuccess: () => {
@@ -151,8 +151,8 @@ const DormitoryDetailPageView: React.FC<DormitoryDetailPageViewProps> = ({ id })
           },
           onError: (error: any) => {
             toast.error(error.message || 'Gagal membuat Fan.')
-          }
-        }
+          },
+        },
       )
     } else if (dialogMode === 'edit' && editingTrack) {
       // Panggil mutasi 'update' dengan objek data parsial
@@ -162,7 +162,7 @@ const DormitoryDetailPageView: React.FC<DormitoryDetailPageViewProps> = ({ id })
           name: form.name,
           targetDays: form.targetDays,
           level: form.level,
-          dormitoryId: id
+          dormitoryId: id,
         },
         {
           onSuccess: () => {
@@ -170,8 +170,8 @@ const DormitoryDetailPageView: React.FC<DormitoryDetailPageViewProps> = ({ id })
           },
           onError: (error: any) => {
             toast.error(error.message || 'Gagal update Fan.')
-          }
-        }
+          },
+        },
       )
     }
 
@@ -296,7 +296,7 @@ const DormitoryDetailPageView: React.FC<DormitoryDetailPageViewProps> = ({ id })
                           slot: slotNumber,
                           startTime,
                           endTime,
-                          dormitoryId: id
+                          dormitoryId: id,
                         })
                       }}
                     >

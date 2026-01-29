@@ -54,12 +54,12 @@ export const menuItems: MenuConfigSection[] = [
     label: 'PUSAT',
     items: [
       { title: 'Laporan', href: '/report', icon: 'tabler-currency-dollar', permissions: ['report:view'] },
-      { title: 'Transaksi', href: '/transaction', icon: 'tabler-users', permissions: ['transaction:view'] }
-    ]
+      { title: 'Transaksi', href: '/transaction', icon: 'tabler-users', permissions: ['transaction:view'] },
+    ],
   },
   {
     label: 'Perizinan',
-    items: [{ title: 'Perizinan', href: '/permit', icon: 'tabler-license-off', permissions: ['permit:view'] }]
+    items: [{ title: 'Perizinan', href: '/permit', icon: 'tabler-license-off', permissions: ['permit:view'] }],
   },
   {
     label: 'Absensi',
@@ -72,16 +72,16 @@ export const menuItems: MenuConfigSection[] = [
           {
             title: 'Santri',
             href: '/attendance/list-attendance-student',
-            permissions: ['attendance:view']
+            permissions: ['attendance:view'],
           },
           {
             title: 'Pengajar',
             href: '/attendance/list-attendance-teacher',
-            permissions: ['attendance:view']
-          }
-        ]
-      }
-    ]
+            permissions: ['attendance:view'],
+          },
+        ],
+      },
+    ],
   },
   {
     label: 'Pengajar',
@@ -90,9 +90,9 @@ export const menuItems: MenuConfigSection[] = [
         title: 'Jadwal Pelajaran',
         href: '/schedule',
         icon: 'tabler-presentation-analytics',
-        permissions: ['teacher.schedule:view']
-      }
-    ]
+        permissions: ['teacher.schedule:view'],
+      },
+    ],
   },
   {
     label: 'Asrama',
@@ -102,33 +102,33 @@ export const menuItems: MenuConfigSection[] = [
         title: 'Validasi Absensi Santri',
         href: '/dormitory/validate-student',
         icon: 'tabler-copy-check',
-        permissions: ['dormitory.validation.student:view']
+        permissions: ['dormitory.validation.student:view'],
       },
       {
         title: 'Validasi Absensi Pengajar',
         href: '/dormitory/validate-teacher',
         icon: 'tabler-copy-check',
-        permissions: ['dormitory.validation.teacher:view']
+        permissions: ['dormitory.validation.teacher:view'],
       },
       {
         title: 'Jadwal Pelajaran',
         href: '/dormitory/schedule',
         icon: 'tabler-calendar-due',
-        permissions: ['dormitory.schedul:view']
+        permissions: ['dormitory.schedul:view'],
       },
       {
         title: 'Pengajar',
         href: '/dormitory/teacher',
         icon: 'tabler-brand-tether',
-        permissions: ['dormitory.teacher:view']
+        permissions: ['dormitory.teacher:view'],
       },
       {
         title: 'Fan',
         href: '/dormitory/track',
         icon: 'tabler-brand-tether',
-        permissions: ['dormitory.track:view']
-      }
-    ]
+        permissions: ['dormitory.track:view'],
+      },
+    ],
   },
 
   {
@@ -138,9 +138,15 @@ export const menuItems: MenuConfigSection[] = [
         title: 'Daftar Tes',
         href: '/academic/test-registration',
         icon: 'tabler-users',
-        permissions: ['academic.registration-test:view']
-      }
-    ]
+        permissions: ['academic.registration-test:view'],
+      },
+      {
+        title: 'Laporan Progress SKS',
+        href: '/academic/sks-report',
+        icon: 'tabler-chart-bar',
+        permissions: ['user:view'],
+      },
+    ],
   },
   {
     label: 'Data',
@@ -151,20 +157,20 @@ export const menuItems: MenuConfigSection[] = [
         title: 'Pengajar',
         href: '/data/teacher',
         icon: 'tabler-brand-tether',
-        permissions: ['teacher:view']
+        permissions: ['teacher:view'],
       },
 
       {
         title: 'Kependudukan',
         href: '/data/penduduk',
         icon: 'tabler-world-plus',
-        permissions: ['leadership:view']
+        permissions: ['leadership:view'],
       },
       {
         title: 'Pindah Asrama',
         href: '/data/move-dormitory',
         icon: 'tabler-replace',
-        permissions: ['leadership:view']
+        permissions: ['leadership:view'],
       },
       {
         title: 'Kepengurusan',
@@ -174,21 +180,21 @@ export const menuItems: MenuConfigSection[] = [
           {
             title: 'Periode Kepengurusan',
             href: '/data/leadership/term-leadership',
-            permissions: ['leadership.term:view']
+            permissions: ['leadership.term:view'],
           },
           {
             title: 'List Kepengurusan',
             href: '/data/leadership/list-leadership',
-            permissions: ['leadership.list:view']
+            permissions: ['leadership.list:view'],
           },
           {
             title: 'Data Kepengurusan',
             href: '/data/leadership/leadership-data',
-            permissions: ['leadership.list:view']
-          }
-        ]
-      }
-    ]
+            permissions: ['leadership.list:view'],
+          },
+        ],
+      },
+    ],
   },
   {
     label: 'ADMIN',
@@ -197,9 +203,9 @@ export const menuItems: MenuConfigSection[] = [
       { title: 'Role', href: '/admin/role', icon: 'tabler-key', permissions: ['role:view'] },
       { title: 'Survey', href: '/admin/periods', icon: 'tabler-chart-dots', permissions: ['user:view'] },
       { title: 'Import', href: '/admin/import', icon: 'tabler-upload', permissions: ['role:view'] },
-      { title: 'Import Pengajar', href: '/admin/import-teacher', icon: 'tabler-upload', permissions: ['role:view'] }
-    ]
-  }
+      { title: 'Import Pengajar', href: '/admin/import-teacher', icon: 'tabler-upload', permissions: ['role:view'] },
+    ],
+  },
 ]
 
 const renderMenuItems = (items: MenuConfigItem[]) => {
@@ -249,11 +255,11 @@ const VerticalMenu = ({ scrollMenu }: Props) => {
       {...(isBreakpointReached
         ? {
             className: 'bs-full overflow-y-auto overflow-x-hidden',
-            onScroll: container => scrollMenu(container, false)
+            onScroll: container => scrollMenu(container, false),
           }
         : {
             options: { wheelPropagation: false, suppressScrollX: true },
-            onScrollY: container => scrollMenu(container, true)
+            onScrollY: container => scrollMenu(container, true),
           })}
     >
       {/* Incase you also want to scroll NavHeader to scroll with Vertical Menu, remove NavHeader from above and paste it below this comment */}

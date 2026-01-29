@@ -21,14 +21,20 @@ import {
   TableBody,
   Chip,
   LinearProgress,
-  Alert
+  Alert,
 } from '@mui/material'
 
 import { DateTime } from 'luxon'
+import { toast } from 'react-toastify'
 
 import CustomTextField from '@/@core/components/mui/TextField'
 import { useStudentDetail } from './student.query'
 import { convertHistoryStatus } from '@/utils/get-status'
+import { featureFlags } from '@/configs/feature-flags'
+import StudentManualScoreDialog from './components/student-manual-score-dialog'
+import type { TrackGroup } from './components/student-manual-score-dialog'
+import { useManualSksScore } from '@/features/academic/query'
+import type { ManualSksScoreInput } from '@/features/academic/test-schema'
 
 interface StudentForm {
   id: string
@@ -84,8 +90,10 @@ const FormItem = ({ label, name, value = '', onChange, disabled = false, type = 
 export default function StudentPageDetailView({ id }: { id: string }) {
   const [isEditing, setIsEditing] = useState<boolean>(false)
   const [formData, setFormData] = useState<StudentForm | null>(null)
+  const [openManualScoreDialog, setOpenManualScoreDialog] = useState(false)
 
-  const { data: studentDetail, isLoading } = useStudentDetail(id)
+  const { data: studentDetail, isLoading, refetch } = useStudentDetail(id)
+  const { mutate: saveManualSksScore } = useManualSksScore()
 
   //   console.log(studentDetail)
   useEffect(() => {
@@ -115,9 +123,9 @@ export default function StudentPageDetailView({ id }: { id: string }) {
         leadership: studentDetail.leadership
           ? {
               name: studentDetail.leadership.name,
-              status: studentDetail.leadership.status
+              status: studentDetail.leadership.status,
             }
-          : null
+          : null,
       })
     }
   }, [studentDetail])
@@ -148,9 +156,9 @@ export default function StudentPageDetailView({ id }: { id: string }) {
         leadership: studentDetail.leadership
           ? {
               name: studentDetail.leadership.name,
-              status: studentDetail.leadership.status
+              status: studentDetail.leadership.status,
             }
-          : null
+          : null,
       })
     }
 
@@ -170,10 +178,24 @@ export default function StudentPageDetailView({ id }: { id: string }) {
       prevData
         ? {
             ...prevData,
-            [name]: value
+            [name]: value,
           }
-        : null
+        : null,
     )
+  }
+
+  // Handler for manual score dialog
+  const handleSubmitManualScore = (input: ManualSksScoreInput) => {
+    saveManualSksScore(input, {
+      onSuccess: res => {
+        toast.success(res.message ?? 'Berhasil menyimpan nilai manual')
+        setOpenManualScoreDialog(false)
+        refetch()
+      },
+      onError: (error: any) => {
+        toast.error(error.message ?? 'Gagal menyimpan nilai')
+      },
+    })
   }
 
   if (id === 'add') {
@@ -340,7 +362,16 @@ export default function StudentPageDetailView({ id }: { id: string }) {
       </Card>
       {studentDetail?.sksByTrack && studentDetail?.sksByTrack.length > 0 ? (
         <Card>
-          <CardHeader title='SKS Santri' />
+          <CardHeader
+            title='SKS Santri'
+            action={
+              featureFlags.enableStudentDetailManualScore && (
+                <Button variant='contained' size='small' onClick={() => setOpenManualScoreDialog(true)}>
+                  Input Nilai Manual
+                </Button>
+              )
+            }
+          />
 
           <Divider />
           <CardContent>
@@ -492,6 +523,18 @@ export default function StudentPageDetailView({ id }: { id: string }) {
         </Card>
       ) : (
         <Alert severity='warning'>Data Riwayat Tidak ditemukan</Alert>
+      )}
+
+      {/* Manual Score Dialog */}
+      {featureFlags.enableStudentDetailManualScore && studentDetail && (
+        <StudentManualScoreDialog
+          open={openManualScoreDialog}
+          onClose={() => setOpenManualScoreDialog(false)}
+          onSubmit={handleSubmitManualScore}
+          studentId={studentDetail.id}
+          studentName={studentDetail.name}
+          sksByTrack={(studentDetail.sksByTrack ?? []) as TrackGroup[]}
+        />
       )}
     </div>
   )
