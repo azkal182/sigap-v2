@@ -534,6 +534,7 @@ export default function StudentPageDetailView({ id }: { id: string }) {
           studentId={studentDetail.id}
           studentName={studentDetail.name}
           sksByTrack={(studentDetail.sksByTrack ?? []) as TrackGroup[]}
+          activeTrackId={studentDetail.activeTrackId ?? undefined}
         />
       )}
     </div>

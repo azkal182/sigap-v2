@@ -26,6 +26,7 @@ type StudentManualScoreForm = z.infer<typeof studentManualScoreSchema>
 export type TrackGroup = {
   trackId: string
   trackName: string | null
+  trackLevel: number // Added DormitoryTrack.level
   sks: {
     sksId: string
     subjectName: string
@@ -54,6 +55,7 @@ interface StudentManualScoreDialogProps {
   studentId: string
   studentName: string
   sksByTrack: TrackGroup[]
+  activeTrackId?: string // Added for default track selection
 }
 
 export default function StudentManualScoreDialog({
@@ -63,6 +65,7 @@ export default function StudentManualScoreDialog({
   studentId,
   studentName,
   sksByTrack,
+  activeTrackId, // Added prop
 }: StudentManualScoreDialogProps) {
   const [showAllTracks, setShowAllTracks] = useState(false)
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null)
@@ -112,11 +115,16 @@ export default function StudentManualScoreDialog({
         score: 0,
       })
       setShowAllTracks(false)
-      // Use last track as default (current/active track with highest level)
-      const currentTrack = sksByTrack[sksByTrack.length - 1]
-      setSelectedTrackId(currentTrack?.trackId || null)
+
+      // ✅ Use activeTrackId if provided, else fallback to last track (highest level)
+      if (activeTrackId) {
+        setSelectedTrackId(activeTrackId)
+      } else {
+        const highestLevelTrack = sksByTrack[sksByTrack.length - 1]
+        setSelectedTrackId(highestLevelTrack?.trackId || null)
+      }
     }
-  }, [open, reset, sksByTrack])
+  }, [open, reset, sksByTrack, activeTrackId])
 
   const handleFormSubmit = (data: StudentManualScoreForm) => {
     onSubmit({

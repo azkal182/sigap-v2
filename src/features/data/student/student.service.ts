@@ -24,6 +24,7 @@ export type StudentItem = {
   provinceId?: number | null
   activeDormitory: string | null
   activeTrack: string | null
+  activeTrackId?: string | null // Added for dialog default track
   activeClass: string | null
   ttl: string | null
   daysLeft?: number | null // Sisa hari menuju target
@@ -35,6 +36,7 @@ export type StudentItem = {
   sksByTrack?: {
     trackId: string
     trackName: string | null
+    trackLevel: number // Added DormitoryTrack.level
     sks: sksItem[]
     totalSks: number
     passedCount: number
@@ -630,6 +632,7 @@ export async function getStudentDetail(id: string): Promise<StudentItem | null> 
       },
       dormitory: {
         select: {
+          id: true,
           name: true,
         },
       },
@@ -762,6 +765,7 @@ export async function getStudentDetail(id: string): Promise<StudentItem | null> 
   const currentHistory = student.histories[0]
   const { track } = currentHistory.class
 
+  // Collect unique track IDs from histories and test registrations
   const historyTrackIds = student.histories.map(h => h.class.track.id)
   const registrationTrackIds = student.testRegistration
     .map(r => r.sks.trackId)
@@ -769,71 +773,150 @@ export async function getStudentDetail(id: string): Promise<StudentItem | null> 
 
   const uniqueTrackIds = Array.from(new Set([...historyTrackIds, ...registrationTrackIds]))
 
-  const tracksForSks = await db.track.findMany({
-    where: {
-      id: { in: uniqueTrackIds },
-    },
-    orderBy: {
-      level: 'asc',
-    },
-    select: {
-      id: true,
-      name: true,
-      sks: {
-        select: {
-          id: true,
-          name: true,
-          passingGrade: true,
-          testRegistration: {
-            where: {
-              studentId: id,
-            },
-            orderBy: {
-              createdAt: 'desc',
-            },
-            take: 1,
-            include: {
-              test: true,
+  // Determine reference date based on student active status
+  const activeHistory = student.histories.find(h => h.status === 'STUDYING')
+  const latestHistory = student.histories[0]
+
+  let referenceDate: Date
+  if (activeHistory) {
+    // Student is still STUDYING -> use current date
+    referenceDate = new Date()
+  } else if (latestHistory?.endDate) {
+    // Student is not active (GRADUATED/TRANSFERRED/REPEATED) -> use endDate of latest history
+    referenceDate = latestHistory.endDate
+  } else {
+    // Fallback: use startDate of latest history
+    referenceDate = latestHistory?.startDate || new Date()
+  }
+
+  // Get dormitory ID
+  const dormitoryId = student.dormitory?.id
+  let sksByTrack: any[] = [] // Initialize sksByTrack here
+  if (!dormitoryId) {
+    // Student has no dormitory - return empty sksByTrack
+    sksByTrack = []
+  } else {
+    // Query DormitoryTrack to get tracks with correct level ordering
+    const dormitoryTracks = await db.dormitoryTrack.findMany({
+      where: {
+        dormitoryId,
+        trackId: { in: uniqueTrackIds },
+      },
+      select: {
+        trackId: true,
+        level: true, // ✅ DormitoryTrack.level (specific to dormitory)
+        track: {
+          select: {
+            id: true,
+            name: true,
+            sks: {
+              select: {
+                id: true,
+                name: true,
+                passingGrade: true,
+                validFrom: true,
+                validTo: true,
+                deletedAt: true,
+                testRegistration: {
+                  where: {
+                    studentId: id,
+                  },
+                  orderBy: {
+                    createdAt: 'desc',
+                  },
+                  take: 1,
+                  include: {
+                    test: true,
+                  },
+                },
+              },
             },
           },
         },
       },
-    },
-  })
-
-  const sksByTrack = tracksForSks.map(t => {
-    const sks = t.sks.map(sksItem => {
-      const registration = sksItem.testRegistration[0]
-      const score = registration?.test?.score ?? null
-      const passed = registration?.test?.passed ?? false
-
-      let status = 'Belum Daftar'
-
-      if (registration) {
-        status = registration.test ? (passed ? 'Lulus' : 'Tidak Lulus') : 'Menunggu Tes'
-      }
-
-      return {
-        sksId: sksItem.id,
-        subjectName: sksItem.name,
-        passingGrade: sksItem.passingGrade ?? 0,
-        score,
-        passed,
-        status,
-      }
+      orderBy: {
+        level: 'desc', // ✅ Order by DormitoryTrack.level
+      },
     })
 
-    const totalSks = sks.length
-    const passedCount = sks.filter(item => item.passed).length
+    sksByTrack = dormitoryTracks.map(dt => {
+      const track = dt.track
 
-    return {
-      trackId: t.id,
-      trackName: t.name,
-      sks,
-      totalSks,
-      passedCount,
-    }
-  })
+      // Filter valid SKS based on referenceDate
+      const validSks = track.sks.filter(sks => {
+        const hasRegistration = sks.testRegistration.length > 0
+
+        // If has test registration, preserve it (historical data)
+        if (hasRegistration) {
+          return sks.deletedAt === null
+        }
+
+        // Otherwise, filter by validity at referenceDate
+        const isValid =
+          sks.validFrom <= referenceDate &&
+          (sks.validTo === null || sks.validTo >= referenceDate) &&
+          sks.deletedAt === null
+
+        return isValid
+      })
+
+      // Group SKS by name for deduplication
+      const sksGroupedByName = validSks.reduce(
+        (acc, sksItem) => {
+          if (!acc[sksItem.name]) {
+            acc[sksItem.name] = []
+          }
+          acc[sksItem.name].push(sksItem)
+          return acc
+        },
+        {} as Record<string, typeof validSks>,
+      )
+
+      // Deduplicate: Pick one SKS per name
+      const dedupedSks = Object.values(sksGroupedByName).map(group => {
+        // Priority 1: SKS with test score
+        const withScore = group.find(sks => sks.testRegistration[0]?.test != null)
+        if (withScore) return withScore
+
+        // Priority 2: Latest validFrom
+        return group.reduce((latest, current) => (current.validFrom > latest.validFrom ? current : latest))
+      })
+
+      // Map to expected format
+      const sks = dedupedSks.map(sksItem => {
+        const registration = sksItem.testRegistration[0]
+        const score = registration?.test?.score ?? null
+        const passed = registration?.test?.passed ?? false
+
+        let status = 'Belum Daftar'
+
+        if (registration) {
+          status = registration.test ? (passed ? 'Lulus' : 'Tidak Lulus') : 'Menunggu Tes'
+        }
+
+        return {
+          sksId: sksItem.id,
+          subjectName: sksItem.name,
+          passingGrade: sksItem.passingGrade ?? 0,
+          score,
+          passed,
+          status,
+        }
+      })
+
+      const totalSks = sks.length
+      const passedCount = sks.filter(item => item.passed).length
+
+      return {
+        trackId: track.id,
+        trackName: track.name,
+        trackLevel: dt.level, // ✅ Include level from DormitoryTrack
+        sks,
+        totalSks,
+        passedCount,
+      }
+    })
+  }
 
   // Persiapan untuk SKS
   const sksList = track.sks.map(sksItem => {
@@ -899,6 +982,7 @@ export async function getStudentDetail(id: string): Promise<StudentItem | null> 
     activeDormitory: student.dormitory?.name || null,
     activeClass: currentHistory?.class?.name || null,
     activeTrack: track?.name || null,
+    activeTrackId: track?.id || null, // Added for dialog default track
     dormitoryRoom: student.dormitoryRoom ? student.dormitoryRoom.name : null,
     dormitoryRoomId: student.dormitoryRoom ? student.dormitoryRoom.id : null,
     formalClass: student.formalClass ? student.formalClass.name : null,
