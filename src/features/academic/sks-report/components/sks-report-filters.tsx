@@ -32,7 +32,7 @@ export default function SksReportFilters({
             <DatePicker
               label='Tanggal Mulai'
               value={dateRange.start}
-              onChange={date => {
+              onChange={(date: Date | null) => {
                 if (date) {
                   onDateRangeChange({ ...dateRange, start: date })
                 }
@@ -49,7 +49,7 @@ export default function SksReportFilters({
             <DatePicker
               label='Tanggal Akhir'
               value={dateRange.end}
-              onChange={date => {
+              onChange={(date: Date | null) => {
                 if (date) {
                   onDateRangeChange({ ...dateRange, end: date })
                 }
