@@ -92,6 +92,7 @@ enum StudentStatus {
     ACTIVE
     INACTIVE
     TRANSFERRED
+    GRADUATED
 }
 
 enum HistoryStatus {
@@ -155,6 +156,11 @@ model Student {
     dormitoryHistories DormitoryHistory[]
 
     status StudentStatus? @default(ACTIVE)
+
+    // Exit tracking fields (nullable for backward compatibility)
+    exitDate   DateTime? // Tanggal keluar/lulus
+    exitReason String? // Alasan keluar (wajib untuk non-graduated)
+    exitNotes  String? // Catatan tambahan
 
     createdAt                 DateTime                    @default(now())
     updatedAt                 DateTime                    @updatedAt
@@ -313,7 +319,7 @@ model Sks {
 
     sksKey String?
 
-    validFrom DateTime @default(now())
+    validFrom DateTime  @default(now())
     validTo   DateTime?
     deletedAt DateTime?
 

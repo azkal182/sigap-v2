@@ -1,6 +1,6 @@
 import StudentPageDetailView from '@/features/data/student/student-page-detail-view'
-import { getStudentDetailAction } from '@/features/data/student/actions/user.action'
-import NotFoundPage from '@/app/[...not-found]/page'
+// import { getStudentDetailAction } from '@/features/data/student/actions/user.action'
+// import NotFoundPage from '@/app/[...not-found]/page'
 import StudentForm from '@/features/data/student/components/StudentForm'
 
 export default async function StudentDetailOrAddPage({ params }: { params: Promise<{ id: string }> }) {
@@ -10,11 +10,11 @@ export default async function StudentDetailOrAddPage({ params }: { params: Promi
     return <StudentForm />
   }
 
-  const student = await getStudentDetailAction(id)
+  //   const student = await getStudentDetailAction(id)
 
-  if (!student) {
-    return NotFoundPage()
-  }
+  //   if (!student) {
+  //     return NotFoundPage()
+  //   }
 
   return <StudentPageDetailView id={id} />
 }

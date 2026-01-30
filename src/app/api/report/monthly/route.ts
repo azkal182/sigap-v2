@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { DateTime } from 'luxon'
 
 import prisma from '@/lib/prisma'
+import { handleServerError } from '@/lib/handle-error'
 
 async function getMonthlyDormAttendanceReport(month: Date, timeZone: string) {
   const start = DateTime.fromJSDate(month, { zone: timeZone }).startOf('month').toJSDate()
@@ -13,8 +14,8 @@ async function getMonthlyDormAttendanceReport(month: Date, timeZone: string) {
     where: {
       date: {
         gte: start,
-        lte: end
-      }
+        lte: end,
+      },
     },
     select: {
       status: true,
@@ -25,12 +26,12 @@ async function getMonthlyDormAttendanceReport(month: Date, timeZone: string) {
           dormitory: {
             select: {
               id: true,
-              name: true
-            }
-          }
-        }
-      }
-    }
+              name: true,
+            },
+          },
+        },
+      },
+    },
   })
 
   // Ambil total santri aktif per dormitory
@@ -38,11 +39,11 @@ async function getMonthlyDormAttendanceReport(month: Date, timeZone: string) {
     by: ['dormitoryId'],
     where: {
       dormitoryId: { not: null },
-      status: 'ACTIVE'
+      status: 'ACTIVE',
     },
     _count: {
-      _all: true
-    }
+      _all: true,
+    },
   })
 
   // Struktur report awal
@@ -67,21 +68,26 @@ async function getMonthlyDormAttendanceReport(month: Date, timeZone: string) {
         PRESENT: 0,
         SICK: 0,
         PERMIT: 0,
-        ABSENT: 0
+        ABSENT: 0,
       },
       statusPercentages: {
         PRESENT: 0,
         SICK: 0,
         PERMIT: 0,
-        ABSENT: 0
-      }
+        ABSENT: 0,
+      },
     }
   }
 
   // Proses absensi
   for (const a of absences) {
-    const dormId = a.student.dormitoryId!
+    const dormId = a.student.dormitoryId
     const status = a.status as 'PRESENT' | 'SICK' | 'PERMIT' | 'ABSENT'
+
+    // Skip absence if student is not assigned to any dormitory (e.g. exited students)
+    if (!dormId || !a.student.dormitory) {
+      continue
+    }
 
     if (!dormReports[dormId]) {
       dormReports[dormId] = {
@@ -92,14 +98,14 @@ async function getMonthlyDormAttendanceReport(month: Date, timeZone: string) {
           PRESENT: 0,
           SICK: 0,
           PERMIT: 0,
-          ABSENT: 0
+          ABSENT: 0,
         },
         statusPercentages: {
           PRESENT: 0,
           SICK: 0,
           PERMIT: 0,
-          ABSENT: 0
-        }
+          ABSENT: 0,
+        },
       }
     }
 
@@ -160,13 +166,15 @@ export async function GET(req: NextRequest) {
 
     const date = new Date(Date.UTC(year, month - 1, day)) // Gunakan UTC agar konsisten
 
-    console.log(date)
-
     // Validasi timezone (opsional, jika kamu punya daftar timezone yang diizinkan, bisa ditambahkan validasinya)
     const data = await getMonthlyDormAttendanceReport(date, tz)
 
     return NextResponse.json(data)
   } catch (error) {
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    const message = handleServerError(
+      `Failed to get monthly report for date: ${req.nextUrl.searchParams.get('date')}`,
+      error,
+    )
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

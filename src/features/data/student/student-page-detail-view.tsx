@@ -35,6 +35,10 @@ import StudentManualScoreDialog from './components/student-manual-score-dialog'
 import type { TrackGroup } from './components/student-manual-score-dialog'
 import { useManualSksScore } from '@/features/academic/query'
 import type { ManualSksScoreInput } from '@/features/academic/test-schema'
+import StudentExitDialog from './components/student-exit-dialog'
+import StudentReactivateDialog from './components/student-reactivate-dialog'
+import { exitStudentAction, reactivateStudentAction } from './actions/student-exit.action'
+import type { ExitStudentInput, ReactivateStudentInput } from './student.service'
 
 interface StudentForm {
   id: string
@@ -91,6 +95,8 @@ export default function StudentPageDetailView({ id }: { id: string }) {
   const [isEditing, setIsEditing] = useState<boolean>(false)
   const [formData, setFormData] = useState<StudentForm | null>(null)
   const [openManualScoreDialog, setOpenManualScoreDialog] = useState(false)
+  const [openExitDialog, setOpenExitDialog] = useState(false)
+  const [openReactivateDialog, setOpenReactivateDialog] = useState(false)
 
   const { data: studentDetail, isLoading, refetch } = useStudentDetail(id)
   const { mutate: saveManualSksScore } = useManualSksScore()
@@ -198,6 +204,34 @@ export default function StudentPageDetailView({ id }: { id: string }) {
     })
   }
 
+  // Handler for exit dialog
+  const handleExitStudent = async (data: Omit<ExitStudentInput, 'studentId'>) => {
+    const result = await exitStudentAction({
+      studentId: id,
+      ...data,
+    })
+
+    if (result.success) {
+      refetch()
+    } else {
+      throw new Error(result.error)
+    }
+  }
+
+  // Handler for reactivate dialog
+  const handleReactivateStudent = async (data: Omit<ReactivateStudentInput, 'studentId'>) => {
+    const result = await reactivateStudentAction({
+      studentId: id,
+      ...data,
+    })
+
+    if (result.success) {
+      refetch()
+    } else {
+      throw new Error(result.error)
+    }
+  }
+
   if (id === 'add') {
     return (
       <Box mt={4}>
@@ -212,23 +246,75 @@ export default function StudentPageDetailView({ id }: { id: string }) {
 
   return (
     <div className='space-y-4'>
+      {/* Exit Status Alert for Non-Active Students */}
+      {studentDetail && studentDetail.status !== 'ACTIVE' && (
+        <Alert
+          severity={
+            studentDetail.status === 'GRADUATED' ? 'info' : studentDetail.status === 'TRANSFERRED' ? 'warning' : 'error'
+          }
+          sx={{ mt: 4 }}
+        >
+          <Typography variant='h6' gutterBottom>
+            {studentDetail.status === 'GRADUATED'
+              ? '🎓 Student Sudah Lulus'
+              : studentDetail.status === 'TRANSFERRED'
+                ? '🔄 Student Pindah Pondok'
+                : '⚠️ Student Tidak Aktif'}
+          </Typography>
+          <Typography variant='body2' sx={{ mb: 1 }}>
+            <strong>Status:</strong> {studentDetail.status}
+          </Typography>
+          {studentDetail.exitDate && (
+            <Typography variant='body2' sx={{ mb: 1 }}>
+              <strong>Tanggal Keluar:</strong>{' '}
+              {new Date(studentDetail.exitDate).toLocaleDateString('id-ID', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              })}
+            </Typography>
+          )}
+          {studentDetail.exitReason && (
+            <Typography variant='body2' sx={{ mb: 1 }}>
+              <strong>Alasan:</strong> {studentDetail.exitReason}
+            </Typography>
+          )}
+          {studentDetail.exitNotes && (
+            <Typography variant='body2'>
+              <strong>Catatan:</strong> {studentDetail.exitNotes}
+            </Typography>
+          )}
+        </Alert>
+      )}
+
       <Card sx={{ mt: 4 }}>
         <CardHeader
           title='Detail Siswa'
           action={
-            !isEditing ? (
-              <Button variant='contained' onClick={handleEditClick}>
-                Edit
-              </Button>
+            studentDetail?.status === 'ACTIVE' ? (
+              !isEditing ? (
+                <Box display='flex' gap={2}>
+                  <Button variant='outlined' color='error' onClick={() => setOpenExitDialog(true)}>
+                    Keluarkan dari Pondok
+                  </Button>
+                  <Button variant='contained' onClick={handleEditClick}>
+                    Edit
+                  </Button>
+                </Box>
+              ) : (
+                <Box display='flex' gap={2}>
+                  <Button variant='contained' onClick={handleSaveClick}>
+                    Simpan
+                  </Button>
+                  <Button variant='outlined' onClick={handleCancelClick}>
+                    Batal
+                  </Button>
+                </Box>
+              )
             ) : (
-              <Box display='flex' gap={2}>
-                <Button variant='contained' onClick={handleSaveClick}>
-                  Simpan
-                </Button>
-                <Button variant='outlined' onClick={handleCancelClick}>
-                  Batal
-                </Button>
-              </Box>
+              <Button variant='contained' color='primary' onClick={() => setOpenReactivateDialog(true)}>
+                Reaktivasi Student
+              </Button>
             )
           }
         />
@@ -535,6 +621,28 @@ export default function StudentPageDetailView({ id }: { id: string }) {
           studentName={studentDetail.name}
           sksByTrack={(studentDetail.sksByTrack ?? []) as TrackGroup[]}
           activeTrackId={studentDetail.activeTrackId ?? undefined}
+        />
+      )}
+
+      {/* Exit Dialog */}
+      {studentDetail && (
+        <StudentExitDialog
+          open={openExitDialog}
+          onClose={() => setOpenExitDialog(false)}
+          onSubmit={handleExitStudent}
+          studentId={studentDetail.id}
+          studentName={studentDetail.name}
+        />
+      )}
+
+      {/* Reactivate Dialog */}
+      {studentDetail && (
+        <StudentReactivateDialog
+          open={openReactivateDialog}
+          onClose={() => setOpenReactivateDialog(false)}
+          onSubmit={handleReactivateStudent}
+          studentId={studentDetail.id}
+          studentName={studentDetail.name}
         />
       )}
     </div>

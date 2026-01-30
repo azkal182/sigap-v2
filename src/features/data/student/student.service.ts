@@ -48,6 +48,11 @@ export type StudentItem = {
   formalClass: string | null
   formalClassId: string | null
   leadership: Leadership | null
+  // Exit tracking fields
+  status?: StudentStatus | null
+  exitDate?: Date | null
+  exitReason?: string | null
+  exitNotes?: string | null
 }
 
 type Leadership = {
@@ -178,7 +183,7 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
         ...(classId
           ? [
               {
-                status: StudentStatus.ACTIVE,
+                // Removed status filter - allow all students
                 histories: {
                   some: {
                     status: HistoryStatus.STUDYING,
@@ -192,7 +197,7 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
         ...(trackId
           ? [
               {
-                status: StudentStatus.ACTIVE,
+                // Removed status filter - allow all students
                 histories: {
                   some: {
                     status: HistoryStatus.STUDYING,
@@ -208,7 +213,7 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
         ...(dormitoryId
           ? [
               {
-                status: StudentStatus.ACTIVE,
+                // Removed status filter - allow all students
                 dormitoryHistories: {
                   some: {
                     dormitoryId: dormitoryId,
@@ -221,7 +226,7 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
         ...(dormitoryIds.length > 0
           ? [
               {
-                status: StudentStatus.ACTIVE,
+                // Removed status filter - allow all students
                 dormitoryHistories: {
                   some: {
                     dormitoryId: {
@@ -590,13 +595,17 @@ export async function getStudentDetail(id: string): Promise<StudentItem | null> 
   const student = await db.student.findFirst({
     where: {
       id,
-      status: StudentStatus.ACTIVE,
     },
     select: {
       id: true,
       name: true,
       nis: true,
+      status: true,
       gender: true,
+      // Exit tracking fields
+      exitDate: true,
+      exitReason: true,
+      exitNotes: true,
       fatherName: true,
       motherName: true,
       parrentPhone: true,
@@ -971,10 +980,11 @@ export async function getStudentDetail(id: string): Promise<StudentItem | null> 
       ? `${student.placeOfBirth}, ${new Date(student.dateOfBirth).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}`
       : null
 
-  return {
+  const data = {
     id: student.id,
     name: student.name,
     nis: student.nis,
+    status: student.status,
     gender: student.gender,
     fatherName: student.fatherName || null,
     motherName: student.motherName || null,
@@ -1004,6 +1014,9 @@ export async function getStudentDetail(id: string): Promise<StudentItem | null> 
     passedCount,
     histories,
   }
+
+  console.log(JSON.stringify(data, null, 2))
+  return data
 }
 
 export async function addStudent(input: StudentFormInput): Promise<
@@ -1095,6 +1108,220 @@ export async function addStudent(input: StudentFormInput): Promise<
   } catch (error) {
     const message = handleServerError('Gagal menambhkan santri:', error)
 
+    return { success: false, error: message }
+  }
+}
+
+// ==================== EXIT & REACTIVATION ====================
+
+export type ExitStudentInput = {
+  studentId: string
+  exitDate: Date
+  exitType: 'GRADUATED' | 'RESIGNED' | 'EXPELLED' | 'TRANSFERRED'
+  exitReason?: string
+  exitNotes?: string
+}
+
+export async function exitStudent(input: ExitStudentInput): Promise<APIResult<void>> {
+  const { studentId, exitDate, exitType, exitReason, exitNotes } = input
+
+  try {
+    // 1. Get student with active histories
+    const student = await db.student.findUnique({
+      where: { id: studentId },
+      include: {
+        histories: {
+          where: { status: 'STUDYING' },
+          orderBy: { startDate: 'desc' },
+          take: 1,
+        },
+        dormitoryHistories: {
+          where: { status: 'ACTIVE' },
+          orderBy: { startDate: 'desc' },
+          take: 1,
+        },
+      },
+    })
+
+    if (!student) {
+      return { success: false, error: 'Student tidak ditemukan' }
+    }
+
+    if (student.status !== 'ACTIVE') {
+      return { success: false, error: 'Student sudah tidak aktif' }
+    }
+
+    // 2. Validate exit reason for non-graduated
+    if (exitType !== 'GRADUATED' && !exitReason) {
+      return { success: false, error: 'Alasan keluar wajib diisi untuk non-lulus' }
+    }
+
+    // 3. Determine status mapping
+    let newStatus: StudentStatus
+    let historyStatus: HistoryStatus
+    let dormitoryStatus: 'ACTIVE' | 'GRADUATED' | 'TRANSFERRED'
+
+    switch (exitType) {
+      case 'GRADUATED':
+        newStatus = 'GRADUATED'
+        historyStatus = 'GRADUATED'
+        dormitoryStatus = 'GRADUATED'
+        break
+      case 'TRANSFERRED':
+        newStatus = 'TRANSFERRED'
+        historyStatus = 'TRANSFERRED'
+        dormitoryStatus = 'TRANSFERRED'
+        break
+      case 'RESIGNED':
+      case 'EXPELLED':
+      default:
+        newStatus = 'INACTIVE'
+        historyStatus = 'TRANSFERRED' // Use TRANSFERRED as generic "ended"
+        dormitoryStatus = 'TRANSFERRED'
+        break
+    }
+
+    // 4. Execute transaction
+    await db.$transaction(async tx => {
+      // Update student
+      await tx.student.update({
+        where: { id: studentId },
+        data: {
+          status: newStatus,
+          exitDate,
+          exitReason: exitReason || (exitType === 'GRADUATED' ? 'Lulus' : null),
+          exitNotes,
+          // Clear references
+          dormitoryId: null,
+          formalClassId: null,
+          dormitoryRoomId: null,
+        },
+      })
+
+      // Update active history
+      const activeHistory = student.histories[0]
+      if (activeHistory) {
+        await tx.history.update({
+          where: { id: activeHistory.id },
+          data: {
+            endDate: exitDate,
+            status: historyStatus,
+          },
+        })
+      }
+
+      // Update active dormitory history
+      const activeDormHistory = student.dormitoryHistories[0]
+      if (activeDormHistory) {
+        await tx.dormitoryHistory.update({
+          where: { id: activeDormHistory.id },
+          data: {
+            endDate: exitDate,
+            status: dormitoryStatus,
+          },
+        })
+      }
+    })
+
+    return { success: true, data: undefined }
+  } catch (error) {
+    const message = handleServerError('Gagal exit student:', error)
+    return { success: false, error: message }
+  }
+}
+
+export type ReactivateStudentInput = {
+  studentId: string
+  reactivateDate: Date
+  dormitoryId: string // Required
+  classId?: string // Optional
+  formalClassId?: string // Optional
+  dormitoryRoomId?: string // Optional
+  notes?: string
+}
+
+export async function reactivateStudent(input: ReactivateStudentInput): Promise<APIResult<void>> {
+  const { studentId, reactivateDate, dormitoryId, classId, formalClassId, dormitoryRoomId, notes } = input
+
+  try {
+    // 1. Get student
+    const student = await db.student.findUnique({
+      where: { id: studentId },
+    })
+
+    if (!student) {
+      return { success: false, error: 'Student tidak ditemukan' }
+    }
+
+    if (student.status === 'ACTIVE') {
+      return { success: false, error: 'Student sudah aktif' }
+    }
+
+    // 2. Validate dormitory exists
+    const dormitory = await db.dormitory.findUnique({
+      where: { id: dormitoryId },
+      select: { id: true, name: true },
+    })
+
+    if (!dormitory) {
+      return { success: false, error: 'Dormitory tidak ditemukan' }
+    }
+
+    // 3. Execute transaction
+    await db.$transaction(async tx => {
+      // Update student status
+      await tx.student.update({
+        where: { id: studentId },
+        data: {
+          status: 'ACTIVE',
+          // Clear exit tracking
+          exitDate: null,
+          exitReason: null,
+          exitNotes: null,
+          // Assign new references
+          dormitoryId,
+          formalClassId,
+          dormitoryRoomId,
+        },
+      })
+
+      // Create new DormitoryHistory
+      await tx.dormitoryHistory.create({
+        data: {
+          studentId,
+          dormitoryId,
+          startDate: reactivateDate,
+          status: 'ACTIVE',
+          dormNameAtThatTime: dormitory?.name || 'Unknown',
+        },
+      })
+
+      // Create new History if class is provided
+      if (classId) {
+        const classData = await tx.class.findUnique({
+          where: { id: classId },
+          include: { track: true, dormitory: true },
+        })
+
+        if (classData) {
+          await tx.history.create({
+            data: {
+              studentId,
+              classId,
+              startDate: reactivateDate,
+              status: 'STUDYING',
+              classNameAtThatTime: classData.name,
+              trackNameAtThatTime: classData.track.name,
+              dormNameAtThatTime: classData.dormitory.name,
+            },
+          })
+        }
+      }
+    })
+
+    return { success: true, data: undefined }
+  } catch (error) {
+    const message = handleServerError('Gagal reactivate student:', error)
     return { success: false, error: message }
   }
 }
