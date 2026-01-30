@@ -141,8 +141,8 @@ export const menuItems: MenuConfigSection[] = [
         permissions: ['academic.registration-test:view'],
       },
       {
-        title: 'Laporan Progress SKS',
-        href: '/academic/sks-report',
+        title: 'Laporan Target Santri',
+        href: '/academic/target-report',
         icon: 'tabler-chart-bar',
         permissions: ['user:view'],
       },

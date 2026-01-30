@@ -17,7 +17,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Typography // Ditambahkan untuk judul
+  Typography, // Ditambahkan untuk judul
 } from '@mui/material'
 import { toast } from 'react-toastify'
 import { DateTime } from 'luxon'
@@ -29,6 +29,7 @@ import { useManualSksScore, useRegistrationList, useRegistrationTest, useSaveTes
 import { usePermissionStore } from '@/store/permission'
 import AppReactDatepicker from '@/lib/styles/AppReactDatepicker'
 import CustomTextField from '@/@core/components/mui/TextField'
+import { generateTestRegistrationPdf } from './utils/pdf-generator'
 
 const TestRegistrationView = () => {
   const [open, setOpen] = useState(false)
@@ -60,7 +61,7 @@ const TestRegistrationView = () => {
       },
       onError: error => {
         toast.error(error.message)
-      }
+      },
     })
   }
 
@@ -76,7 +77,7 @@ const TestRegistrationView = () => {
       setScore('')
       setOpenScoreDialog(true)
     },
-    []
+    [],
   )
 
   const handleCloseScoreDialog = () => {
@@ -106,8 +107,8 @@ const TestRegistrationView = () => {
         },
         onError: (error: any) => {
           toast.error(error.message)
-        }
-      }
+        },
+      },
     )
   }
 
@@ -119,8 +120,16 @@ const TestRegistrationView = () => {
       },
       onError: (error: any) => {
         toast.error(error.message)
-      }
+      },
     })
+  }
+
+  const handleExportPdf = () => {
+    if (!data?.data || data.data.length === 0) {
+      toast.error('Tidak ada data untuk diexport')
+      return
+    }
+    generateTestRegistrationPdf(data.data as any[], date)
   }
 
   return (
@@ -150,7 +159,7 @@ const TestRegistrationView = () => {
             Input Nilai Manual
           </Button>
 
-          <Button variant='contained' className='w-full sm:w-auto'>
+          <Button variant='contained' className='w-full sm:w-auto' onClick={handleExportPdf}>
             Export Pdf
           </Button>
         </div>
@@ -189,7 +198,7 @@ const TestRegistrationView = () => {
                       <TableCell>
                         {row.scheduledAt
                           ? new Date(row.scheduledAt).toLocaleString('id-ID', {
-                              dateStyle: 'medium'
+                              dateStyle: 'medium',
                             })
                           : ''}
                       </TableCell>
@@ -215,7 +224,7 @@ const TestRegistrationView = () => {
                               row.student.name,
                               row.sks.Track!.name,
                               row.sks.name,
-                              row.sks.passingGrade ?? 0
+                              row.sks.passingGrade ?? 0,
                             )
                           }
                         >
@@ -242,8 +251,8 @@ const TestRegistrationView = () => {
             margin='dense'
             slotProps={{
               input: {
-                readOnly: true
-              }
+                readOnly: true,
+              },
             }}
           />
           <CustomTextField
@@ -253,8 +262,8 @@ const TestRegistrationView = () => {
             margin='dense'
             slotProps={{
               input: {
-                readOnly: true
-              }
+                readOnly: true,
+              },
             }}
           />
           <CustomTextField
@@ -264,8 +273,8 @@ const TestRegistrationView = () => {
             margin='dense'
             slotProps={{
               input: {
-                readOnly: true
-              }
+                readOnly: true,
+              },
             }}
           />
           <CustomTextField
@@ -276,8 +285,8 @@ const TestRegistrationView = () => {
             margin='dense'
             slotProps={{
               input: {
-                readOnly: true
-              }
+                readOnly: true,
+              },
             }}
           />
           <CustomTextField
