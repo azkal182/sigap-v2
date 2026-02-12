@@ -1,7 +1,6 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 
 import type { ColumnDef } from '@tanstack/react-table'
 import { flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table'
@@ -15,54 +14,54 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Tooltip
+  Tooltip,
 } from '@mui/material'
+import MenuItem from '@mui/material/MenuItem'
 
 import { DateTime } from 'luxon'
-
 import axios from 'axios'
 
-import type { AbsenceReportData, WeeklyReportData, AbsenceDetail } from './data-processing'
-import { getMonthlyAttendanceReport, getUniqueDates, groupDatesByWeek } from './data-processing'
+import type { AbsenceDetail, AbsenceReportData, WeeklyReportData } from './data-processing'
+import { getUniqueDates, groupDatesByWeek } from './data-processing'
+
 import { AbsenceStatus } from '@/generated/prisma/enums'
 import { useClassesByDormitory } from '@features/dormitory/validate-teacher/query'
+import { useDormitoryList } from '@/features/data/dormitory/dormitory.query'
 import { usePermissionStore } from '@/store/permission'
-import CustomAutocomplete from '@core/components/mui/Autocomplete'
+
 import CustomTextField from '@core/components/mui/TextField'
 
-// Fungsi untuk mendapatkan ikon berdasarkan status absensi
-const getStatusIcon = (status: AbsenceStatus | undefined): React.ReactElement => {
+const SPECIAL_DORM_ID = 'b2c3d4e5-f6a7-8901-2345-abcdef012345'
+
+const getStatusIcon = (status?: AbsenceStatus): React.ReactElement => {
   const iconSize = 'size-4'
 
   switch (status) {
     case AbsenceStatus.PRESENT:
-      return <i className={`tabler-circle-check ${iconSize} text-green-600`} title='Hadir'></i>
+      return <i className={`tabler-circle-check ${iconSize} text-green-600`} title='Hadir' />
     case AbsenceStatus.ABSENT:
-      return <i className={`tabler-circle-x ${iconSize} text-red-600`} title='Tidak Hadir'></i>
+      return <i className={`tabler-circle-x ${iconSize} text-red-600`} title='Tidak Hadir' />
     case AbsenceStatus.SICK:
-      return <i className={`tabler-alert-circle ${iconSize} text-yellow-600`} title='Sakit'></i>
+      return <i className={`tabler-alert-circle ${iconSize} text-yellow-600`} title='Sakit' />
     case AbsenceStatus.PERMIT:
-      return <i className={`tabler-progress-help ${iconSize} text-blue-600`} title='Izin'></i>
+      return <i className={`tabler-progress-help ${iconSize} text-blue-600`} title='Izin' />
     default:
       return <span className='text-gray-400'>-</span>
   }
 }
 
-// --- KOMPONEN TERPISAH UNTUK SETIAP TABEL MINGGUAN ---
 interface WeeklyTableProps {
   week: WeeklyReportData
-  dormitoryId: string
   attendanceData: AbsenceReportData[]
+  slotsPerDay: number
 }
 
-const WeeklyAttendanceTable: React.FC<WeeklyTableProps> = ({ week, attendanceData, dormitoryId }) => {
+const WeeklyAttendanceTable = React.memo(function WeeklyAttendanceTable({
+  week,
+  attendanceData,
+  slotsPerDay,
+}: WeeklyTableProps) {
   const columns = useMemo<ColumnDef<AbsenceReportData>[]>(() => {
-    let slotsPerDay = 3
-
-    if (dormitoryId === 'b2c3d4e5-f6a7-8901-2345-abcdef012345') {
-      slotsPerDay = 4
-    }
-
     const numberColumn: ColumnDef<AbsenceReportData> = {
       header: () => (
         <div className='text-center'>
@@ -75,14 +74,14 @@ const WeeklyAttendanceTable: React.FC<WeeklyTableProps> = ({ week, attendanceDat
           id: 'rowNumber',
           header: '',
           cell: ({ row }) => <div className='text-center'>{row.index + 1}</div>,
-          size: 50
-        }
-      ]
+          size: 50,
+        },
+      ],
     }
 
     const studentNameColumn: ColumnDef<AbsenceReportData> = {
       header: () => (
-        <div className=''>
+        <div>
           <span className='font-bold'>Nama Santri</span>
         </div>
       ),
@@ -94,46 +93,39 @@ const WeeklyAttendanceTable: React.FC<WeeklyTableProps> = ({ week, attendanceDat
           size: 200,
           cell: ({ getValue }) => (
             <div className='whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px]'>{getValue() as string}</div>
-          )
-        }
-      ]
+          ),
+        },
+      ],
     }
 
-    const dateColumns = week.datesInWeek.map(date => {
-      const day: ColumnDef<AbsenceReportData> = {
-        id: `date-${date}`,
+    const dateColumns = week.datesInWeek.map(date => ({
+      id: `date-${date}`,
+      header: () => (
+        <div className='text-center'>
+          <span className='font-bold'>{date.slice(8, 10)}</span>
+        </div>
+      ),
+      columns: Array.from({ length: slotsPerDay }).map((_, slotIndex) => ({
+        id: `slot-${date}-${slotIndex + 1}`,
         header: () => (
           <div className='text-center'>
-            <span className='font-bold'>{date.slice(8, 10)}</span>
+            <span className='text-xs font-medium text-gray-400'>{slotIndex + 1}</span>
           </div>
         ),
-        columns: Array.from({ length: slotsPerDay }).map((_, slotIndex) => ({
-          id: `slot-${date}-${slotIndex + 1}`,
-          header: () => (
-            <div className='text-center'>
-              <span className='text-xs font-medium text-gray-400'>{slotIndex + 1}</span>
-            </div>
-          ),
-          cell: info => {
-            const row = info.row.original
-            const dayData = row.absencesByDay[date]
-            const status = dayData?.find((a: AbsenceDetail) => a.slot === slotIndex + 1)?.status
-
-            // Jika dayData tidak ada atau tidak ada status yang cocok,
-            // `getStatusIcon` akan menampilkan "-".
-            return <div className='p-1 flex justify-center'>{getStatusIcon(status)}</div>
-          },
-          size: 1
-        }))
-      }
-
-      return day
-    })
+        cell: (info: any) => {
+          const row = info.row.original as AbsenceReportData
+          const dayData = row.absencesByDay[date]
+          const status = dayData?.find((a: AbsenceDetail) => a.slot === slotIndex + 1)?.status
+          return <div className='p-1 flex justify-center'>{getStatusIcon(status)}</div>
+        },
+        size: 1,
+      })),
+    }))
 
     const totalAbsentColumn: ColumnDef<AbsenceReportData> = {
       header: () => (
         <div className='text-center'>
-          <span className='font-bold '>Jumlah</span>
+          <span className='font-bold'>Jumlah</span>
         </div>
       ),
       id: 'total-absent-group',
@@ -150,31 +142,30 @@ const WeeklyAttendanceTable: React.FC<WeeklyTableProps> = ({ week, attendanceDat
             const rowData = row.original
             let absentCount = 0
 
-            week.datesInWeek.forEach(date => {
+            for (const date of week.datesInWeek) {
               const dayData = rowData.absencesByDay[date]
-
               if (dayData) {
-                absentCount += dayData.filter(absenceDetail => absenceDetail.status === AbsenceStatus.ABSENT).length
+                absentCount += dayData.filter(d => d.status === AbsenceStatus.ABSENT).length
               }
-            })
+            }
 
             return (
               <Tooltip title={rowData.studentName}>
                 <div className='text-center font-semibold text-red-600'>{absentCount}</div>
               </Tooltip>
             )
-          }
-        }
-      ]
+          },
+        },
+      ],
     }
 
     return [numberColumn, studentNameColumn, ...dateColumns, totalAbsentColumn]
-  }, [week.datesInWeek])
+  }, [week.datesInWeek, slotsPerDay])
 
   const table = useReactTable({
     data: attendanceData,
     columns,
-    getCoreRowModel: getCoreRowModel()
+    getCoreRowModel: getCoreRowModel(),
   })
 
   return (
@@ -182,9 +173,10 @@ const WeeklyAttendanceTable: React.FC<WeeklyTableProps> = ({ week, attendanceDat
       <h2 className='text-xl font-semibold mb-4'>
         Minggu ke-{week.weekNumber} ({week.startDate} s/d {week.endDate})
       </h2>
+
       <div className='overflow-x-auto shadow-md rounded-lg'>
         <TableContainer component={Paper}>
-          <Table className=''>
+          <Table>
             <TableHead>
               {table.getHeaderGroups().map(headerGroup => (
                 <TableRow key={headerGroup.id}>
@@ -214,6 +206,7 @@ const WeeklyAttendanceTable: React.FC<WeeklyTableProps> = ({ week, attendanceDat
                 </TableRow>
               ))}
             </TableHead>
+
             <TableBody>
               {table.getRowModel().rows.map(row => (
                 <TableRow key={row.id}>
@@ -223,9 +216,9 @@ const WeeklyAttendanceTable: React.FC<WeeklyTableProps> = ({ week, attendanceDat
                     const isStickyName = columnId === 'studentName'
 
                     const stickyClass = isStickyNumber
-                      ? 'lg:sticky lg:left-0 z-10 '
+                      ? 'lg:sticky lg:left-0 z-10'
                       : isStickyName
-                        ? 'lg:sticky lg:left-[50px] z-10 '
+                        ? 'lg:sticky lg:left-[50px] z-10'
                         : ''
 
                     return (
@@ -247,58 +240,99 @@ const WeeklyAttendanceTable: React.FC<WeeklyTableProps> = ({ week, attendanceDat
       </div>
     </div>
   )
-}
-
-// --- KOMPONEN UTAMA HALAMAN ---
+})
 
 export default function AbsensiPage() {
   const [attendanceData, setAttendanceData] = useState<AbsenceReportData[]>([])
   const [weeklyReport, setWeeklyReport] = useState<WeeklyReportData[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const [classId, setClassId] = useState('')
 
+  const [dormitoryId, setDormitoryId] = useState<string>('')
+  const [classId, setClassId] = useState<string>('')
+
+  const dormQuery = useDormitoryList()
   const { allowedDormitoryIds } = usePermissionStore()
-  const { data: classes, isLoading: classesLoading } = useClassesByDormitory({
-    dormitoryId: allowedDormitoryIds[0]
-  })
 
-  // === BULAN TERPILIH: default ke awal bulan ini (Asia/Jakarta) ===
-  const nowJakarta = DateTime.now().setZone('Asia/Jakarta')
-  const [selectedMonth, setSelectedMonth] = useState<DateTime>(nowJakarta.startOf('month'))
+  const allowedSet = useMemo(() => new Set(allowedDormitoryIds ?? []), [allowedDormitoryIds])
 
-  // === OPSI: bulan ini + 3 bulan sebelumnya ===
-  const monthOptions = useMemo(() => {
-    return Array.from({ length: 4 }, (_, i) => nowJakarta.minus({ months: i }).startOf('month'))
-  }, [nowJakarta.toISO()]) // toISO untuk memicu re-render saat hari berganti (jarang perlu)
+  const allowedDorms = useMemo(
+    () => (dormQuery.data ?? []).filter(d => allowedSet.has(d.id)),
+    [dormQuery.data, allowedSet],
+  )
+
+  const { data: classes, isLoading: classesLoading } = useClassesByDormitory({ dormitoryId })
+
+  const slotsPerDay = useMemo(() => (dormitoryId === SPECIAL_DORM_ID ? 4 : 3), [dormitoryId])
+  const startDayOfWeek = useMemo(() => (dormitoryId === SPECIAL_DORM_ID ? 3 : 6), [dormitoryId])
+
+  // Luxon: jangan hitung "now" setiap render
+  const nowJakarta = useMemo(() => DateTime.now().setZone('Asia/Jakarta'), [])
+  const [selectedMonthIso, setSelectedMonthIso] = useState<string>(nowJakarta.startOf('month').toISO()!)
+
+  const selectedMonth = useMemo(
+    () => DateTime.fromISO(selectedMonthIso).setZone('Asia/Jakarta').startOf('month'),
+    [selectedMonthIso],
+  )
+
+  const monthOptions = useMemo(
+    () => Array.from({ length: 4 }, (_, i) => nowJakarta.minus({ months: i }).startOf('month')),
+    [nowJakarta],
+  )
 
   const timezone = selectedMonth.zoneName
   const month = selectedMonth.month
   const year = selectedMonth.year
-  const queryDate = selectedMonth.toFormat('dd-MM-yyyy') // selalu tgl 01-<bulan>-<tahun>
+  const queryDate = selectedMonth.toFormat('dd-MM-yyyy')
 
-  let startDayOfWeek = 6
-  if (allowedDormitoryIds[0] === 'b2c3d4e5-f6a7-8901-2345-abcdef012345') {
-    startDayOfWeek = 3
-  }
+  // Reset class & data saat dorm berubah
+  useEffect(() => {
+    setClassId('')
+    setAttendanceData([])
+    setWeeklyReport([])
+  }, [dormitoryId])
+
+  const handleDormChange = useCallback((e: any) => setDormitoryId(e.target.value as string), [])
+  const handleClassChange = useCallback((e: any) => setClassId(e.target.value as string), [])
+  const handleMonthChange = useCallback((e: any) => setSelectedMonthIso(e.target.value as string), [])
+
+  const renderDormValue = useCallback(
+    (selected: any) => {
+      if (!selected) return <em>Pilih Asrama</em>
+      const found = allowedDorms.find(d => d.id === selected)
+      return found?.name ?? String(selected)
+    },
+    [allowedDorms],
+  )
+
+  const renderClassValue = useCallback(
+    (selected: any) => {
+      if (!selected) return <em>Pilih Kelas</em>
+      const found = classes?.find(c => c.id === selected)
+      return found?.name ?? String(selected)
+    },
+    [classes],
+  )
 
   useEffect(() => {
     if (!classId) return
+
     let cancelled = false
 
     ;(async () => {
       setIsLoading(true)
       try {
-        const res = await axios(
-          `/api/attendance/report/monthly?classId=${classId}&date=${queryDate}&tz=${timezone}&start_week_day=${startDayOfWeek}`
+        const res = await axios.get<AbsenceReportData[]>(
+          `/api/attendance/report/monthly?classId=${classId}&date=${queryDate}&tz=${timezone}&start_week_day=${startDayOfWeek}`,
         )
-        const data: AbsenceReportData[] = res.data
+
+        if (cancelled) return
+
+        const data = res.data
         const uniqueDates = getUniqueDates(data, year, month, startDayOfWeek)
         const weeklyData = groupDatesByWeek(uniqueDates, startDayOfWeek)
 
-        if (!cancelled) {
-          setAttendanceData(data)
-          setWeeklyReport(weeklyData)
-        }
+        setAttendanceData(data)
+        setWeeklyReport(weeklyData)
       } finally {
         if (!cancelled) setIsLoading(false)
       }
@@ -307,9 +341,9 @@ export default function AbsensiPage() {
     return () => {
       cancelled = true
     }
-  }, [classId, queryDate, timezone, year, month, startDayOfWeek])
+  }, [classId, queryDate, timezone, startDayOfWeek, year, month])
 
-  if (classesLoading) {
+  if (dormQuery.isLoading || classesLoading) {
     return (
       <div className='w-full h-screen flex items-center justify-center'>
         <CircularProgress />
@@ -321,32 +355,78 @@ export default function AbsensiPage() {
     <div className='font-inter'>
       <title>Laporan Absensi Santri</title>
 
-      <div className='grid grid-cols-1 md:grid-cols-2 gap-3 mb-4'>
-        <CustomAutocomplete
-          fullWidth
-          options={classes ?? []}
-          id='autocomplete-custom'
-          getOptionLabel={option => option.name || ''}
-          onChange={(_, value) => setClassId(value?.id || '')}
-          renderInput={params => <CustomTextField placeholder='Pilih Kelas' {...params} label='Pilih Kelas' />}
-        />
+      <div className='grid grid-cols-1 md:grid-cols-3 gap-3 mb-4'>
+        {allowedDorms.length === 0 ? (
+          <div className='text-red-600'>Anda tidak memiliki akses ke asrama manapun.</div>
+        ) : allowedDorms.length === 1 ? (
+          <CustomTextField
+            fullWidth
+            label='Asrama'
+            value={allowedDorms[0].name}
+            disabled
+            InputProps={{ readOnly: true }}
+          />
+        ) : (
+          <CustomTextField
+            select
+            fullWidth
+            label='Pilih Asrama'
+            value={dormitoryId}
+            slotProps={{
+              select: {
+                onChange: handleDormChange,
+                renderValue: renderDormValue,
+              },
+            }}
+          >
+            <MenuItem value=''>
+              <em>Pilih Asrama</em>
+            </MenuItem>
+            {allowedDorms.map(d => (
+              <MenuItem key={d.id} value={d.id}>
+                {d.name} {d.gender ? `(${d.gender})` : ''}
+              </MenuItem>
+            ))}
+          </CustomTextField>
+        )}
 
-        {/* === Selector bulan: hanya 4 opsi (bulan ini + 3 sebelumnya) === */}
+        <CustomTextField
+          select
+          label='Pilih Kelas'
+          value={classId}
+          disabled={!dormitoryId}
+          slotProps={{
+            select: {
+              onChange: handleClassChange,
+              renderValue: renderClassValue,
+            },
+          }}
+        >
+          <MenuItem value=''>
+            <em>Pilih Kelas</em>
+          </MenuItem>
+          {classes?.map(c => (
+            <MenuItem key={c.id} value={c.id}>
+              {c.name}
+            </MenuItem>
+          ))}
+        </CustomTextField>
+
         <CustomTextField
           select
           label='Periode (Bulan • Tahun)'
-          value={selectedMonth.toISO()} // pakai ISO sebagai key yang stabil
-          onChange={e => {
-            const dt = DateTime.fromISO(e.target.value).setZone('Asia/Jakarta').startOf('month')
-            setSelectedMonth(dt)
+          value={selectedMonthIso}
+          slotProps={{
+            select: {
+              onChange: handleMonthChange,
+            },
           }}
-          SelectProps={{ native: true }}
           fullWidth
         >
           {monthOptions.map(dt => (
-            <option key={dt.toISO()} value={dt.toISO()?.toString()}>
+            <MenuItem key={dt.toISO()!} value={dt.toISO()!}>
               {dt.setLocale('id').toFormat('LLLL yyyy')}
-            </option>
+            </MenuItem>
           ))}
         </CustomTextField>
       </div>
@@ -360,114 +440,15 @@ export default function AbsensiPage() {
           <p>Tidak ada data absensi yang tersedia.</p>
         </div>
       ) : (
-        weeklyReport.map((week, weekIndex) => (
+        weeklyReport.map(week => (
           <WeeklyAttendanceTable
-            dormitoryId={allowedDormitoryIds[0]}
-            key={weekIndex}
+            key={`${week.startDate}-${week.endDate}`}
             week={week}
             attendanceData={attendanceData}
+            slotsPerDay={slotsPerDay}
           />
         ))
       )}
     </div>
   )
 }
-
-// export default function AbsensiPage() {
-//   const [attendanceData, setAttendanceData] = useState<AbsenceReportData[]>([])
-//   const [weeklyReport, setWeeklyReport] = useState<WeeklyReportData[]>([])
-//   const [isLoading, setIsLoading] = useState(false)
-//   const [classId, setClassId] = useState('')
-//   const { allowedDormitoryIds } = usePermissionStore()
-
-//   const { data: classes, isLoading: classesLoading } = useClassesByDormitory({
-//     dormitoryId: allowedDormitoryIds[0]
-//   })
-
-//   // Set tahun dan bulan secara hardcode untuk contoh
-//   const todayJakarta = DateTime.now().setZone('Asia/Jakarta').startOf('day')
-//   const today = DateTime.now().toFormat('dd-MM-yyyy')
-//   const timezone = todayJakarta.zoneName
-//   const month = todayJakarta.month // angka bulan (1-12)
-//   const year = todayJakarta.year
-//   let startDayOfWeek = 6 // 6 = Sabtu
-
-//   // khusus illiyyin
-//   if (allowedDormitoryIds[0] === 'b2c3d4e5-f6a7-8901-2345-abcdef012345') {
-//     startDayOfWeek = 3
-//   }
-
-//   useEffect(() => {
-//     if (classId) {
-//       async function fetchData() {
-//         setIsLoading(true)
-
-//         // const data = await getMonthlyAttendanceReport(classId, today, timezone)
-//         const res = await axios(
-//           `/api/attendance/report/monthly?classId=${classId}&date=${today}&tz=${timezone}&${`start_week_day=${startDayOfWeek}`}`
-//         )
-
-//         // console.log(res)
-
-//         const data = res.data
-
-//         const uniqueDates = getUniqueDates(data, year, month, startDayOfWeek)
-
-//         // console.log(uniqueDates)
-
-//         const weeklyData = groupDatesByWeek(uniqueDates, startDayOfWeek)
-
-//         // console.log(weeklyData)
-
-//         setAttendanceData(data)
-//         setWeeklyReport(weeklyData)
-//         setIsLoading(false)
-//       }
-
-//       fetchData()
-//     }
-//     // eslint-disable-next-line react-hooks/exhaustive-deps
-//   }, [year, month, startDayOfWeek, classId])
-
-//   if (classesLoading) {
-//     return (
-//       <div className='w-full h-screen flex items-center justify-center'>
-//         <CircularProgress />
-//       </div>
-//     )
-//   }
-
-//   return (
-//     <div className='font-inter'>
-//       <title>Laporan Absensi Santri</title>
-//       <CustomAutocomplete
-//         className='mb-4'
-//         fullWidth
-//         options={classes ?? []}
-//         id='autocomplete-custom'
-//         getOptionLabel={option => option.name || ''}
-//         onChange={(_, value) => {
-//           setClassId(value?.id || '')
-//         }}
-//         renderInput={params => <CustomTextField placeholder='Pilih Kelas' {...params} label='Pilih Kelas' />}
-//       />
-
-//       {/*<meta name='description' content='Laporan absensi bulanan santri per minggu.' />*/}
-//       {/*<h1 className='text-3xl font-bold mb-6 text-center'>Laporan Absensi Bulanan</h1>*/}
-//       {attendanceData.length === 0 ? (
-//         <div className='flex justify-center items-center h-screen'>
-//           <p>Tidak ada data absensi yang tersedia.</p>
-//         </div>
-//       ) : (
-//         weeklyReport.map((week, weekIndex) => (
-//           <WeeklyAttendanceTable
-//             dormitoryId={allowedDormitoryIds[0]}
-//             key={weekIndex}
-//             week={week}
-//             attendanceData={attendanceData}
-//           />
-//         ))
-//       )}
-//     </div>
-//   )
-// }

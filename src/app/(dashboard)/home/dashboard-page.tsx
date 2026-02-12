@@ -129,7 +129,7 @@ const pieColorMap: Record<string, string> = {
   HADIR: '#00d4bd',
   SAKIT: '#826bf8',
   IZIN: '#ffe700',
-  ALPA: '#FFA1A1'
+  ALPA: '#FFA1A1',
 }
 
 function mapDormitoryToPieData(dorm: Dormitory) {
@@ -137,7 +137,7 @@ function mapDormitoryToPieData(dorm: Dormitory) {
     { name: 'HADIR', value: dorm.statusPercentages.PRESENT, color: pieColorMap.HADIR },
     { name: 'SAKIT', value: dorm.statusPercentages.SICK, color: pieColorMap.SAKIT },
     { name: 'IZIN', value: dorm.statusPercentages.PERMIT, color: pieColorMap.IZIN },
-    { name: 'ALPA', value: dorm.statusPercentages.ABSENT, color: pieColorMap.ALPA }
+    { name: 'ALPA', value: dorm.statusPercentages.ABSENT, color: pieColorMap.ALPA },
   ]
 }
 
@@ -148,7 +148,7 @@ function normalizeDormitoryData(dorm: Dormitory): Dormitory {
   if (total === 0) {
     return {
       ...dorm,
-      statusPercentages: { PRESENT: 100, SICK: 0, PERMIT: 0, ABSENT: 0 }
+      statusPercentages: { PRESENT: 100, SICK: 0, PERMIT: 0, ABSENT: 0 },
     }
   }
 
@@ -158,7 +158,7 @@ function normalizeDormitoryData(dorm: Dormitory): Dormitory {
 
       return acc
     },
-    {} as Record<StatusKey, number>
+    {} as Record<StatusKey, number>,
   )
 
   return { ...dorm, statusPercentages: percentages }
@@ -184,7 +184,7 @@ function PdfPages({ data }: { data: Dormitory[] }) {
         left: -99999, // geser jauh ke kiri, tetap ikut layout dan tidak invisible
         width: 794, // ~ A4 96dpi
         background: '#fff',
-        pointerEvents: 'none'
+        pointerEvents: 'none',
 
         // JANGAN pakai transform/opacity/zIndex negatif karena bikin html2canvas bermasalah
       }}
@@ -201,7 +201,7 @@ function PdfPages({ data }: { data: Dormitory[] }) {
             gridTemplateColumns: '1fr 1fr',
             gap: 16,
             background: '#fff',
-            boxSizing: 'border-box'
+            boxSizing: 'border-box',
           }}
         >
           {page.map(d => {
@@ -233,7 +233,11 @@ function PdfPages({ data }: { data: Dormitory[] }) {
 }
 
 const DashboardPage = ({ dormitories }: { dormitories: Dormitory[] }) => {
-  const normalized = useMemo(() => dormitories.map(normalizeDormitoryData), [dormitories])
+  const normalized = useMemo(() => {
+    // Ensure dormitories is an array before calling map
+    if (!Array.isArray(dormitories)) return []
+    return dormitories.map(normalizeDormitoryData)
+  }, [dormitories])
   const [exporting, setExporting] = useState(false)
 
   // render PdfPages hanya saat dibutuhkan agar tidak membebani DOM
@@ -262,7 +266,7 @@ const DashboardPage = ({ dormitories }: { dormitories: Dormitory[] }) => {
 
     const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
       import('html2canvas'),
-      import('jspdf') as unknown as Promise<{ jsPDF: any }>
+      import('jspdf') as unknown as Promise<{ jsPDF: any }>,
     ])
 
     const pdf = new jsPDF('p', 'mm', 'a4')
@@ -274,7 +278,7 @@ const DashboardPage = ({ dormitories }: { dormitories: Dormitory[] }) => {
       const canvas = await html2canvas(el, {
         scale: 2,
         backgroundColor: '#ffffff', // pastikan putih
-        useCORS: true
+        useCORS: true,
 
         // foreignObjectRendering: true  // <- DISABLE. Sering jadi penyebab canvas gelap/blank
       } as any)
