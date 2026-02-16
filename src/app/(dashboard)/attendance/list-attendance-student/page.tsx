@@ -295,6 +295,13 @@ export default function AbsensiPage() {
   const handleClassChange = useCallback((e: any) => setClassId(e.target.value as string), [])
   const handleMonthChange = useCallback((e: any) => setSelectedMonthIso(e.target.value as string), [])
 
+  // Auto-set dormitoryId when there's only one allowed dorm
+  useEffect(() => {
+    if (allowedDorms.length === 1 && dormitoryId !== allowedDorms[0].id) {
+      setDormitoryId(allowedDorms[0].id)
+    }
+  }, [allowedDorms, dormitoryId])
+
   const renderDormValue = useCallback(
     (selected: any) => {
       if (!selected) return <em>Pilih Asrama</em>

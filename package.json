@@ -34,6 +34,8 @@
         "@prisma/client": "7.1.0",
         "@tanstack/react-query": "^5.81.5",
         "@tanstack/react-table": "^8.21.3",
+        "@types/archiver": "^7.0.0",
+        "archiver": "^7.0.1",
         "bcryptjs": "^3.0.2",
         "classnames": "2.5.1",
         "cloudinary": "^2.7.0",
