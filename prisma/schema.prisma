@@ -154,6 +154,7 @@ model Student {
     absences           Absence[]
     permits            Permit[]
     dormitoryHistories DormitoryHistory[]
+    daurohVideos       DaurohVideo[]
 
     status StudentStatus? @default(ACTIVE)
 
@@ -740,7 +741,8 @@ model Period {
     isActive Boolean   @default(false)
     template Json // {version, title, fields: FieldDef[]}
 
-    responses Response[]
+    responses    Response[]
+    daurohVideos DaurohVideo[]
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
@@ -765,4 +767,36 @@ model Response {
 
     @@index([periodId])
     @@index([studentId])
+}
+
+// DAUROH — Upload Video Hafalan
+enum DaurohVideoType {
+    MINGGUAN
+    HIGHLIGHT
+}
+
+model DaurohVideo {
+    id        String  @id @default(cuid())
+    studentId String
+    student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+    periodId  String
+    period    Period  @relation(fields: [periodId], references: [id], onDelete: Cascade)
+
+    videoType DaurohVideoType
+    sequence  Int // Urutan ke-berapa (1–5)
+
+    // Google Drive metadata
+    driveFileId String
+    driveUrl    String // Public link
+    fileName    String
+    fileSize    Int? // bytes
+    mimeType    String?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@unique([studentId, periodId, sequence, videoType])
+    @@index([periodId])
+    @@index([studentId])
+    @@index([periodId, studentId])
 }

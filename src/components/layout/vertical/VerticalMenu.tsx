@@ -197,6 +197,17 @@ export const menuItems: MenuConfigSection[] = [
     ],
   },
   {
+    label: 'DAUROH',
+    items: [
+      {
+        title: 'Monitoring dauroh',
+        href: '/admin/dauroh',
+        icon: 'tabler-video',
+        // permissions: ['user:view'],
+      },
+    ],
+  },
+  {
     label: 'ADMIN',
     items: [
       { title: 'Users', href: '/admin/user', icon: 'tabler-users', permissions: ['user:view'] },
