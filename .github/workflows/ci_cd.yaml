@@ -132,6 +132,17 @@ jobs:
           echo "WA_API_KEY=${{ secrets.WA_API_KEY }}" >> .env
           echo "WA_ENDPOINT=${{ secrets.WA_ENDPOINT }}" >> .env
 
+          # Google Drive (OAuth2)
+          echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> .env
+          echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> .env
+          echo "GOOGLE_REFRESH_TOKEN=${{ secrets.GOOGLE_REFRESH_TOKEN }}" >> .env
+          echo "DRIVE_DAUROH_FOLDER_ID=${{ secrets.DRIVE_DAUROH_FOLDER_ID }}" >> .env
+          echo "DRIVE_PUBLIC=true" >> .env
+
+          # Dauroh config
+          echo "DAUROH_MAX_FILE_SIZE_MB=100" >> .env
+          echo "DAUROH_MAX_UPLOADS=5" >> .env
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -286,6 +297,17 @@ jobs:
           echo "WHATSAPP_API_KEY=${{ secrets.WHATSAPP_API_KEY }}" >> .env
           echo "WA_API_KEY=${{ secrets.WA_API_KEY }}" >> .env
           echo "WA_ENDPOINT=${{ secrets.WA_ENDPOINT }}" >> .env
+
+          # Google Drive (OAuth2)
+          echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> .env
+          echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> .env
+          echo "GOOGLE_REFRESH_TOKEN=${{ secrets.GOOGLE_REFRESH_TOKEN }}" >> .env
+          echo "DRIVE_DAUROH_FOLDER_ID=${{ secrets.DRIVE_DAUROH_FOLDER_ID }}" >> .env
+          echo "DRIVE_PUBLIC=true" >> .env
+
+          # Dauroh config
+          echo "DAUROH_MAX_FILE_SIZE_MB=100" >> .env
+          echo "DAUROH_MAX_UPLOADS=5" >> .env
 
           # Install dependensi
           pnpm install --production

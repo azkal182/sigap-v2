@@ -514,7 +514,7 @@ export default function DaurohPublicPage() {
                         Mingguan
                       </Typography>
                       <Typography variant='caption' color='text.secondary'>
-                        Tugas hafalan rutin mingguan
+                        Video Dauroh
                       </Typography>
                     </Stack>
                   </MenuItem>
