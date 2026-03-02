@@ -279,12 +279,26 @@ async function fetchUserDataFromDB(userId: string) {
       role: {
         include: {
           rolePermissions: { include: { permission: true } },
-          roleDormitories: { include: { dormitory: true } }
-        }
+          roleDormitories: { include: { dormitory: true } },
+        },
       },
       userPermissions: { include: { permission: true } },
-      userDormitories: { include: { dormitory: true } }
-    }
+      userDormitories: { include: { dormitory: true } },
+      // Include teacher + managedClass for PENGAJAR role filter
+      teacher: {
+        select: {
+          id: true,
+          managedClass: {
+            select: {
+              id: true,
+              name: true,
+              track: { select: { name: true } },
+              dormitory: { select: { name: true } },
+            },
+          },
+        },
+      },
+    },
   })
 
   if (!user || !user.role) throw new Error('User not found or no role assigned')
@@ -310,8 +324,17 @@ async function fetchUserDataFromDB(userId: string) {
     allowedDormitoryIds: Array.from(dormitoryAccess),
     allowedDormitories: [
       ...user.role.roleDormitories.map(rd => ({ ...rd.dormitory, source: 'role' as const })),
-      ...user.userDormitories.map(ud => ({ ...ud.dormitory, source: 'user' as const }))
-    ].filter((d, i, arr) => i === arr.findIndex(x => x.id === d.id))
+      ...user.userDormitories.map(ud => ({ ...ud.dormitory, source: 'user' as const })),
+    ].filter((d, i, arr) => i === arr.findIndex(x => x.id === d.id)),
+    // managedClass: the class this PENGAJAR is wali kelas of (null if not PENGAJAR or not yet linked)
+    managedClass: user.teacher?.managedClass
+      ? {
+          id: user.teacher.managedClass.id,
+          name: user.teacher.managedClass.name,
+          trackName: user.teacher.managedClass.track.name,
+          dormitoryName: user.teacher.managedClass.dormitory.name,
+        }
+      : null,
   }
 }
 

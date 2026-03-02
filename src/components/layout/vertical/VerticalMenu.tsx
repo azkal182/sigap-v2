@@ -205,6 +205,12 @@ export const menuItems: MenuConfigSection[] = [
         icon: 'tabler-video',
         // permissions: ['user:view'],
       },
+      {
+        title: 'Sinkronasi Wali Kelas',
+        href: '/admin/class-teacher-sync',
+        icon: 'tabler-link',
+        permissions: ['role:view'],
+      },
     ],
   },
   {

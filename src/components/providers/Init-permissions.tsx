@@ -63,7 +63,8 @@ export function InitPermissions() {
             user: { id: data.id, name: data.name, role: data.role, mustChangeCredentials: data.mustChangeCredentials },
             permissions: data.permissions,
             allowedDormitoryIds: data.allowedDormitoryIds,
-            allowedDormitories: data.allowedDormitories || []
+            allowedDormitories: data.allowedDormitories || [],
+            managedClass: data.managedClass ?? null,
           })
         })
         .catch(err => {

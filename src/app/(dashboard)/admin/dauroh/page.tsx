@@ -31,7 +31,7 @@ import Divider from '@mui/material/Divider'
 import CustomTextField from '@/@core/components/mui/TextField'
 import { DAUROH_MAX_UPLOADS } from '@/features/dauroh/dauroh.constants'
 import { useDaurohPeriods, useDaurohTracking, useDaurohTrackingOptions } from '@/features/dauroh/dauroh.query'
-import { useAllowedDormitories } from '@/store/permission'
+import { useAllowedDormitories, useManagedClass, useUser } from '@/store/permission'
 
 const ROWS_PER_PAGE_OPTIONS = [10, 25, 50, 100]
 
@@ -56,11 +56,29 @@ export default function DaurohAdminPage() {
   const allowedDormitories = useAllowedDormitories()
   const allowedDormNames = allowedDormitories.map(d => d.name)
 
+  // Permission: PENGAJAR — their wali kelas class (null = not PENGAJAR or not linked)
+  const currentUser = useUser()
+  const managedClass = useManagedClass()
+  const isPengajar = currentUser?.role === 'PENGAJAR'
+  const hasNoAccess = isPengajar && managedClass === null
+
   // ─── Data queries ────────────────────────────────────────────────────────────
 
   const { data: periods, isLoading: loadingPeriods } = useDaurohPeriods(false)
 
   const selectedPeriod = periods?.find(p => p.id === selectedPeriodId)
+
+  // Auto-select active period on load (only one active at a time)
+  const activePeriod = periods?.find(p => p.isActive) ?? null
+  const hasNoPeriod = !loadingPeriods && periods !== undefined && !activePeriod
+
+  useEffect(() => {
+    if (activePeriod && !selectedPeriodId) {
+      setSelectedPeriodId(activePeriod.id)
+      setPage(0)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activePeriod?.id])
 
   // Cascading dropdown options (server-driven), intersected with user's allowed dormitories
   const { data: options, isLoading: loadingOptions } = useDaurohTrackingOptions(
@@ -85,6 +103,9 @@ export default function DaurohAdminPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visibleDormitories.join(',')])
 
+  // PENGAJAR: locked to their managedClass (overrides manual filterClass)
+  const effectiveClassName = isPengajar ? (managedClass?.name ?? undefined) : filterClass || undefined
+
   // Paginated + filtered tracking data (server-driven)
   const {
     data: trackingResult,
@@ -94,7 +115,7 @@ export default function DaurohAdminPage() {
   } = useDaurohTracking(selectedPeriodId || null, {
     dormitoryName: filterDormitory || undefined,
     trackName: filterTrack || undefined,
-    className: filterClass || undefined,
+    className: effectiveClassName,
     search: search || undefined,
     page,
     limit: rowsPerPage,
@@ -122,18 +143,37 @@ export default function DaurohAdminPage() {
     setPage(0)
   }
 
-  // Active filter chips
+  // Active filter chips (PENGAJAR class chip is locked — no delete)
   const activeFilters = [
     filterDormitory && { label: filterDormitory, onDelete: () => handleDormitoryChange('') },
     filterTrack && { label: filterTrack, onDelete: () => handleTrackChange('') },
-    filterClass && {
-      label: filterClass,
-      onDelete: () => {
-        setFilterClass('')
-        setPage(0)
-      },
-    },
-  ].filter(Boolean) as { label: string; onDelete: () => void }[]
+    // For PENGAJAR: show locked class chip (no onDelete)
+    isPengajar && managedClass
+      ? { label: `🔒 ${managedClass.name}`, onDelete: undefined }
+      : filterClass && {
+          label: filterClass,
+          onDelete: () => {
+            setFilterClass('')
+            setPage(0)
+          },
+        },
+  ].filter(Boolean) as { label: string; onDelete?: () => void }[]
+
+  // ─── Access denied guard for PENGAJAR without linked class ──────────────────
+  if (hasNoAccess) {
+    return (
+      <Container maxWidth='sm' sx={{ py: 8 }}>
+        <Alert severity='error' icon={<i className='tabler-lock' />}>
+          <Typography fontWeight={600}>Tidak Memiliki Akses</Typography>
+          <Typography variant='body2' mt={0.5}>
+            Akun Anda belum terhubung ke kelas sebagai wali kelas. Hubungi administrator untuk menghubungkan akun ke
+            kelas melalui halaman
+            <strong> Sinkronasi Wali Kelas</strong>.
+          </Typography>
+        </Alert>
+      </Container>
+    )
+  }
 
   // ─── Render ─────────────────────────────────────────────────────────────────
 
@@ -141,12 +181,30 @@ export default function DaurohAdminPage() {
     <Container maxWidth='xl' sx={{ py: 4 }}>
       {/* Header */}
       <Box mb={3}>
-        <Typography variant='h4' fontWeight={700}>
-          🎥 Dauroh — Tracking Upload Video
-        </Typography>
-        <Typography variant='body2' color='text.secondary' mt={0.5}>
-          Monitor video hafalan santri per periode · Auto-refresh setiap 30 detik
-        </Typography>
+        <Stack direction='row' alignItems='center' spacing={2} flexWrap='wrap'>
+          <Box flex={1}>
+            <Typography variant='h4' fontWeight={700}>
+              🎥 Dauroh — Tracking Upload Video
+            </Typography>
+            <Typography variant='body2' color='text.secondary' mt={0.5}>
+              Monitor video hafalan santri per periode · Auto-refresh setiap 30 detik
+            </Typography>
+          </Box>
+          {/* PENGAJAR: show their class badge */}
+          {isPengajar && managedClass && (
+            <Paper variant='outlined' sx={{ px: 2, py: 1, borderColor: 'primary.main', borderWidth: 2 }}>
+              <Typography variant='caption' color='text.secondary' display='block'>
+                Kelas Anda
+              </Typography>
+              <Typography variant='subtitle1' fontWeight={700} color='primary.main'>
+                {managedClass.name}
+              </Typography>
+              <Typography variant='caption' color='text.secondary'>
+                {managedClass.dormitoryName} · {managedClass.trackName}
+              </Typography>
+            </Paper>
+          )}
+        </Stack>
       </Box>
 
       {/* ── Filter bar ── */}
@@ -154,29 +212,36 @@ export default function DaurohAdminPage() {
         <Stack spacing={2}>
           {/* Row 1: Periode + Search */}
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-            <CustomTextField
-              select
-              label='Periode'
-              value={selectedPeriodId}
-              onChange={e => {
-                setSelectedPeriodId(e.target.value)
-                setPage(0)
-              }}
-              disabled={loadingPeriods}
-              sx={{ minWidth: 260 }}
-            >
-              <MenuItem value='' disabled>
-                <em>— Pilih periode —</em>
-              </MenuItem>
-              {periods?.map(p => (
-                <MenuItem key={p.id} value={p.id}>
-                  <Stack direction='row' alignItems='center' spacing={1}>
-                    <span>{p.name}</span>
-                    {p.isActive && <Chip label='AKTIF' size='small' color='success' variant='outlined' />}
-                  </Stack>
+            {/* Periode: auto-selected from active period */}
+            {hasNoPeriod ? (
+              <Alert severity='warning' sx={{ flex: 1 }}>
+                Tidak ada periode yang aktif. Hubungi administrator untuk mengaktifkan periode.
+              </Alert>
+            ) : (
+              <CustomTextField
+                select
+                label='Periode'
+                value={selectedPeriodId}
+                onChange={e => {
+                  setSelectedPeriodId(e.target.value)
+                  setPage(0)
+                }}
+                disabled={loadingPeriods}
+                sx={{ minWidth: 260 }}
+              >
+                <MenuItem value='' disabled>
+                  <em>— Pilih periode —</em>
                 </MenuItem>
-              ))}
-            </CustomTextField>
+                {periods?.map(p => (
+                  <MenuItem key={p.id} value={p.id}>
+                    <Stack direction='row' alignItems='center' spacing={1}>
+                      <span>{p.name}</span>
+                      {p.isActive && <Chip label='AKTIF' size='small' color='success' variant='outlined' />}
+                    </Stack>
+                  </MenuItem>
+                ))}
+              </CustomTextField>
+            )}
 
             {selectedPeriodId && (
               <CustomTextField
@@ -207,8 +272,8 @@ export default function DaurohAdminPage() {
             )}
           </Stack>
 
-          {/* Row 2: Nested Dormitory → Track → Class filter */}
-          {selectedPeriodId && visibleDormitories.length > 0 && (
+          {/* Row 2: Nested Dormitory → Track → Class filter (hidden for PENGAJAR with linked class) */}
+          {selectedPeriodId && visibleDormitories.length > 0 && !(isPengajar && managedClass) && (
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems='flex-start' flexWrap='wrap'>
               <Box sx={{ pt: 0.5, minWidth: 90 }}>
                 <Typography variant='caption' color='text.secondary' fontWeight={600}>

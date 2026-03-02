@@ -244,6 +244,8 @@ model Teacher {
     user                 User                   @relation(fields: [userId], references: [id])
     substitutedSchedules ScheduleSubstitution[] @relation("SubstituteTeacher")
 
+    managedClass Class? // back-relation: wali kelas (one-to-one, nullable)
+
     @@index([name])
 }
 
@@ -409,7 +411,7 @@ model DormitoryTrack {
 model Class {
     id          String @id @default(uuid())
     name        String // e.g., "Ubudiyah - Ust Umam"
-    teacher     String // Wali kelas
+    teacher     String // Wali kelas (plain text, diisi manual)
     trackId     String
     dormitoryId String
 
@@ -417,6 +419,11 @@ model Class {
     dormitory Dormitory @relation(fields: [dormitoryId], references: [id])
 
     active Boolean? @default(true)
+
+    // Relasi wali kelas ke Teacher (nullable, one-to-one)
+    // Diisi melalui halaman sinkronasi class-teacher
+    teacherId   String?  @unique
+    teacherLink Teacher? @relation(fields: [teacherId], references: [id])
 
     histories    History[]
     schedules    Schedule[]

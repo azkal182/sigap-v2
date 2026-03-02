@@ -105,11 +105,19 @@ type DormitoryInfo = {
   source: 'role' | 'user'
 }
 
+export type ManagedClass = {
+  id: string
+  name: string
+  trackName: string
+  dormitoryName: string
+}
+
 type PermissionStore = {
   user: { id: string; name: string; role: string; mustChangeCredentials: boolean } | null
   permissions: string[]
   allowedDormitoryIds: string[]
   allowedDormitories: DormitoryInfo[]
+  managedClass: ManagedClass | null // null = not PENGAJAR or not yet linked
   loaded: boolean
 
   // Setters
@@ -117,6 +125,7 @@ type PermissionStore = {
   setPermissions: (permissions: string[]) => void
   setAllowedDormitoryIds: (ids: string[]) => void
   setAllowedDormitories: (dormitories: DormitoryInfo[]) => void
+  setManagedClass: (mc: ManagedClass | null) => void
   setLoaded: (loaded: boolean) => void
 
   // Helper methods
@@ -131,6 +140,7 @@ type PermissionStore = {
     permissions: string[]
     allowedDormitoryIds: string[]
     allowedDormitories: DormitoryInfo[]
+    managedClass?: ManagedClass | null
   }) => void
 }
 
@@ -139,6 +149,7 @@ export const usePermissionStore = create<PermissionStore>()((set, get) => ({
   permissions: [],
   allowedDormitoryIds: [],
   allowedDormitories: [],
+  managedClass: null,
   loaded: false,
 
   // Setters
@@ -164,15 +175,11 @@ export const usePermissionStore = create<PermissionStore>()((set, get) => ({
   setAllowedDormitories: newDormitories => {
     const currentDormitories = get().allowedDormitories
 
-    // For arrays of objects, you might need a deeper comparison if order doesn't matter
-    // For now, a shallow comparison of the array elements themselves (which are objects)
-    // might be enough if you always pass new object references for changes.
-    // If object identity within the array changes but their content is the same,
-    // you'll need a custom deep comparison function here or a consistent way to update DormitoryInfo objects.
     if (!shallow(currentDormitories, newDormitories)) {
       set({ allowedDormitories: newDormitories })
     }
   },
+  setManagedClass: managedClass => set({ managedClass }),
   setLoaded: loaded => set({ loaded }),
 
   // Helper methods (remain unchanged)
@@ -202,10 +209,9 @@ export const usePermissionStore = create<PermissionStore>()((set, get) => ({
     set(state => {
       const updates: Partial<PermissionStore> = {
         user: data.user,
-        loaded: true
+        loaded: true,
       }
 
-      // Apply shallow comparison for arrays in batch update
       if (!shallow(state.permissions, data.permissions)) {
         updates.permissions = data.permissions
       }
@@ -218,9 +224,14 @@ export const usePermissionStore = create<PermissionStore>()((set, get) => ({
         updates.allowedDormitories = data.allowedDormitories
       }
 
+      // managedClass: always update (simple nullable object)
+      if ('managedClass' in data) {
+        updates.managedClass = data.managedClass ?? null
+      }
+
       return updates
     })
-  }
+  },
 }))
 
 // Selector hooks remain the same
@@ -230,3 +241,4 @@ export const useAllowedDormitoryIds = () => usePermissionStore(state => state.al
 export const useAllowedDormitories = () => usePermissionStore(state => state.allowedDormitories)
 export const useHasPermission = () => usePermissionStore(state => state.hasPermission)
 export const useHasDormitoryAccess = () => usePermissionStore(state => state.hasDormitoryAccess)
+export const useManagedClass = () => usePermissionStore(state => state.managedClass)
