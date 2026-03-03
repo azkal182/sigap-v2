@@ -381,7 +381,7 @@ export default function DaurohPublicPage() {
             🎥 Upload Video Dauroh
           </Typography>
           <Typography variant='body1' color='text.secondary'>
-            Upload video hafalan Anda sesuai periode yang sedang aktif
+            Upload video Dauroh sesuai periode yang sedang aktif
           </Typography>
           {activePeriod && (
             <Chip label={`Periode Aktif: ${activePeriod.name}`} color='success' variant='outlined' sx={{ mt: 1.5 }} />
