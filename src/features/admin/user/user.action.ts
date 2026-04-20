@@ -14,7 +14,7 @@ export const getUsersAction = async () => {
   try {
     const { allowed } = await requirePermission({
       resource: 'user',
-      action: 'view'
+      action: 'view',
     })
 
     // console.log('[getUsersAction] Permission check result:', { allowed })
@@ -42,13 +42,13 @@ export async function getAllUsersWithRoleAndPermissions() {
       role: {
         include: {
           rolePermissions: { include: { permission: true } },
-          roleDormitories: { include: { dormitory: true } }
-        }
+          roleDormitories: { include: { dormitory: true } },
+        },
       },
       userPermissions: { include: { permission: true } },
-      userDormitories: { include: { dormitory: true } }
+      userDormitories: { include: { dormitory: true } },
     },
-    orderBy: { name: 'asc' }
+    orderBy: { name: 'asc' },
   })
 }
 
@@ -56,9 +56,9 @@ export async function getAllRoles() {
   return prisma.role.findMany({
     include: {
       rolePermissions: { include: { permission: true } },
-      roleDormitories: { include: { dormitory: true } }
+      roleDormitories: { include: { dormitory: true } },
     },
-    orderBy: { name: 'asc' }
+    orderBy: { name: 'asc' },
   })
 }
 
@@ -67,7 +67,7 @@ export async function getAllDormitories() {
 
   return data.map(item => ({
     ...item,
-    name: `${item.name} | ${item.gender}`
+    name: `${item.name} | ${item.gender}`,
   }))
 }
 
@@ -92,12 +92,12 @@ export async function createUser(data: {
       password: hashed,
       roleId: data.roleId,
       userDormitories: {
-        create: data.dormitoryIds?.map(dormId => ({ dormitoryId: dormId })) || []
+        create: data.dormitoryIds?.map(dormId => ({ dormitoryId: dormId })) || [],
       },
       userPermissions: {
-        create: data.permissionOverrides || []
-      }
-    }
+        create: data.permissionOverrides || [],
+      },
+    },
   })
 }
 
@@ -110,7 +110,7 @@ export async function updateUser(
     roleId?: string
     dormitoryIds?: string[]
     permissionOverrides?: { permissionId: string; allow: boolean }[]
-  }
+  },
 ) {
   const updates: any = {}
 
@@ -122,7 +122,7 @@ export async function updateUser(
   const tx = await prisma.$transaction(async tx => {
     await tx.user.update({
       where: { id: userId },
-      data: updates
+      data: updates,
     })
 
     if (data.dormitoryIds !== undefined) {
@@ -130,7 +130,7 @@ export async function updateUser(
 
       if (data.dormitoryIds.length > 0) {
         await tx.userDormitory.createMany({
-          data: data.dormitoryIds.map(dormitoryId => ({ userId, dormitoryId }))
+          data: data.dormitoryIds.map(dormitoryId => ({ userId, dormitoryId })),
         })
       }
     }
@@ -140,7 +140,7 @@ export async function updateUser(
 
       if (data.permissionOverrides.length > 0) {
         await tx.userPermission.createMany({
-          data: data.permissionOverrides.map(p => ({ userId, permissionId: p.permissionId, allow: p.allow }))
+          data: data.permissionOverrides.map(p => ({ userId, permissionId: p.permissionId, allow: p.allow })),
         })
       }
     }
@@ -151,15 +151,16 @@ export async function updateUser(
         role: {
           include: {
             rolePermissions: { include: { permission: true } },
-            roleDormitories: { include: { dormitory: true } }
-          }
+            roleDormitories: { include: { dormitory: true } },
+          },
         },
         userPermissions: { include: { permission: true } },
-        userDormitories: { include: { dormitory: true } }
-      }
+        userDormitories: { include: { dormitory: true } },
+      },
     })
   })
 
+  await redis.del(userId)
   return tx
 }
 
@@ -174,11 +175,11 @@ export async function getUserEffectiveDormitoryAccess(userId: string) {
     include: {
       role: {
         include: {
-          roleDormitories: { include: { dormitory: true } }
-        }
+          roleDormitories: { include: { dormitory: true } },
+        },
       },
-      userDormitories: { include: { dormitory: true } }
-    }
+      userDormitories: { include: { dormitory: true } },
+    },
   })
 
   if (!user) return []
@@ -193,7 +194,7 @@ export async function getUserEffectiveDormitoryAccess(userId: string) {
   const allDormitories = [...roleDormitories, ...userDormitories]
 
   const uniqueDormitories = allDormitories.filter(
-    (dorm, index, self) => index === self.findIndex(d => d.id === dorm.id)
+    (dorm, index, self) => index === self.findIndex(d => d.id === dorm.id),
   )
 
   return uniqueDormitories
@@ -209,7 +210,7 @@ export async function checkUserDormitoryAccess(userId: string, dormitoryId: stri
 const updateSchema = z.object({
   userId: z.string(),
   username: z.string(),
-  password: z.string().min(6, 'Password minimal 6 karakter')
+  password: z.string().min(6, 'Password minimal 6 karakter'),
 })
 
 export async function updateCredentialsAction(input: z.infer<typeof updateSchema>) {
@@ -222,7 +223,7 @@ export async function updateCredentialsAction(input: z.infer<typeof updateSchema
 
     return {
       success: false,
-      errors: errorMessage
+      errors: errorMessage,
     }
   }
 
