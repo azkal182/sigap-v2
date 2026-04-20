@@ -23,7 +23,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Typography
+  Typography,
 } from '@mui/material'
 import Tab from '@mui/material/Tab'
 import TabList from '@mui/lab/TabList'
@@ -43,7 +43,7 @@ import {
   useTrackDetail,
   useUpdateClass,
   useUpdateSksVersioned,
-  useUpdateSubject
+  useUpdateSubject,
 } from './dormitory.query'
 import ClassFormDialog, { type ClassFormValues } from './components/class-dialog'
 import SubjectFormDialog from './components/subject-dialog'
@@ -63,7 +63,7 @@ type Slot = {
 const slotData: Slot[] = [
   { id: 1, slot: 'A1', start: '08:00', end: '10:00' },
   { id: 2, slot: 'B2', start: '10:30', end: '12:30' },
-  { id: 3, slot: 'C3', start: '13:00', end: '15:00' }
+  { id: 3, slot: 'C3', start: '13:00', end: '15:00' },
 ]
 
 const ClassListPageView = ({ trackId, dormitoryId }: { trackId: string; dormitoryId: string }) => {
@@ -132,8 +132,8 @@ const ClassListPageView = ({ trackId, dormitoryId }: { trackId: string; dormitor
           onError: (error: any) => {
             toast.error('Gagal membuat kelas')
             console.error(error)
-          }
-        }
+          },
+        },
       )
     } else if (classDialog.mode === 'edit' && form.id) {
       updateClass(
@@ -146,8 +146,8 @@ const ClassListPageView = ({ trackId, dormitoryId }: { trackId: string; dormitor
           onError: (error: any) => {
             toast.error('Gagal memperbaharui kelas')
             console.error(error)
-          }
-        }
+          },
+        },
       )
     }
   }
@@ -164,8 +164,8 @@ const ClassListPageView = ({ trackId, dormitoryId }: { trackId: string; dormitor
           onError: (error: any) => {
             toast.error('Gagal membuat Pelajaran')
             console.error(error)
-          }
-        }
+          },
+        },
       )
     } else if (subjectDialog.mode === 'edit' && form.id) {
       updateSubject(
@@ -178,8 +178,8 @@ const ClassListPageView = ({ trackId, dormitoryId }: { trackId: string; dormitor
           onError: (error: any) => {
             toast.error('Gagal memperbaharui Pelajaran')
             console.error(error)
-          }
-        }
+          },
+        },
       )
     }
   }
@@ -196,8 +196,8 @@ const ClassListPageView = ({ trackId, dormitoryId }: { trackId: string; dormitor
           onError: (error: any) => {
             toast.error(error.message ?? 'Gagal membuat SKS')
             console.error(error)
-          }
-        }
+          },
+        },
       )
     } else if (sksDialog.mode === 'edit' && form.id) {
       updateSks(
@@ -207,7 +207,7 @@ const ClassListPageView = ({ trackId, dormitoryId }: { trackId: string; dormitor
           sksKey: form.sksKey,
           trackId,
           validFrom: form.validFrom,
-          validTo: form.validTo
+          validTo: form.validTo,
         },
         {
           onSuccess: () => {
@@ -217,8 +217,8 @@ const ClassListPageView = ({ trackId, dormitoryId }: { trackId: string; dormitor
           onError: (error: any) => {
             toast.error(error.message ?? 'Gagal memperbaharui SKS')
             console.error(error)
-          }
-        }
+          },
+        },
       )
     }
   }
@@ -237,9 +237,9 @@ const ClassListPageView = ({ trackId, dormitoryId }: { trackId: string; dormitor
 
       <TabContext value={activeTab}>
         <TabList onChange={handleChangeTab} aria-label='master data tabs'>
-          <Tab value='1' label='Daftar Kelas' />
-          <Tab value='2' label='Daftar Pelajaran' />
-          <Tab value='3' label='Daftar SKS' />
+          <Tab value='1' label='Kelas' />
+          <Tab value='2' label='Pelajaran' />
+          <Tab value='3' label='SKS' />
         </TabList>
 
         {/* Tab 1: Daftar Kelas */}
@@ -287,7 +287,7 @@ const ClassListPageView = ({ trackId, dormitoryId }: { trackId: string; dormitor
                               openClassDialog('edit', {
                                 id: item.id,
                                 className: item.name,
-                                teacherName: item.teacher
+                                teacherName: item.teacher,
                               })
                             }
                           >
@@ -340,7 +340,7 @@ const ClassListPageView = ({ trackId, dormitoryId }: { trackId: string; dormitor
                             openSubjectDialog('edit', {
                               id: item.id,
                               name: item.name,
-                              trackId: item.trackId
+                              trackId: item.trackId,
                             })
                           }
                         >
@@ -405,7 +405,7 @@ const ClassListPageView = ({ trackId, dormitoryId }: { trackId: string; dormitor
                               sksKey: item.sksKey,
                               trackId,
                               validFrom: item.validFrom,
-                              validTo: item.validTo
+                              validTo: item.validTo,
                             })
                           }
                           disabled={!!item.deletedAt}
@@ -417,7 +417,7 @@ const ClassListPageView = ({ trackId, dormitoryId }: { trackId: string; dormitor
                           onClick={() =>
                             softDeleteSks(item.id, {
                               onSuccess: () => toast.success('SKS berhasil dihapus'),
-                              onError: (error: any) => toast.error(error.message ?? 'Gagal menghapus SKS')
+                              onError: (error: any) => toast.error(error.message ?? 'Gagal menghapus SKS'),
                             })
                           }
                           disabled={!!item.deletedAt}

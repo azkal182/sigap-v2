@@ -14,6 +14,8 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
+  ListItemIcon,
+  ListItemText,
   Paper,
   Table,
   TableBody,
@@ -38,6 +40,38 @@ import {
 import type { CreateScheduleSlotInput, TrackFormSchema } from './schemas/dormitory-schema'
 
 import ScheduleSlotForm from './components/ScheduleSlotForm'
+
+import { styled } from '@mui/material/styles'
+import MuiMenu from '@mui/material/Menu'
+import MuiMenuItem from '@mui/material/MenuItem'
+import type { MenuProps } from '@mui/material/Menu'
+import type { MenuItemProps } from '@mui/material/MenuItem'
+
+const Menu = styled(MuiMenu)<MenuProps>({
+  '& .MuiMenu-paper': {
+    border: '1px solid var(--mui-palette-divider)',
+  },
+})
+
+const MenuItem = styled(MuiMenuItem)<MenuItemProps>({
+  minHeight: 32,
+  paddingTop: 4,
+  paddingBottom: 4,
+  paddingLeft: 10,
+  paddingRight: 10,
+  fontSize: 13,
+
+  '& .MuiListItemIcon-root': {
+    minWidth: 28,
+  },
+
+  '&:focus': {
+    backgroundColor: 'var(--mui-palette-primary-main)',
+    '& .MuiListItemIcon-root, & .MuiListItemText-primary': {
+      color: 'var(--mui-palette-common-white)',
+    },
+  },
+})
 
 type Slot = {
   id: number
@@ -83,6 +117,19 @@ const DormitoryDetailPageView: React.FC<DormitoryDetailPageViewProps> = ({ id })
   const { mutate: createTrack } = useCreateTrackForDormitory()
   const { mutate: updateTrack } = useUpdateTrack()
   const { mutate: deleteTrack } = useRemoveTrackFromDormitory()
+
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
+  const [selectedTrack, setSelectedTrack] = useState<Track | null>(null)
+
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, track: Track) => {
+    setAnchorEl(event.currentTarget)
+    setSelectedTrack(track)
+  }
+
+  const handleMenuClose = () => {
+    setAnchorEl(null)
+    setSelectedTrack(null)
+  }
 
   //   const { mutate: createScheduleSlot } = useCreateScheduleSlot()
 
@@ -187,69 +234,174 @@ const DormitoryDetailPageView: React.FC<DormitoryDetailPageViewProps> = ({ id })
       <Typography variant='h4' className='text-center'>
         Daftar Fan {data?.name}
       </Typography>
-      <Button onClick={handleOpenCreateDialog} variant='contained' color='primary' className=''>
-        Tambah Fan
-      </Button>
+      <div className='flex flex-col sm:flex-row gap-2 sm:items-center mb-4'>
+        <Button onClick={handleOpenCreateDialog} variant='contained' color='primary' className='w-full sm:w-auto'>
+          Tambah Fan
+        </Button>
 
-      <Button onClick={handleOpenCreateScheduleSlot} variant='contained' color='primary' className='ml-4'>
-        Atur Jam Pelajaran
-      </Button>
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell className='w-6'>NO</TableCell>
-              <TableCell>NAMA</TableCell>
-              <TableCell>LEVEL</TableCell>
-              <TableCell>TARGET</TableCell>
-              <TableCell>AKSI</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {isLoading ? (
+        <Button onClick={handleOpenCreateScheduleSlot} variant='contained' color='primary' className='w-full sm:w-auto'>
+          Jam Pelajaran
+        </Button>
+      </div>
+      <div className='hidden sm:block'>
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
               <TableRow>
-                <TableCell colSpan={5} align='center'>
-                  <Typography variant='body2' color='textSecondary'>
-                    Memuat data...
-                  </Typography>
-                </TableCell>
+                <TableCell className='w-6'>NO</TableCell>
+                <TableCell>NAMA</TableCell>
+                <TableCell>LEVEL</TableCell>
+                <TableCell>TARGET</TableCell>
+                <TableCell>AKSI</TableCell>
               </TableRow>
-            ) : !data?.tracks || data?.tracks?.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} align='center'>
-                  <Typography variant='body2' color='textSecondary'>
-                    Tidak ada data fan ditemukan.
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            ) : (
-              data?.tracks.map((track, index: number) => (
-                <TableRow key={track.id}>
-                  <TableCell>{index + 1}</TableCell>
-                  <TableCell>{track.name}</TableCell>
-                  <TableCell>{track.level}</TableCell>
-                  <TableCell>{track.targetDays} Hari</TableCell>
-                  <TableCell>
-                    <div className='flex gap-2'>
-                      <IconButton size='small' onClick={() => handleOpenEditDialog(track)}>
-                        <i className='tabler-edit text-green-400' />
-                      </IconButton>
-                      <IconButton disabled size='small' onClick={() => handleDeleteTrack(track.id)}>
-                        <i className='tabler-trash text-red-400' />
-                      </IconButton>
-                      <Link href={`/data/dormitory/${data.id}/${track.id}`}>
-                        <IconButton size='small'>
-                          <i className='tabler-eye text-primary' />
-                        </IconButton>
-                      </Link>
-                    </div>
+            </TableHead>
+            <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={5} align='center'>
+                    <Typography variant='body2' color='textSecondary'>
+                      Memuat data...
+                    </Typography>
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+              ) : !data?.tracks || data?.tracks?.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} align='center'>
+                    <Typography variant='body2' color='textSecondary'>
+                      Tidak ada data fan ditemukan.
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                data?.tracks.map((track, index: number) => (
+                  <TableRow key={track.id}>
+                    <TableCell>{index + 1}</TableCell>
+                    <TableCell>{track.name}</TableCell>
+                    <TableCell>{track.level}</TableCell>
+                    <TableCell>{track.targetDays} Hari</TableCell>
+                    <TableCell>
+                      <div className='flex gap-2'>
+                        <IconButton size='small' onClick={() => handleOpenEditDialog(track)}>
+                          <i className='tabler-edit text-green-400' />
+                        </IconButton>
+                        <IconButton disabled size='small' onClick={() => handleDeleteTrack(track.id)}>
+                          <i className='tabler-trash text-red-400' />
+                        </IconButton>
+                        <Link href={`/data/dormitory/${data.id}/${track.id}`}>
+                          <IconButton size='small'>
+                            <i className='tabler-eye text-primary' />
+                          </IconButton>
+                        </Link>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </div>
+
+      <div className='block sm:hidden space-y-3'>
+        {isLoading ? (
+          <Typography align='center'>Memuat data...</Typography>
+        ) : !data?.tracks || data?.tracks.length === 0 ? (
+          <Typography align='center'>Tidak ada data fan ditemukan.</Typography>
+        ) : (
+          data.tracks.map((track, index) => (
+            <Card key={track.id} className='p-3'>
+              <div className='flex justify-between items-start'>
+                <div>
+                  <Typography className='font-semibold'>{track.name}</Typography>
+                  <Typography variant='body2' color='textSecondary'>
+                    Level: {track.level ?? '-'}
+                  </Typography>
+                  <Typography variant='body2' color='textSecondary'>
+                    Target: {track.targetDays} Hari
+                  </Typography>
+                </div>
+
+                <IconButton size='small' onClick={e => handleMenuOpen(e, track)}>
+                  <i className='tabler-dots-vertical' />
+                </IconButton>
+              </div>
+            </Card>
+          ))
+        )}
+      </div>
+
+      <Menu
+        keepMounted
+        elevation={0}
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleMenuClose}
+        MenuListProps={{ dense: true }}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'right',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'right',
+        }}
+      >
+        <MenuItem
+          className='gap-1'
+          sx={{
+            minHeight: 32,
+            py: 0.5,
+            px: 1.5,
+          }}
+          onClick={() => {
+            if (selectedTrack) handleOpenEditDialog(selectedTrack)
+            handleMenuClose()
+          }}
+        >
+          <ListItemIcon sx={{ minWidth: 20 }}>
+            <i className='tabler-edit text-sm' />
+          </ListItemIcon>
+          <ListItemText primary='Edit' primaryTypographyProps={{ fontSize: 13, ml: 0 }} />
+        </MenuItem>
+
+        <MenuItem
+          className='gap-1'
+          sx={{
+            minHeight: 32,
+            py: 0.5,
+            px: 1.5,
+          }}
+          onClick={() => {
+            if (selectedTrack) handleDeleteTrack(selectedTrack.id)
+            handleMenuClose()
+          }}
+        >
+          <ListItemIcon sx={{ minWidth: 20 }}>
+            <i className='tabler-trash text-sm text-red-400' />
+          </ListItemIcon>
+          <ListItemText primary='Hapus' primaryTypographyProps={{ fontSize: 13, ml: 0 }} />
+        </MenuItem>
+
+        <MenuItem
+          className='gap-1'
+          sx={{
+            minHeight: 32,
+            py: 0.5,
+            px: 1.5,
+          }}
+          onClick={() => {
+            if (selectedTrack) {
+              window.location.href = `/data/dormitory/${data?.id}/${selectedTrack.id}`
+            }
+            handleMenuClose()
+          }}
+        >
+          <ListItemIcon sx={{ minWidth: 20 }}>
+            <i className='tabler-eye text-sm text-primary' />
+          </ListItemIcon>
+          <ListItemText primary='Detail' primaryTypographyProps={{ fontSize: 13, ml: 0 }} />
+        </MenuItem>
+      </Menu>
 
       <TrackFormDialog
         open={dialogOpen}
