@@ -143,6 +143,10 @@ jobs:
           echo "DAUROH_MAX_FILE_SIZE_MB=100" >> .env
           echo "DAUROH_MAX_UPLOADS=5" >> .env
 
+          # Eksternal API config
+          echo "API_BASE_URL=${{ secrets.API_BASE_URL }}" >> .env
+          echo "API_KEY=${{ secrets.API_KEY }}" >> .env
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -308,6 +312,10 @@ jobs:
           # Dauroh config
           echo "DAUROH_MAX_FILE_SIZE_MB=100" >> .env
           echo "DAUROH_MAX_UPLOADS=5" >> .env
+
+          # Eksternal API config
+          echo "API_BASE_URL=${{ secrets.API_BASE_URL }}" >> .env
+          echo "API_KEY=${{ secrets.API_KEY }}" >> .env
 
           # Install dependensi
           pnpm install --production

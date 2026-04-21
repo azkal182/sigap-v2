@@ -1,5 +1,3 @@
-'use client'
-
 export interface ExternalStudentGeoNode {
   id: string | null
   nama: string | null
@@ -61,8 +59,8 @@ interface ExternalStudentApiResponse {
   }
 }
 
-const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, '')
-const apiKey = process.env.NEXT_PUBLIC_API_KEY
+const baseUrl = process.env.API_BASE_URL?.replace(/\/$/, '')
+const apiKey = process.env.API_KEY
 
 export async function searchExternalStudents(search: string): Promise<ExternalStudentItem[]> {
   const keyword = search.trim()
