@@ -1,11 +1,12 @@
 'use client'
 
-import React, { useEffect, useState, useMemo } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 
 import type { SubmitHandler } from 'react-hook-form'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
+  Alert,
   Autocomplete,
   Box,
   Button,
@@ -19,7 +20,7 @@ import {
   Paper,
   Radio,
   RadioGroup,
-  Typography
+  Typography,
 } from '@mui/material'
 
 import { toast } from 'react-toastify'
@@ -31,6 +32,12 @@ import type { StudentFormInput } from '../schemas/student-schema'
 import { studentFormSchema } from '../schemas/student-schema'
 import { useDormitoryList } from '../../dormitory/dormitory.query'
 import { useAddStudent } from '../student.query'
+import StudentImportModal from './student-import-modal'
+import {
+  type ExternalStudentItem,
+  getExternalStudentAddressNames,
+  mapExternalGenderToFormValue,
+} from '../student-external.service'
 
 // --- Tipe Data & Data Statis ---
 interface GeoOption {
@@ -38,15 +45,71 @@ interface GeoOption {
   name: string
 }
 
+const PHONE_REGEX = /^(\+62|0)8[1-9][0-9]{7,9}$/
+
+function normalizeText(value?: string | null) {
+  return value?.replace(/\s+/g, ' ').trim() || ''
+}
+
+function parseBirthDate(value?: string | null) {
+  if (!value) return null
+
+  const parsed = new Date(`${value}T00:00:00`)
+
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+function normalizePhone(value?: string | null) {
+  const sanitized = value?.replace(/[^\d+]/g, '').trim() || ''
+
+  if (!sanitized) return undefined
+  if (PHONE_REGEX.test(sanitized)) return sanitized
+
+  if (sanitized.startsWith('62')) {
+    const withPlus = `+${sanitized}`
+
+    if (PHONE_REGEX.test(withPlus)) return withPlus
+  }
+
+  return undefined
+}
+
+function normalizeGeoName(value?: string | null) {
+  return value?.toLowerCase().replace(/\s+/g, ' ').trim() || ''
+}
+
+async function fetchGeoOptions(url: string): Promise<GeoOption[]> {
+  const response = await fetch(url)
+
+  if (!response.ok) {
+    throw new Error('Gagal mengambil data wilayah')
+  }
+
+  return response.json()
+}
+
+function findBestGeoOption(options: GeoOption[], name?: string | null) {
+  const normalizedTarget = normalizeGeoName(name)
+
+  if (!normalizedTarget) return undefined
+
+  return (
+    options.find(option => normalizeGeoName(option.name) === normalizedTarget) ||
+    options.find(option => normalizeGeoName(option.name).includes(normalizedTarget)) ||
+    options.find(option => normalizedTarget.includes(normalizeGeoName(option.name)))
+  )
+}
+
 // --- Komponen Form ---
 export default function StudentForm() {
   const {
     control,
+    clearErrors,
     handleSubmit,
     watch,
     setValue,
     reset,
-    formState: { errors }
+    formState: { errors },
   } = useForm<StudentFormInput>({
     resolver: zodResolver(studentFormSchema),
     defaultValues: {
@@ -62,8 +125,8 @@ export default function StudentForm() {
       provinceId: undefined,
       regencyId: undefined,
       districtId: undefined,
-      villageId: undefined
-    }
+      villageId: undefined,
+    },
   })
 
   const dormQuery = useDormitoryList()
@@ -84,6 +147,9 @@ export default function StudentForm() {
   const [districtOpen, setDistrictOpen] = useState(false)
   const [villageSearch, setVillageSearch] = useState('')
   const [villageOpen, setVillageOpen] = useState(false)
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false)
+  const [isImportingExternalStudent, setIsImportingExternalStudent] = useState(false)
+  const isApplyingImportedAddress = useRef(false)
 
   // Fetch data menggunakan React Query
   const { data: provincesData = [], isLoading: isProvincesLoading } = useProvinces(provinceSearch, provinceOpen)
@@ -91,13 +157,13 @@ export default function StudentForm() {
   const { data: regenciesData = [], isLoading: isRegenciesLoading } = useRegencies(
     provinceId,
     regencySearch,
-    regencyOpen
+    regencyOpen,
   )
 
   const { data: districtsData = [], isLoading: isDistrictsLoading } = useDistricts(
     regencyId,
     districtSearch,
-    districtOpen
+    districtOpen,
   )
 
   const { data: villagesData = [], isLoading: isVillagesLoading } = useVillages(districtId, villageSearch, villageOpen)
@@ -115,26 +181,28 @@ export default function StudentForm() {
   // --- Memoized values untuk Autocomplete
   const selectedProvince = useMemo(
     () => getSelectedOption(provinceId, provincesData, provinceSearch),
-    [provinceId, provincesData, provinceSearch]
+    [provinceId, provincesData, provinceSearch],
   )
 
   const selectedRegency = useMemo(
     () => getSelectedOption(regencyId, regenciesData, regencySearch),
-    [regencyId, regenciesData, regencySearch]
+    [regencyId, regenciesData, regencySearch],
   )
 
   const selectedDistrict = useMemo(
     () => getSelectedOption(districtId, districtsData, districtSearch),
-    [districtId, districtsData, districtSearch]
+    [districtId, districtsData, districtSearch],
   )
 
   const selectedVillage = useMemo(
     () => getSelectedOption(villageId, villagesData, villageSearch),
-    [villageId, villagesData, villageSearch]
+    [villageId, villagesData, villageSearch],
   )
 
   // --- Efek samping untuk reset input saat parent berubah
   useEffect(() => {
+    if (isApplyingImportedAddress.current) return
+
     setRegencySearch('')
     setDistrictSearch('')
     setVillageSearch('')
@@ -145,6 +213,8 @@ export default function StudentForm() {
   }, [provinceId])
 
   useEffect(() => {
+    if (isApplyingImportedAddress.current) return
+
     setDistrictSearch('')
     setVillageSearch('')
     setValue('districtId', undefined)
@@ -153,10 +223,127 @@ export default function StudentForm() {
   }, [regencyId])
 
   useEffect(() => {
+    if (isApplyingImportedAddress.current) return
+
     setVillageSearch('')
     setValue('villageId', undefined)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [districtId])
+
+  const applyFieldIfExists = <K extends keyof StudentFormInput>(field: K, value: StudentFormInput[K] | undefined) => {
+    if (value === undefined || value === null || value === '') return
+
+    setValue(field, value, { shouldDirty: true, shouldTouch: true, shouldValidate: true })
+    clearErrors(field)
+  }
+
+  const resolveGeoSelection = async (student: ExternalStudentItem) => {
+    const addressNames = getExternalStudentAddressNames(student)
+
+    const resolved = {
+      province: undefined as GeoOption | undefined,
+      regency: undefined as GeoOption | undefined,
+      district: undefined as GeoOption | undefined,
+      village: undefined as GeoOption | undefined,
+    }
+
+    if (addressNames.province) {
+      const provinceOptions = await fetchGeoOptions(
+        `/api/geo/provinces?search=${encodeURIComponent(addressNames.province)}`,
+      )
+
+      resolved.province = findBestGeoOption(provinceOptions, addressNames.province)
+    }
+
+    if (resolved.province && addressNames.regency) {
+      const regencyOptions = await fetchGeoOptions(
+        `/api/geo/regencies?provinceId=${resolved.province.id}&search=${encodeURIComponent(addressNames.regency)}`,
+      )
+
+      resolved.regency = findBestGeoOption(regencyOptions, addressNames.regency)
+    }
+
+    if (resolved.regency && addressNames.district) {
+      const districtOptions = await fetchGeoOptions(
+        `/api/geo/districts?regencyId=${resolved.regency.id}&search=${encodeURIComponent(addressNames.district)}`,
+      )
+
+      resolved.district = findBestGeoOption(districtOptions, addressNames.district)
+    }
+
+    if (resolved.district && addressNames.village) {
+      const villageOptions = await fetchGeoOptions(
+        `/api/geo/villages?districtId=${resolved.district.id}&search=${encodeURIComponent(addressNames.village)}`,
+      )
+
+      resolved.village = findBestGeoOption(villageOptions, addressNames.village)
+    }
+
+    return resolved
+  }
+
+  const handleImportExternalStudent = async (student: ExternalStudentItem) => {
+    setIsImportingExternalStudent(true)
+
+    try {
+      const addressNames = getExternalStudentAddressNames(student)
+      const resolvedAddress = await resolveGeoSelection(student)
+      const genderValue = mapExternalGenderToFormValue(student.kelamin)
+      const parentPhone = normalizePhone(student.kontak?.hp_ortu || student.kontak?.hp)
+
+      applyFieldIfExists('nis', normalizeText(student.nis_santri || student.id_anggota))
+      applyFieldIfExists('name', normalizeText(student.nama))
+      applyFieldIfExists('placeOfBirth', normalizeText(student.tempat_lahir))
+      applyFieldIfExists('dateOfBirth', parseBirthDate(student.tgl_lahir) as StudentFormInput['dateOfBirth'])
+      applyFieldIfExists('fatherName', normalizeText(student.keluarga?.nama_ayah))
+      applyFieldIfExists('motherName', normalizeText(student.keluarga?.nama_ibu))
+      applyFieldIfExists('parentPhone', parentPhone)
+      applyFieldIfExists('gender', genderValue)
+
+      isApplyingImportedAddress.current = true
+
+      setProvinceSearch(addressNames.province || '')
+      setRegencySearch(addressNames.regency || '')
+      setDistrictSearch(addressNames.district || '')
+      setVillageSearch(addressNames.village || '')
+
+      setValue('provinceId', resolvedAddress.province?.id, {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: true,
+      })
+      setValue('regencyId', resolvedAddress.regency?.id, { shouldDirty: true, shouldTouch: true, shouldValidate: true })
+      setValue('districtId', resolvedAddress.district?.id, {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: true,
+      })
+      setValue('villageId', resolvedAddress.village?.id, { shouldDirty: true, shouldTouch: true, shouldValidate: true })
+
+      window.setTimeout(() => {
+        isApplyingImportedAddress.current = false
+      }, 0)
+
+      const missingAddressFields = [
+        !resolvedAddress.province && addressNames.province ? 'provinsi' : null,
+        !resolvedAddress.regency && addressNames.regency ? 'kabupaten/kota' : null,
+        !resolvedAddress.district && addressNames.district ? 'kecamatan' : null,
+        !resolvedAddress.village && addressNames.village ? 'desa/kelurahan' : null,
+      ].filter(Boolean)
+
+      setIsImportModalOpen(false)
+
+      if (missingAddressFields.length > 0) {
+        toast.warning(`Data santri berhasil diimpor. Mohon cek manual field ${missingAddressFields.join(', ')}.`)
+      } else {
+        toast.success('Data santri berhasil dimasukkan ke form')
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Gagal mengimpor data santri')
+    } finally {
+      setIsImportingExternalStudent(false)
+    }
+  }
 
   const onSubmit: SubmitHandler<StudentFormInput> = data => {
     // console.log('Form Submitted:', data)
@@ -165,18 +352,55 @@ export default function StudentForm() {
       onSuccess: data => {
         toast.success(data.message ?? 'santri berhasil dibuat!')
         reset()
+        setProvinceSearch('')
+        setRegencySearch('')
+        setDistrictSearch('')
+        setVillageSearch('')
       },
       onError: error => {
         toast.error(error.message ?? 'Gagal membuat santri')
-      }
+      },
     })
   }
 
   return (
     <Paper elevation={3} sx={{ p: 4, mt: 4, maxWidth: '800px', mx: 'auto' }}>
-      <Typography variant='h5' component='h1' gutterBottom>
-        Form Pendaftaran Santri
-      </Typography>
+      <Box
+        sx={{
+          mb: 4,
+          display: 'flex',
+          gap: 2,
+          justifyContent: 'space-between',
+          alignItems: { xs: 'flex-start', sm: 'center' },
+          flexDirection: { xs: 'column', sm: 'row' },
+        }}
+      >
+        <Box>
+          <Typography variant='h5' component='h1' gutterBottom>
+            Form Pendaftaran Santri
+          </Typography>
+          <Typography variant='body2' color='text.secondary'>
+            Anda bisa isi manual atau ambil data awal dari API eksternal.
+          </Typography>
+        </Box>
+
+        <Button
+          variant='outlined'
+          startIcon={<i className='tabler-search' />}
+          onClick={() => setIsImportModalOpen(true)}
+        >
+          Cari dari API Eksternal
+        </Button>
+      </Box>
+
+      {(provinceSearch || regencySearch || districtSearch || villageSearch) &&
+      (!provinceId || !regencyId || !districtId || !villageId) ? (
+        <Alert severity='warning' sx={{ mb: 3 }}>
+          Beberapa data wilayah hasil import belum cocok dengan database lokal. Silakan cek dan lengkapi field wilayah
+          secara manual.
+        </Alert>
+      ) : null}
+
       <Box component='form' onSubmit={handleSubmit(onSubmit)} noValidate>
         <Grid container spacing={5}>
           {/* Data Diri */}
@@ -375,7 +599,7 @@ export default function StudentForm() {
                             {isProvincesLoading ? <CircularProgress color='inherit' size={20} /> : null}
                             {params.InputProps.endAdornment}
                           </>
-                        )
+                        ),
                       }}
                     />
                   )}
@@ -415,7 +639,7 @@ export default function StudentForm() {
                             {isRegenciesLoading ? <CircularProgress color='inherit' size={20} /> : null}
                             {params.InputProps.endAdornment}
                           </>
-                        )
+                        ),
                       }}
                     />
                   )}
@@ -455,7 +679,7 @@ export default function StudentForm() {
                             {isDistrictsLoading ? <CircularProgress color='inherit' size={20} /> : null}
                             {params.InputProps.endAdornment}
                           </>
-                        )
+                        ),
                       }}
                     />
                   )}
@@ -495,7 +719,7 @@ export default function StudentForm() {
                             {isVillagesLoading ? <CircularProgress color='inherit' size={20} /> : null}
                             {params.InputProps.endAdornment}
                           </>
-                        )
+                        ),
                       }}
                     />
                   )}
@@ -512,6 +736,17 @@ export default function StudentForm() {
           </Grid>
         </Grid>
       </Box>
+
+      <StudentImportModal
+        open={isImportModalOpen}
+        onClose={() => {
+          if (!isImportingExternalStudent) {
+            setIsImportModalOpen(false)
+          }
+        }}
+        onImport={handleImportExternalStudent}
+        isImporting={isImportingExternalStudent}
+      />
     </Paper>
   )
 }
