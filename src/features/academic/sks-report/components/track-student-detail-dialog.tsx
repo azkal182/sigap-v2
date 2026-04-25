@@ -8,7 +8,6 @@ import {
   IconButton,
   List,
   ListItem,
-  ListItemText,
   Paper,
   Stack,
   Typography,
@@ -55,14 +54,30 @@ export default function TrackStudentDetailDialog({
   onClose,
 }: TrackStudentDetailDialogProps) {
   const theme = useTheme()
-  const fullScreen = useMediaQuery(theme.breakpoints.down('sm'))
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
 
   return (
-    <Dialog open={open} onClose={onClose} fullScreen={fullScreen} maxWidth='md' fullWidth>
-      <DialogTitle sx={{ pb: 1 }}>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth='md'
+      fullWidth
+      PaperProps={{
+        sx: {
+          m: isMobile ? 1 : 2,
+          width: isMobile ? 'calc(100% - 16px)' : undefined,
+          maxHeight: '86dvh',
+          borderRadius: isMobile ? 2 : 3,
+          overflow: 'hidden',
+        },
+      }}
+    >
+      <DialogTitle sx={{ pb: 1, pt: isMobile ? 1.5 : 2, position: 'sticky', top: 0, bgcolor: 'background.paper', zIndex: 1 }}>
         <Stack direction='row' alignItems='center' justifyContent='space-between' spacing={2}>
-          <Box>
-            <Typography variant='h6'>Detail Santri per Kelas</Typography>
+          <Box sx={{ minWidth: 0 }}>
+            <Typography variant={isMobile ? 'subtitle1' : 'h6'} noWrap>
+              Detail Santri per Kelas
+            </Typography>
             <Typography variant='body2' color='text.secondary'>
               {trackName} • Filter: {statusLabel[statusFilter]}
             </Typography>
@@ -73,7 +88,14 @@ export default function TrackStudentDetailDialog({
         </Stack>
       </DialogTitle>
 
-      <DialogContent dividers>
+      <DialogContent
+        dividers
+        sx={{
+          p: isMobile ? 1.5 : 3,
+          overflowY: 'auto',
+          overscrollBehavior: 'contain',
+        }}
+      >
         {loading ? (
           <Box sx={{ py: 8, display: 'flex', justifyContent: 'center' }}>
             <Typography variant='body2' color='text.secondary'>
@@ -107,23 +129,21 @@ export default function TrackStudentDetailDialog({
 
                 <List dense disablePadding>
                   {classGroup.students.map(student => (
-                    <ListItem
-                      key={student.studentId}
-                      divider
-                      secondaryAction={
-                        <Chip
-                          size='small'
-                          label={statusChipLabel[student.status]}
-                          color={statusChipColor[student.status]}
-                          variant='outlined'
-                        />
-                      }
-                    >
-                      <ListItemText
-                        primary={student.studentName}
-                        secondary={`Belajar ${student.daysStudied} hari • Sisa ${student.daysLeft} hari`}
-                        primaryTypographyProps={{ variant: 'body2' }}
-                        secondaryTypographyProps={{ variant: 'caption' }}
+                    <ListItem key={student.studentId} divider sx={{ px: 2, py: 1.25, gap: 1.25, alignItems: 'center' }}>
+                      <Box sx={{ minWidth: 0, flex: 1 }}>
+                        <Typography variant='body2' sx={{ fontWeight: 500 }} noWrap>
+                          {student.studentName}
+                        </Typography>
+                        <Typography variant='caption' color='text.secondary'>
+                          Belajar {student.daysStudied} hari • Sisa {student.daysLeft} hari
+                        </Typography>
+                      </Box>
+                      <Chip
+                        size='small'
+                        label={statusChipLabel[student.status]}
+                        color={statusChipColor[student.status]}
+                        variant='outlined'
+                        sx={{ flexShrink: 0 }}
                       />
                     </ListItem>
                   ))}
