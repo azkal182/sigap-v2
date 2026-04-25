@@ -5,18 +5,24 @@ import { useState } from 'react'
 import { Card, CardContent, CardHeader, Typography, Grid, Alert, CircularProgress } from '@mui/material'
 import { startOfMonth, endOfMonth } from 'date-fns'
 
-import { useGlobalSummary, useDormitoryBreakdown, useTrackBreakdown } from './sks-report.query'
-import type { SksReportParams, TrackBreakdownParams } from './sks-report.schema'
+import { useGlobalSummary, useDormitoryBreakdown, useTrackBreakdown, useTrackStudentDetails } from './sks-report.query'
+import type { SksReportParams, StudentStatusFilter, TrackBreakdownParams, TrackStudentDetailsParams } from './sks-report.schema'
 import GlobalSummaryCard from './components/global-summary-card'
 import DormitoryBreakdownCard from './components/dormitory-breakdown-card'
 import TrackBreakdownCard from './components/track-breakdown-card'
 import SksReportFilters from './components/sks-report-filters'
+import TrackStudentDetailDialog from './components/track-student-detail-dialog'
 
 export default function SksReportPageView() {
   const now = new Date()
 
   const [selectedDormitoryIds, setSelectedDormitoryIds] = useState<string[]>([])
   const [selectedTrackDormitoryId, setSelectedTrackDormitoryId] = useState<string>('')
+  const [trackDetailSelection, setTrackDetailSelection] = useState<{
+    trackId: string
+    trackName: string
+    statusFilter: StudentStatusFilter
+  } | null>(null)
   const [dateRange, setDateRange] = useState({
     start: startOfMonth(now),
     end: endOfMonth(now),
@@ -34,6 +40,14 @@ export default function SksReportPageView() {
     endDate: dateRange.end,
   }
 
+  const trackDetailParams: TrackStudentDetailsParams = {
+    dormitoryId: selectedTrackDormitoryId,
+    trackId: trackDetailSelection?.trackId || '',
+    statusFilter: trackDetailSelection?.statusFilter || 'all',
+    startDate: dateRange.start,
+    endDate: dateRange.end,
+  }
+
   const { data: globalSummary, isLoading: loadingGlobal } = useGlobalSummary(
     reportParams,
     selectedDormitoryIds.length > 0,
@@ -46,13 +60,24 @@ export default function SksReportPageView() {
 
   const { data: trackBreakdown, isLoading: loadingTrack } = useTrackBreakdown(trackParams, !!selectedTrackDormitoryId)
 
+  const { data: trackStudentDetails, isLoading: loadingTrackDetails } = useTrackStudentDetails(
+    trackDetailParams,
+    !!selectedTrackDormitoryId && !!trackDetailSelection?.trackId,
+  )
+
   const handleDormitoryChange = (dormitoryIds: string[]) => {
     setSelectedDormitoryIds(dormitoryIds)
 
     // Reset track selection if current selection is not in the new list
     if (selectedTrackDormitoryId && !dormitoryIds.includes(selectedTrackDormitoryId)) {
       setSelectedTrackDormitoryId('')
+      setTrackDetailSelection(null)
     }
+  }
+
+  const handleSelectDormitoryForTrack = (dormitoryId: string) => {
+    setSelectedTrackDormitoryId(dormitoryId)
+    setTrackDetailSelection(null)
   }
 
   return (
@@ -100,13 +125,13 @@ export default function SksReportPageView() {
                     <CircularProgress />
                   </div>
                 ) : dormitoryBreakdown ? (
-                  <DormitoryBreakdownCard
-                    data={dormitoryBreakdown}
-                    selectedDormitoryIds={selectedDormitoryIds}
-                    onSelectDormitory={setSelectedTrackDormitoryId}
-                    selectedForTrack={selectedTrackDormitoryId}
-                  />
-                ) : (
+                    <DormitoryBreakdownCard
+                      data={dormitoryBreakdown}
+                      selectedDormitoryIds={selectedDormitoryIds}
+                      onSelectDormitory={handleSelectDormitoryForTrack}
+                      selectedForTrack={selectedTrackDormitoryId}
+                    />
+                  ) : (
                   <Alert severity='warning'>Gagal memuat breakdown per asrama</Alert>
                 )}
               </CardContent>
@@ -124,7 +149,7 @@ export default function SksReportPageView() {
                       <CircularProgress />
                     </div>
                   ) : trackBreakdown ? (
-                    <TrackBreakdownCard data={trackBreakdown} />
+                    <TrackBreakdownCard data={trackBreakdown} onOpenDetail={setTrackDetailSelection} />
                   ) : (
                     <Alert severity='warning'>Gagal memuat breakdown per track</Alert>
                   )}
@@ -134,6 +159,15 @@ export default function SksReportPageView() {
           )}
         </Grid>
       )}
+
+      <TrackStudentDetailDialog
+        open={!!trackDetailSelection}
+        loading={loadingTrackDetails}
+        data={trackStudentDetails}
+        trackName={trackDetailSelection?.trackName || '-'}
+        statusFilter={trackDetailSelection?.statusFilter || 'all'}
+        onClose={() => setTrackDetailSelection(null)}
+      />
     </div>
   )
 }

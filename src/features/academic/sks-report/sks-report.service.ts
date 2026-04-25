@@ -5,10 +5,15 @@ import type { APIResult } from '@/types/api-types'
 import type {
   SksReportParams,
   TrackBreakdownParams,
+  TrackStudentDetailsParams,
   GlobalSummaryResult,
   DormitoryBreakdownResult,
   TrackBreakdownResult,
+  TrackStudentDetailsResult,
+  TrackStudentDetailGroup,
+  TrackStudentDetailItem,
   StudentStatus,
+  StudentStatusFilter,
   StatusCounts,
 } from './sks-report.schema'
 
@@ -398,6 +403,149 @@ export async function getTrackBreakdown(params: TrackBreakdownParams): Promise<A
     return {
       success: false,
       error: 'Gagal mengambil breakdown per track',
+    }
+  }
+}
+
+export async function getTrackStudentDetails(
+  params: TrackStudentDetailsParams,
+): Promise<APIResult<TrackStudentDetailsResult>> {
+  try {
+    const { dormitoryId, trackId, statusFilter, startDate, endDate } = params
+
+    const track = await db.track.findUnique({
+      where: { id: trackId },
+      select: {
+        id: true,
+        name: true,
+        targetDays: true,
+      },
+    })
+
+    if (!track) {
+      return {
+        success: false,
+        error: 'Track tidak ditemukan',
+      }
+    }
+
+    const targetDays = track.targetDays || 180
+
+    const students = await db.student.findMany({
+      where: {
+        dormitoryId,
+        histories: {
+          some: {
+            status: 'STUDYING',
+            startDate: { lte: endDate },
+            OR: [{ endDate: null }, { endDate: { gte: startDate } }],
+            class: {
+              trackId,
+            },
+          },
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+        histories: {
+          where: {
+            status: 'STUDYING',
+            class: {
+              trackId,
+            },
+          },
+          orderBy: {
+            startDate: 'desc',
+          },
+          take: 1,
+          select: {
+            startDate: true,
+            class: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        name: 'asc',
+      },
+    })
+
+    const filteredStudents: TrackStudentDetailItem[] = []
+
+    for (const student of students) {
+      const currentHistory = student.histories[0]
+      if (!currentHistory) continue
+
+      const historyStartDate = currentHistory.startDate
+      const now = new Date()
+      const daysStudied = Math.floor((now.getTime() - historyStartDate.getTime()) / (1000 * 60 * 60 * 24))
+      const daysLeft = targetDays - daysStudied
+
+      const status = getStudentStatus({
+        daysLeft,
+        targetDays,
+      })
+
+      if (statusFilter !== 'all' && statusFilter !== status) {
+        continue
+      }
+
+      filteredStudents.push({
+        studentId: student.id,
+        studentName: student.name,
+        classId: currentHistory.class.id,
+        className: currentHistory.class.name,
+        status,
+        daysLeft,
+        daysStudied,
+        targetDays,
+      })
+    }
+
+    const grouped = new Map<string, TrackStudentDetailGroup>()
+
+    for (const student of filteredStudents) {
+      const classKey = student.classId || 'no-class'
+
+      if (!grouped.has(classKey)) {
+        grouped.set(classKey, {
+          classId: student.classId,
+          className: student.className || 'Kelas Tidak Diketahui',
+          students: [],
+        })
+      }
+
+      grouped.get(classKey)!.students.push(student)
+    }
+
+    const classes = Array.from(grouped.values())
+      .map(group => ({
+        ...group,
+        students: group.students.sort((a, b) => a.studentName.localeCompare(b.studentName)),
+      }))
+      .sort((a, b) => a.className.localeCompare(b.className))
+
+    return {
+      success: true,
+      data: {
+        trackId: track.id,
+        trackName: track.name,
+        statusFilter: statusFilter as StudentStatusFilter,
+        totalStudents: filteredStudents.length,
+        classes,
+      },
+    }
+  } catch (error) {
+    console.error('Error in getTrackStudentDetails:', error)
+
+    return {
+      success: false,
+      error: 'Gagal mengambil detail santri per track',
     }
   }
 }

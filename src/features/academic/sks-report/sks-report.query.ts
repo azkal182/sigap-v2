@@ -4,8 +4,9 @@ import {
   getGlobalSummaryAction,
   getDormitoryBreakdownAction,
   getTrackBreakdownAction,
+  getTrackStudentDetailsAction,
 } from './actions/sks-report.action'
-import type { SksReportParams, TrackBreakdownParams } from './sks-report.schema'
+import type { SksReportParams, TrackBreakdownParams, TrackStudentDetailsParams } from './sks-report.schema'
 import { ActionError } from '@/utils/action-error'
 
 export function useGlobalSummary(params: SksReportParams, enabled: boolean = true) {
@@ -53,5 +54,21 @@ export function useTrackBreakdown(params: TrackBreakdownParams, enabled: boolean
       return res.data
     },
     enabled: enabled && !!params.dormitoryId,
+  })
+}
+
+export function useTrackStudentDetails(params: TrackStudentDetailsParams, enabled: boolean = true) {
+  return useQuery({
+    queryKey: ['sks_track_student_details', params],
+    queryFn: async () => {
+      const res = await getTrackStudentDetailsAction(params)
+
+      if (!res.success) {
+        throw new ActionError(res.error, res.issues)
+      }
+
+      return res.data
+    },
+    enabled: enabled && !!params.dormitoryId && !!params.trackId,
   })
 }

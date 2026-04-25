@@ -12,16 +12,17 @@ import {
   Chip,
 } from '@mui/material'
 
-import type { TrackBreakdownResult } from '../sks-report.schema'
+import type { StudentStatusFilter, TrackBreakdownResult } from '../sks-report.schema'
 
 interface TrackBreakdownCardProps {
   data: TrackBreakdownResult[]
+  onOpenDetail: (params: { trackId: string; trackName: string; statusFilter: StudentStatusFilter }) => void
 }
 
-export default function TrackBreakdownCard({ data }: TrackBreakdownCardProps) {
+export default function TrackBreakdownCard({ data, onOpenDetail }: TrackBreakdownCardProps) {
   return (
     <TableContainer component={Paper} variant='outlined'>
-      <Table>
+      <Table size='small'>
         <TableHead>
           <TableRow>
             <TableCell>Fan (Track)</TableCell>
@@ -41,19 +42,108 @@ export default function TrackBreakdownCard({ data }: TrackBreakdownCardProps) {
                   <Typography variant='body2'>{row.trackName}</Typography>
                 </Box>
               </TableCell>
-              <TableCell align='right'>{row.total}</TableCell>
               <TableCell align='right'>
-                <Typography variant='body2' color='success.main'>
+                <Typography
+                  component='button'
+                  type='button'
+                  variant='body2'
+                  onClick={() =>
+                    onOpenDetail({
+                      trackId: row.trackId,
+                      trackName: row.trackName,
+                      statusFilter: 'all',
+                    })
+                  }
+                  sx={{
+                    cursor: 'pointer',
+                    border: 'none',
+                    background: 'none',
+                    p: 0,
+                    font: 'inherit',
+                    color: 'text.primary',
+                    textDecoration: 'underline',
+                    textDecorationStyle: 'dotted',
+                    '&:hover': { color: 'primary.main' },
+                  }}
+                >
+                  {row.total}
+                </Typography>
+              </TableCell>
+              <TableCell align='right'>
+                <Typography
+                  component='button'
+                  type='button'
+                  variant='body2'
+                  color='success.main'
+                  onClick={() =>
+                    onOpenDetail({
+                      trackId: row.trackId,
+                      trackName: row.trackName,
+                      statusFilter: 'aman',
+                    })
+                  }
+                  sx={{
+                    cursor: 'pointer',
+                    border: 'none',
+                    background: 'none',
+                    p: 0,
+                    font: 'inherit',
+                    textDecoration: 'underline',
+                    textDecorationStyle: 'dotted',
+                  }}
+                >
                   {row.aman} ({row.amanPercent}%)
                 </Typography>
               </TableCell>
               <TableCell align='right'>
-                <Typography variant='body2' color='warning.main'>
+                <Typography
+                  component='button'
+                  type='button'
+                  variant='body2'
+                  color='warning.main'
+                  onClick={() =>
+                    onOpenDetail({
+                      trackId: row.trackId,
+                      trackName: row.trackName,
+                      statusFilter: 'waspada',
+                    })
+                  }
+                  sx={{
+                    cursor: 'pointer',
+                    border: 'none',
+                    background: 'none',
+                    p: 0,
+                    font: 'inherit',
+                    textDecoration: 'underline',
+                    textDecorationStyle: 'dotted',
+                  }}
+                >
                   {row.waspada} ({row.waspadaPercent}%)
                 </Typography>
               </TableCell>
               <TableCell align='right'>
-                <Typography variant='body2' color='error.main'>
+                <Typography
+                  component='button'
+                  type='button'
+                  variant='body2'
+                  color='error.main'
+                  onClick={() =>
+                    onOpenDetail({
+                      trackId: row.trackId,
+                      trackName: row.trackName,
+                      statusFilter: 'telat',
+                    })
+                  }
+                  sx={{
+                    cursor: 'pointer',
+                    border: 'none',
+                    background: 'none',
+                    p: 0,
+                    font: 'inherit',
+                    textDecoration: 'underline',
+                    textDecorationStyle: 'dotted',
+                  }}
+                >
                   {row.telat} ({row.telatPercent}%)
                 </Typography>
               </TableCell>

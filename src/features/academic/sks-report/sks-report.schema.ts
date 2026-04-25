@@ -13,11 +13,21 @@ export const trackBreakdownParamsSchema = z.object({
   endDate: z.date({ required_error: 'Tanggal akhir wajib diisi' }),
 })
 
+export const trackStudentDetailsParamsSchema = z.object({
+  dormitoryId: z.string().min(1, 'Asrama wajib dipilih'),
+  trackId: z.string().min(1, 'Track wajib dipilih'),
+  statusFilter: z.enum(['all', 'aman', 'waspada', 'telat']).default('all'),
+  startDate: z.date({ required_error: 'Tanggal mulai wajib diisi' }),
+  endDate: z.date({ required_error: 'Tanggal akhir wajib diisi' }),
+})
+
 export type SksReportParams = z.infer<typeof sksReportParamsSchema>
 export type TrackBreakdownParams = z.infer<typeof trackBreakdownParamsSchema>
+export type TrackStudentDetailsParams = z.infer<typeof trackStudentDetailsParamsSchema>
 
 // Student status categories - 3 kategori berdasarkan sisa waktu
 export type StudentStatus = 'aman' | 'waspada' | 'telat'
+export type StudentStatusFilter = 'all' | StudentStatus
 
 // Result types
 export type StatusCounts = {
@@ -44,4 +54,29 @@ export type TrackBreakdownResult = StatusCounts & {
   trackId: string
   trackName: string
   level: number | null
+}
+
+export type TrackStudentDetailItem = {
+  studentId: string
+  studentName: string
+  classId: string | null
+  className: string
+  status: StudentStatus
+  daysLeft: number
+  daysStudied: number
+  targetDays: number
+}
+
+export type TrackStudentDetailGroup = {
+  classId: string | null
+  className: string
+  students: TrackStudentDetailItem[]
+}
+
+export type TrackStudentDetailsResult = {
+  trackId: string
+  trackName: string
+  statusFilter: StudentStatusFilter
+  totalStudents: number
+  classes: TrackStudentDetailGroup[]
 }
