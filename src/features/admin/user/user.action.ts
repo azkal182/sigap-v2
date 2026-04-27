@@ -3,11 +3,16 @@ import { hash } from 'bcryptjs'
 
 import { z } from 'zod'
 
-import { getUsers, getUsersFilter, updateCredentials } from './user.service'
+import { changeUserPasswordByAdmin, getUsers, getUsersFilter, updateCredentials } from './user.service'
 import { requirePermission } from '@/utils/require-permission'
 import prisma from '@/lib/prisma'
 import { redis } from '@/lib/redis'
-import { filterUserSchema, type FilterUserParams } from './schemas/user-schema'
+import {
+  changeUserPasswordByAdminSchema,
+  filterUserSchema,
+  type ChangeUserPasswordByAdminInput,
+  type FilterUserParams
+} from './schemas/user-schema'
 import { validateAndRun } from '@/utils/validate-and-run'
 
 export const getUsersAction = async () => {
@@ -246,4 +251,8 @@ export async function updateCredentialsAction(input: z.infer<typeof updateSchema
 
 export async function getUsersFilterAction(filter: FilterUserParams) {
   return validateAndRun(filterUserSchema, filter, getUsersFilter)
+}
+
+export async function changeUserPasswordByAdminAction(input: ChangeUserPasswordByAdminInput) {
+  return validateAndRun(changeUserPasswordByAdminSchema, input, changeUserPasswordByAdmin)
 }

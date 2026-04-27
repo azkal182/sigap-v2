@@ -1,8 +1,8 @@
 'use client'
 import { useMutation, useQuery } from '@tanstack/react-query'
 
-import { getUsersFilterAction, updateCredentialsAction } from './user.action'
-import type { FilterUserParams } from './schemas/user-schema'
+import { changeUserPasswordByAdminAction, getUsersFilterAction, updateCredentialsAction } from './user.action'
+import type { ChangeUserPasswordByAdminInput, FilterUserParams } from './schemas/user-schema'
 import { ActionError } from '@/utils/action-error'
 
 // export function useChangeCredentials() {
@@ -49,5 +49,19 @@ export const useUsers = (params: FilterUserParams, isValid: boolean) => {
       }
     },
     enabled: isValid
+  })
+}
+
+export const useChangeUserPasswordByAdmin = () => {
+  return useMutation({
+    mutationFn: async (input: ChangeUserPasswordByAdminInput) => {
+      const res = await changeUserPasswordByAdminAction(input)
+
+      if (!res.success) {
+        throw new ActionError(res.error, res.issues)
+      }
+
+      return res
+    }
   })
 }

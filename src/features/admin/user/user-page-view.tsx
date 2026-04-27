@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 
-import { Button, IconButton, Typography } from '@mui/material'
+import { Button, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, Typography } from '@mui/material'
 
 import type { ColumnDef } from '@tanstack/react-table'
 
@@ -10,12 +10,13 @@ import { getAllRoles, getAllDormitories, getAllPermissions, createUser, updateUs
 import { filterUserSchema, type createUserFormInput, type updateUserFormInput } from './schemas/user-schema'
 import { UserFormDialog } from './components/user-form-dialog'
 import { useCustomSearchParams } from '@/hooks/useCustomSearchParams'
-import { useUsers } from './user.query'
+import { useChangeUserPasswordByAdmin, useUsers } from './user.query'
 import { DataTableWithParams } from '@/components/DataTableWithParams'
 import type { UserWithAllRelations } from './user.service'
 import { ActionError } from '@/utils/action-error'
 import { toast } from 'react-toastify'
 import { useConfirm } from '@/hooks/useConfirm'
+import CustomTextField from '@/@core/components/mui/TextField'
 
 export default function UserPageView() {
   const [roles, setRoles] = useState<any[]>([])
@@ -23,7 +24,11 @@ export default function UserPageView() {
   const [permissions, setPermissions] = useState<any[]>([])
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<any>(null)
+  const [passwordDialogUser, setPasswordDialogUser] = useState<UserWithAllRelations | null>(null)
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const confirm = useConfirm()
+  const { mutateAsync: changePasswordByAdmin, isPending: changingPassword } = useChangeUserPasswordByAdmin()
 
   const searchParams = useCustomSearchParams({
     defaultParams: filterUserSchema
@@ -95,6 +100,47 @@ export default function UserPageView() {
     })
   }
 
+  const handleOpenPasswordDialog = (user: UserWithAllRelations) => {
+    setPasswordDialogUser(user)
+    setNewPassword('')
+    setConfirmPassword('')
+  }
+
+  const handleClosePasswordDialog = () => {
+    setPasswordDialogUser(null)
+    setNewPassword('')
+    setConfirmPassword('')
+  }
+
+  const handleChangePassword = async () => {
+    if (!passwordDialogUser) return
+
+    try {
+      await changePasswordByAdmin({
+        id: passwordDialogUser.id,
+        newPassword,
+        confirmPassword
+      })
+
+      toast.success(`Password user ${passwordDialogUser.name} berhasil diubah`)
+      handleClosePasswordDialog()
+    } catch (err: any) {
+      if (err instanceof ActionError) {
+        toast.error(err.message || 'Gagal mengubah password user')
+      } else {
+        toast.error(err.message || 'Gagal mengubah password user')
+      }
+    }
+  }
+
+  const passwordError = useMemo(() => {
+    if (!newPassword && !confirmPassword) return ''
+    if (newPassword.length > 0 && newPassword.length < 6) return 'Password minimal 6 karakter'
+    if (confirmPassword.length > 0 && newPassword !== confirmPassword) return 'Konfirmasi password tidak sama'
+
+    return ''
+  }, [newPassword, confirmPassword])
+
   const columns = useMemo<ColumnDef<UserWithAllRelations>[]>(
     () => [
       {
@@ -134,6 +180,9 @@ export default function UserPageView() {
             <div className='flex gap-2'>
               <IconButton size='small' onClick={() => handleEdit(dorm)}>
                 <i className='tabler-edit text-green-400' />
+              </IconButton>
+              <IconButton size='small' onClick={() => handleOpenPasswordDialog(dorm)}>
+                <i className='tabler-lock text-yellow-500' />
               </IconButton>
               <IconButton size='small' onClick={() => handleDelete(dorm)}>
                 <i className='tabler-trash text-red-400' />
@@ -182,6 +231,43 @@ export default function UserPageView() {
         dorms={dorms}
         permissions={permissions}
       />
+
+      <Dialog open={!!passwordDialogUser} onClose={handleClosePasswordDialog} maxWidth='xs' fullWidth>
+        <DialogTitle>Ganti Password User</DialogTitle>
+        <DialogContent className='space-y-4'>
+          <Typography variant='body2' color='text.secondary'>
+            User: <strong>{passwordDialogUser?.name}</strong>
+          </Typography>
+
+          <CustomTextField
+            fullWidth
+            type='password'
+            label='Password Baru'
+            value={newPassword}
+            onChange={e => setNewPassword(e.target.value)}
+            error={!!passwordError && newPassword.length > 0}
+          />
+          <CustomTextField
+            fullWidth
+            type='password'
+            label='Konfirmasi Password'
+            value={confirmPassword}
+            onChange={e => setConfirmPassword(e.target.value)}
+            error={!!passwordError && confirmPassword.length > 0}
+            helperText={passwordError || ' '}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClosePasswordDialog}>Batal</Button>
+          <Button
+            variant='contained'
+            onClick={handleChangePassword}
+            disabled={changingPassword || !newPassword || !confirmPassword || !!passwordError}
+          >
+            Simpan Password
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   )
 }

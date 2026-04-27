@@ -3,8 +3,8 @@ import { hash } from 'bcryptjs'
 import { Prisma } from '@/generated/prisma/client'
 
 import prisma from '@/lib/prisma'
-import type { FilterUserParams } from './schemas/user-schema'
-import type { APIPaginatedResult } from '@/types/api-types'
+import type { ChangeUserPasswordByAdminInput, FilterUserParams } from './schemas/user-schema'
+import type { APIResult, APIPaginatedResult } from '@/types/api-types'
 
 export const getUsers = async () => {
   return prisma.user.findMany({
@@ -110,4 +110,44 @@ export async function updateCredentials(userId: string, data: { username: string
     where: { id: userId },
     data: updateData
   })
+}
+
+export async function changeUserPasswordByAdmin(
+  input: ChangeUserPasswordByAdminInput
+): Promise<APIResult<{ id: string; name: string }>> {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: input.id },
+      select: { id: true, name: true }
+    })
+
+    if (!user) {
+      return { success: false, error: 'User tidak ditemukan' }
+    }
+
+    const hashedPassword = await hash(input.newPassword.trim(), 10)
+
+    const updated = await prisma.user.update({
+      where: { id: input.id },
+      data: {
+        password: hashedPassword,
+        mustChangeCredentials: false
+      },
+      select: {
+        id: true,
+        name: true
+      }
+    })
+
+    return {
+      success: true,
+      data: updated,
+      message: `Password user ${updated.name} berhasil diubah`
+    }
+  } catch {
+    return {
+      success: false,
+      error: 'Gagal mengubah password user'
+    }
+  }
 }

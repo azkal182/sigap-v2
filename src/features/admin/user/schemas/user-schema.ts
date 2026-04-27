@@ -31,3 +31,16 @@ export const updateUserSchema = createUserSchema
 export type createUserFormInput = z.infer<typeof createUserSchema>
 export type updateUserFormInput = z.infer<typeof updateUserSchema>
 export type FilterUserParams = z.infer<typeof filterUserSchema>
+
+export const changeUserPasswordByAdminSchema = z
+  .object({
+    id: z.string().uuid('ID user tidak valid'),
+    newPassword: z.string().min(6, 'Minimal 6 karakter'),
+    confirmPassword: z.string().min(6, 'Minimal 6 karakter')
+  })
+  .refine(data => data.newPassword === data.confirmPassword, {
+    path: ['confirmPassword'],
+    message: 'Konfirmasi password tidak sama'
+  })
+
+export type ChangeUserPasswordByAdminInput = z.infer<typeof changeUserPasswordByAdminSchema>
