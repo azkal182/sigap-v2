@@ -20,6 +20,7 @@ import StyledVerticalNavExpandIcon from '@menu/styles/vertical/StyledVerticalNav
 import menuItemStyles from '@core/styles/vertical/menuItemStyles'
 import menuSectionStyles from '@core/styles/vertical/menuSectionStyles'
 import { permissionHelper } from '@/utils/permission-helper'
+import { usePermissionStore } from '@/store/permission'
 
 type RenderExpandIconProps = {
   open?: boolean
@@ -261,9 +262,12 @@ const VerticalMenu = ({ scrollMenu }: Props) => {
 
   // Vars
   const { isBreakpointReached, transitionDuration } = verticalNavOptions
+  const user = usePermissionStore(state => state.user)
+  const managedClass = usePermissionStore(state => state.managedClass)
 
   const ScrollWrapper = isBreakpointReached ? 'div' : PerfectScrollbar
   const accessibleMenu = permissionHelper.filterAccessibleMenu(menuItems)
+  const showHomeroomMenu = user?.role === 'PENGAJAR' && !!managedClass
 
   return (
     // eslint-disable-next-line lines-around-comment
@@ -296,6 +300,13 @@ const VerticalMenu = ({ scrollMenu }: Props) => {
             {renderMenuItems(section.items)}
           </MenuSection>
         ))}
+        {showHomeroomMenu && (
+          <MenuSection label='Wali Kelas'>
+            <MenuItem href='/teacher/homeroom' icon={<i className='tabler-users-group' />}>
+              Daftar Santri
+            </MenuItem>
+          </MenuSection>
+        )}
       </Menu>
       {/* <Menu
         popoutMenuOffset={{ mainAxis: 23 }}
