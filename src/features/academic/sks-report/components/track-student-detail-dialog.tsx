@@ -45,6 +45,27 @@ const statusChipLabel: Record<StudentStatus, string> = {
   telat: 'Telat',
 }
 
+function StudentMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <Box
+      sx={{
+        minWidth: 0,
+        px: 1,
+        py: 0.75,
+        borderRadius: 1.5,
+        bgcolor: 'action.hover',
+      }}
+    >
+      <Typography variant='caption' color='text.secondary' sx={{ display: 'block', lineHeight: 1.2 }}>
+        {label}
+      </Typography>
+      <Typography variant='body2' fontWeight={600} sx={{ lineHeight: 1.2, mt: 0.25 }}>
+        {value}
+      </Typography>
+    </Box>
+  )
+}
+
 export default function TrackStudentDetailDialog({
   open,
   loading,
@@ -129,24 +150,42 @@ export default function TrackStudentDetailDialog({
 
                 <List dense disablePadding>
                   {classGroup.students.map(student => (
-                    <ListItem key={student.studentId} divider sx={{ px: 2, py: 1.25, gap: 1.25, alignItems: 'center' }}>
+                    <ListItem
+                      key={student.studentId}
+                      divider
+                      sx={{
+                        px: 2,
+                        py: 1.25,
+                        gap: 1.5,
+                        alignItems: 'flex-start',
+                      }}
+                    >
                       <Box sx={{ minWidth: 0, flex: 1 }}>
-                        <Typography variant='body2' sx={{ fontWeight: 500 }} noWrap>
+                        <Typography variant='body2' sx={{ fontWeight: 600 }} noWrap>
                           {student.studentName}
                         </Typography>
-                        <Typography variant='caption' color='text.secondary'>
-                          Belajar {student.daysStudied} hari • Sisa {student.daysLeft} hari
-                        </Typography>
-                        <Typography variant='caption' color='text.secondary' sx={{ display: 'block' }}>
-                          SKS tercapai {student.completedSks}/{student.totalSks}
-                        </Typography>
+
+                        <Box
+                          sx={{
+                            mt: 1,
+                            display: 'grid',
+                            gridTemplateColumns: isMobile ? 'repeat(2, minmax(0, 1fr))' : 'repeat(4, minmax(0, 1fr))',
+                            gap: 0.75,
+                          }}
+                        >
+                          <StudentMetric label='Belajar' value={`${student.daysStudied} hari`} />
+                          <StudentMetric label='Sisa' value={`${student.daysLeft} hari`} />
+                          <StudentMetric label='Target' value={`${student.targetDays} hari`} />
+                          <StudentMetric label='SKS' value={`${student.completedSks}/${student.totalSks}`} />
+                        </Box>
                       </Box>
+
                       <Chip
                         size='small'
                         label={statusChipLabel[student.status]}
                         color={statusChipColor[student.status]}
                         variant='outlined'
-                        sx={{ flexShrink: 0 }}
+                        sx={{ flexShrink: 0, mt: 0.25 }}
                       />
                     </ListItem>
                   ))}
