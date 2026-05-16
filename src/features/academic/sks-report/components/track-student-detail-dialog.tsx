@@ -66,6 +66,14 @@ function StudentMetric({ label, value }: { label: string; value: string }) {
   )
 }
 
+function formatRemainingDays(daysLeft: number) {
+  if (daysLeft < 0) {
+    return `lebih ${Math.abs(daysLeft)} hari`
+  }
+
+  return `${daysLeft} hari`
+}
+
 export default function TrackStudentDetailDialog({
   open,
   loading,
@@ -174,7 +182,7 @@ export default function TrackStudentDetailDialog({
                           }}
                         >
                           <StudentMetric label='Belajar' value={`${student.daysStudied} hari`} />
-                          <StudentMetric label='Sisa' value={`${student.daysLeft} hari`} />
+                          <StudentMetric label='Sisa' value={formatRemainingDays(student.daysLeft)} />
                           <StudentMetric label='Target' value={`${student.targetDays} hari`} />
                           <StudentMetric label='SKS' value={`${student.completedSks}/${student.totalSks}`} />
                         </Box>

@@ -26,8 +26,8 @@ export default function SksReportFilters({
 
   return (
     <Card>
-      <CardContent>
-        <Grid container spacing={3}>
+      <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+        <Grid container spacing={{ xs: 2, md: 3 }}>
           <Grid item xs={12} md={4}>
             <DatePicker
               label='Tanggal Mulai'
@@ -40,6 +40,7 @@ export default function SksReportFilters({
               slotProps={{
                 textField: {
                   fullWidth: true,
+                  size: 'small',
                 },
               }}
             />
@@ -57,6 +58,7 @@ export default function SksReportFilters({
               slotProps={{
                 textField: {
                   fullWidth: true,
+                  size: 'small',
                 },
               }}
             />
@@ -71,6 +73,7 @@ export default function SksReportFilters({
               onChange={(_, newValue) => {
                 onDormitoryChange(newValue.map(d => d.id))
               }}
+              size='small'
               renderInput={params => (
                 <CustomTextField {...params} label='Pilih Asrama' placeholder='Pilih 1 atau lebih asrama' />
               )}

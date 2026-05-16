@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-import { Card, CardContent, CardHeader, Typography, Grid, Alert, CircularProgress } from '@mui/material'
+import { Card, CardContent, CardHeader, Typography, Grid, Alert, CircularProgress, Box, useMediaQuery, useTheme } from '@mui/material'
 import { startOfMonth, endOfMonth } from 'date-fns'
 
 import { useGlobalSummary, useDormitoryBreakdown, useTrackBreakdown, useTrackStudentDetails } from './sks-report.query'
@@ -14,6 +14,8 @@ import SksReportFilters from './components/sks-report-filters'
 import TrackStudentDetailDialog from './components/track-student-detail-dialog'
 
 export default function SksReportPageView() {
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const now = new Date()
 
   const [selectedDormitoryIds, setSelectedDormitoryIds] = useState<string[]>([])
@@ -81,8 +83,10 @@ export default function SksReportPageView() {
   }
 
   return (
-    <div className='space-y-6'>
-      <Typography variant='h4'>Laporan Progress SKS - Bulanan</Typography>
+    <Box sx={{ px: { xs: 0, sm: 0.5 } }} className='space-y-6'>
+      <Typography variant='h4' sx={{ fontSize: { xs: '1.5rem', sm: '2rem' }, lineHeight: 1.2 }}>
+        Laporan Progress SKS - Bulanan
+      </Typography>
 
       {/* Filters */}
       <SksReportFilters
@@ -100,7 +104,7 @@ export default function SksReportPageView() {
         <>
           {loadingGlobal ? (
             <Card>
-              <CardContent className='flex justify-center py-12'>
+              <CardContent className='flex justify-center py-8 sm:py-12'>
                 <CircularProgress />
               </CardContent>
             </Card>
@@ -114,14 +118,18 @@ export default function SksReportPageView() {
 
       {/* Dormitory & Track Breakdown Grid */}
       {selectedDormitoryIds.length > 0 && (
-        <Grid container spacing={3}>
+        <Grid container spacing={{ xs: 2, md: 3 }}>
           {/* Dormitory Breakdown */}
           <Grid item xs={12} md={selectedTrackDormitoryId ? 6 : 12}>
             <Card>
-              <CardHeader title='Breakdown per Asrama' />
+              <CardHeader
+                title='Breakdown per Asrama'
+                sx={{ pb: 1, '& .MuiCardHeader-content': { minWidth: 0 } }}
+                titleTypographyProps={{ variant: isMobile ? 'h6' : 'h5' }}
+              />
               <CardContent>
                 {loadingDormitory ? (
-                  <div className='flex justify-center py-8'>
+                  <div className='flex justify-center py-6 sm:py-8'>
                     <CircularProgress />
                   </div>
                 ) : dormitoryBreakdown ? (
@@ -142,10 +150,14 @@ export default function SksReportPageView() {
           {selectedTrackDormitoryId && (
             <Grid item xs={12} md={6}>
               <Card>
-                <CardHeader title='Breakdown per Fan (Track)' />
+                <CardHeader
+                  title='Breakdown per Fan (Track)'
+                  sx={{ pb: 1, '& .MuiCardHeader-content': { minWidth: 0 } }}
+                  titleTypographyProps={{ variant: isMobile ? 'h6' : 'h5' }}
+                />
                 <CardContent>
                   {loadingTrack ? (
-                    <div className='flex justify-center py-8'>
+                    <div className='flex justify-center py-6 sm:py-8'>
                       <CircularProgress />
                     </div>
                   ) : trackBreakdown ? (
@@ -168,6 +180,6 @@ export default function SksReportPageView() {
         statusFilter={trackDetailSelection?.statusFilter || 'all'}
         onClose={() => setTrackDetailSelection(null)}
       />
-    </div>
+    </Box>
   )
 }
