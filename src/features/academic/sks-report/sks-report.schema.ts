@@ -32,9 +32,9 @@ export type StudentStatusFilter = 'all' | StudentStatus
 // Result types
 export type StatusCounts = {
   total: number
-  aman: number // Aman: Sisa waktu ≤ 40% dari target
-  waspada: number // Waspada: Sisa waktu > 40% hingga batas target
-  telat: number // Telat: Waktu sudah melewati target
+  aman: number // Aman: masih di bawah 70% target
+  waspada: number // Waspada: 70% sampai sebelum target
+  telat: number // Telat: sudah melewati target
   // Percentages
   amanPercent: number
   waspadaPercent: number
@@ -65,6 +65,8 @@ export type TrackStudentDetailItem = {
   daysLeft: number
   daysStudied: number
   targetDays: number
+  completedSks: number
+  totalSks: number
 }
 
 export type TrackStudentDetailGroup = {

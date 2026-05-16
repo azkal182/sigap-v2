@@ -1,6 +1,7 @@
 'use server'
 
 import db from '@/lib/prisma'
+import { RegistrationStatus } from '@/generated/prisma/client'
 import type { APIResult } from '@/types/api-types'
 import type {
   SksReportParams,
@@ -17,25 +18,25 @@ import type {
   StatusCounts,
 } from './sks-report.schema'
 
-// Helper function to determine student status based on remaining time ratio
+// Helper function to determine student status based on progress toward targetDays
 function getStudentStatus(student: { daysLeft: number; targetDays: number }): StudentStatus {
   const { daysLeft, targetDays } = student
+  const daysStudied = targetDays - daysLeft
 
-  // Telat: Waktu sudah melewati target (daysLeft < 0)
-  if (daysLeft < 0) {
+  // Telat: Sudah melewati target
+  if (daysStudied >= targetDays) {
     return 'telat'
   }
 
-  // Hitung rasio sisa waktu
-  const remainingRatio = (daysLeft / targetDays) * 100
+  // Waspada: Sudah mencapai 70% atau lebih dari target, tapi belum lewat target
+  const progressRatio = (daysStudied / targetDays) * 100
 
-  // Aman: Sisa waktu ≤ 70% dari target
-  if (remainingRatio <= 70) {
-    return 'aman'
+  if (progressRatio >= 70) {
+    return 'waspada'
   }
 
-  // Waspada: Sisa waktu > 70% hingga batas target
-  return 'waspada'
+  // Aman: Masih di bawah 70% target
+  return 'aman'
 }
 
 // Helper to calculate percentages
@@ -430,6 +431,22 @@ export async function getTrackStudentDetails(
     }
 
     const targetDays = track.targetDays || 180
+    const now = new Date()
+
+    const activeSks = await db.sks.findMany({
+      where: {
+        trackId,
+        deletedAt: null,
+        validFrom: { lte: now },
+        OR: [{ validTo: null }, { validTo: { gte: now } }],
+      },
+      select: {
+        id: true,
+      },
+    })
+
+    const activeSksIds = activeSks.map(sks => sks.id)
+    const totalSks = activeSksIds.length
 
     const students = await db.student.findMany({
       where: {
@@ -469,6 +486,15 @@ export async function getTrackStudentDetails(
             },
           },
         },
+        testRegistration: {
+          where: {
+            sksId: { in: activeSksIds },
+          },
+          select: {
+            status: true,
+            sksId: true,
+          },
+        },
       },
       orderBy: {
         name: 'asc',
@@ -482,9 +508,13 @@ export async function getTrackStudentDetails(
       if (!currentHistory) continue
 
       const historyStartDate = currentHistory.startDate
-      const now = new Date()
       const daysStudied = Math.floor((now.getTime() - historyStartDate.getTime()) / (1000 * 60 * 60 * 24))
       const daysLeft = targetDays - daysStudied
+      const completedSks = new Set(
+        student.testRegistration
+          .filter(item => item.status === RegistrationStatus.COMPLETED)
+          .map(item => item.sksId),
+      ).size
 
       const status = getStudentStatus({
         daysLeft,
@@ -504,6 +534,8 @@ export async function getTrackStudentDetails(
         daysLeft,
         daysStudied,
         targetDays,
+        completedSks,
+        totalSks,
       })
     }
 

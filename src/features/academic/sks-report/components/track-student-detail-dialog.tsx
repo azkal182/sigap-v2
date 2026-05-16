@@ -137,6 +137,9 @@ export default function TrackStudentDetailDialog({
                         <Typography variant='caption' color='text.secondary'>
                           Belajar {student.daysStudied} hari • Sisa {student.daysLeft} hari
                         </Typography>
+                        <Typography variant='caption' color='text.secondary' sx={{ display: 'block' }}>
+                          SKS tercapai {student.completedSks}/{student.totalSks}
+                        </Typography>
                       </Box>
                       <Chip
                         size='small'
