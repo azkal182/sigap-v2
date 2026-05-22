@@ -32,6 +32,7 @@ import { usePermissionStore } from '@/store/permission'
 import CustomTextField from '@core/components/mui/TextField'
 
 const SPECIAL_DORM_ID = 'b2c3d4e5-f6a7-8901-2345-abcdef012345'
+const FRIDAY_WEEK_DORM_ID = 'c7d8e9f0-a1b2-3456-7890-345678901234'
 
 const getStatusIcon = (status?: AbsenceStatus): React.ReactElement => {
   const iconSize = 'size-4'
@@ -263,7 +264,13 @@ export default function AbsensiPage() {
   const { data: classes, isLoading: classesLoading } = useClassesByDormitory({ dormitoryId })
 
   const slotsPerDay = useMemo(() => (dormitoryId === SPECIAL_DORM_ID ? 4 : 3), [dormitoryId])
-  const startDayOfWeek = useMemo(() => (dormitoryId === SPECIAL_DORM_ID ? 3 : 6), [dormitoryId])
+  const isFridayWeekDorm = useMemo(() => dormitoryId === FRIDAY_WEEK_DORM_ID, [dormitoryId])
+  const startDayOfWeek = useMemo(() => {
+    if (dormitoryId === SPECIAL_DORM_ID) return 3
+    if (isFridayWeekDorm) return 5
+    return 6
+  }, [dormitoryId, isFridayWeekDorm])
+  const skipWeekdays = useMemo(() => (isFridayWeekDorm ? [4] : [5]), [isFridayWeekDorm])
 
   // Luxon: jangan hitung "now" setiap render
   const nowJakarta = useMemo(() => DateTime.now().setZone('Asia/Jakarta'), [])
@@ -335,7 +342,7 @@ export default function AbsensiPage() {
         if (cancelled) return
 
         const data = res.data
-        const uniqueDates = getUniqueDates(data, year, month, startDayOfWeek)
+        const uniqueDates = getUniqueDates(data, year, month, skipWeekdays, startDayOfWeek)
         const weeklyData = groupDatesByWeek(uniqueDates, startDayOfWeek)
 
         setAttendanceData(data)

@@ -189,9 +189,10 @@ export const getUniqueDates = (
   data: AbsenceReportData[],
   year: number,
   month: number,
+  skipWeekdays: number[] = [5],
   startWeekDay?: number
 ): string[] => {
-  return generateFullMonthDates(year, month, [5], startWeekDay) // skip Jumat(5)
+  return generateFullMonthDates(year, month, skipWeekdays, startWeekDay)
 }
 
 // Helper untuk mengelompokkan tanggal ke dalam minggu
