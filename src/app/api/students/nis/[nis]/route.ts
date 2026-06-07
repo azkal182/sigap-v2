@@ -35,7 +35,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ nis:
 
   const student = await prisma.student.findUnique({
     where: { nis },
-    select: { id: true, nis: true, name: true, address: true }
+    select: { id: true, nis: true, name: true, address: true },
   })
 
   if (!student) return Response.json({ error: 'Student not found' }, { status: 404 })
@@ -44,13 +44,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ nis:
 
   if (periodId) {
     const count = await prisma.response.count({
-      where: { studentId: student.id, periodId }
+      where: { studentId: student.id, periodId },
     })
 
     hasResponded = count > 0
   }
 
   return Response.json({
-    data: periodId ? { ...student, hasResponded } : student
+    data: periodId ? { ...student, hasResponded } : student,
   })
 }
