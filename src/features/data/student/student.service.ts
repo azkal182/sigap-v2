@@ -1234,14 +1234,15 @@ export type ReactivateStudentInput = {
   studentId: string
   reactivateDate: Date
   dormitoryId: string // Required
-  classId?: string // Optional
+  trackId: string
+  classId: string
   formalClassId?: string // Optional
   dormitoryRoomId?: string // Optional
   notes?: string
 }
 
 export async function reactivateStudent(input: ReactivateStudentInput): Promise<APIResult<void>> {
-  const { studentId, reactivateDate, dormitoryId, classId, formalClassId, dormitoryRoomId, notes } = input
+  const { studentId, reactivateDate, dormitoryId, trackId, classId, formalClassId, dormitoryRoomId } = input
 
   try {
     // 1. Get student
@@ -1265,6 +1266,33 @@ export async function reactivateStudent(input: ReactivateStudentInput): Promise<
 
     if (!dormitory) {
       return { success: false, error: 'Dormitory tidak ditemukan' }
+    }
+
+    const dormitoryTrack = await db.dormitoryTrack.findUnique({
+      where: {
+        dormitoryId_trackId: {
+          dormitoryId,
+          trackId,
+        },
+      },
+    })
+
+    if (!dormitoryTrack) {
+      return { success: false, error: 'Fan tidak terdaftar pada asrama yang dipilih' }
+    }
+
+    const classData = await db.class.findFirst({
+      where: {
+        id: classId,
+        dormitoryId,
+        trackId,
+        active: true,
+      },
+      include: { track: true, dormitory: true },
+    })
+
+    if (!classData) {
+      return { success: false, error: 'Kelas tidak sesuai dengan asrama dan fan yang dipilih' }
     }
 
     // 3. Execute transaction
@@ -1296,27 +1324,17 @@ export async function reactivateStudent(input: ReactivateStudentInput): Promise<
         },
       })
 
-      // Create new History if class is provided
-      if (classId) {
-        const classData = await tx.class.findUnique({
-          where: { id: classId },
-          include: { track: true, dormitory: true },
-        })
-
-        if (classData) {
-          await tx.history.create({
-            data: {
-              studentId,
-              classId,
-              startDate: reactivateDate,
-              status: 'STUDYING',
-              classNameAtThatTime: classData.name,
-              trackNameAtThatTime: classData.track.name,
-              dormNameAtThatTime: classData.dormitory.name,
-            },
-          })
-        }
-      }
+      await tx.history.create({
+        data: {
+          studentId,
+          classId,
+          startDate: reactivateDate,
+          status: 'STUDYING',
+          classNameAtThatTime: classData.name,
+          trackNameAtThatTime: classData.track.name,
+          dormNameAtThatTime: classData.dormitory.name,
+        },
+      })
     })
 
     return { success: true, data: undefined }

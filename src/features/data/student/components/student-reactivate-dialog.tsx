@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import { useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -13,16 +14,21 @@ import {
   FormControl,
   FormLabel,
   Alert,
-  TextField,
   Stack,
+  MenuItem,
 } from '@mui/material'
 import { DatePicker } from '@mui/lab'
 import { toast } from 'react-toastify'
 
+import CustomTextField from '@/@core/components/mui/TextField'
+import { useClass, useDormitoryList, useDormitodyDetail } from '@/features/data/dormitory/dormitory.query'
+import type { ReactivateStudentInput } from '../student.service'
+
 const reactivateSchema = z.object({
   reactivateDate: z.date({ required_error: 'Tanggal reaktivasi wajib diisi' }),
   dormitoryId: z.string().min(1, 'Dormitory ID wajib diisi'),
-  notes: z.string().optional(),
+  trackId: z.string().min(1, 'Fan wajib dipilih'),
+  classId: z.string().min(1, 'Kelas wajib dipilih'),
 })
 
 type ReactivateForm = z.infer<typeof reactivateSchema>
@@ -32,7 +38,9 @@ interface StudentReactivateDialogProps {
   onClose: () => void
   studentId: string
   studentName: string
-  onSubmit: (data: ReactivateForm) => Promise<void>
+  onSubmit: (
+    data: Omit<ReactivateStudentInput, 'studentId' | 'formalClassId' | 'dormitoryRoomId' | 'notes'>,
+  ) => Promise<void>
 }
 
 export default function StudentReactivateDialog({
@@ -48,13 +56,33 @@ export default function StudentReactivateDialog({
     control,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<ReactivateForm>({
     resolver: zodResolver(reactivateSchema),
     defaultValues: {
       reactivateDate: new Date(),
+      dormitoryId: '',
+      trackId: '',
+      classId: '',
     },
   })
+
+  const dormitoryId = watch('dormitoryId')
+  const trackId = watch('trackId')
+  const dormitoryQuery = useDormitoryList()
+  const dormitoryDetailQuery = useDormitodyDetail(dormitoryId)
+  const classQuery = useClass(dormitoryId, trackId)
+
+  useEffect(() => {
+    setValue('trackId', '')
+    setValue('classId', '')
+  }, [dormitoryId, setValue])
+
+  useEffect(() => {
+    setValue('classId', '')
+  }, [trackId, setValue])
 
   const handleFormSubmit = async (data: ReactivateForm) => {
     setLoading(true)
@@ -84,10 +112,9 @@ export default function StudentReactivateDialog({
         <Stack spacing={3} sx={{ mt: 2 }}>
           <Alert severity='info'>
             <strong>Info:</strong> Reaktivasi <strong>{studentName}</strong> akan mengembalikan status menjadi aktif.
-            Silakan masukkan dormitory ID baru untuk student.
+            Tentukan asrama, fan, dan kelas baru sebelum santri diaktifkan kembali.
           </Alert>
 
-          {/* Reactivate Date */}
           <FormControl fullWidth>
             <FormLabel>Tanggal Reaktivasi *</FormLabel>
             <Controller
@@ -109,35 +136,71 @@ export default function StudentReactivateDialog({
             />
           </FormControl>
 
-          {/* Dormitory ID (Simple text input for now) */}
           <Controller
             name='dormitoryId'
             control={control}
             render={({ field }) => (
-              <TextField
+              <CustomTextField
                 {...field}
-                label='Dormitory ID *'
+                select
+                label='Asrama *'
                 fullWidth
                 error={!!errors.dormitoryId}
-                helperText={errors.dormitoryId?.message || 'ID dormitory tujuan'}
-                placeholder='Masukkan ID dormitory...'
-              />
+                helperText={errors.dormitoryId?.message}
+              >
+                <MenuItem value=''>Pilih asrama</MenuItem>
+                {(dormitoryQuery.data ?? []).map(item => (
+                  <MenuItem key={item.id} value={item.id}>
+                    {item.name}
+                  </MenuItem>
+                ))}
+              </CustomTextField>
             )}
           />
 
-          {/* Notes - Optional */}
           <Controller
-            name='notes'
+            name='trackId'
             control={control}
             render={({ field }) => (
-              <TextField
+              <CustomTextField
                 {...field}
-                label='Catatan (Optional)'
+                select
+                label='Fan *'
                 fullWidth
-                multiline
-                rows={2}
-                placeholder='Catatan reaktivasi...'
-              />
+                disabled={!dormitoryId || dormitoryDetailQuery.isLoading}
+                error={!!errors.trackId}
+                helperText={errors.trackId?.message}
+              >
+                <MenuItem value=''>Pilih fan</MenuItem>
+                {(dormitoryDetailQuery.data?.tracks ?? []).map(track => (
+                  <MenuItem key={track.id} value={track.id}>
+                    {track.name}
+                  </MenuItem>
+                ))}
+              </CustomTextField>
+            )}
+          />
+
+          <Controller
+            name='classId'
+            control={control}
+            render={({ field }) => (
+              <CustomTextField
+                {...field}
+                select
+                label='Kelas *'
+                fullWidth
+                disabled={!dormitoryId || !trackId || classQuery.isLoading}
+                error={!!errors.classId}
+                helperText={errors.classId?.message}
+              >
+                <MenuItem value=''>Pilih kelas</MenuItem>
+                {(classQuery.data ?? []).map(item => (
+                  <MenuItem key={item.id} value={item.id}>
+                    {item.name} | {item.teacher} | {item.studentCount} santri
+                  </MenuItem>
+                ))}
+              </CustomTextField>
             )}
           />
         </Stack>
