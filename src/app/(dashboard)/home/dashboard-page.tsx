@@ -109,7 +109,25 @@ import React, { useMemo, useState, useEffect } from 'react'
 // MUI Imports
 import Grid from '@mui/material/Grid2'
 import Typography from '@mui/material/Typography'
-import { Alert, Button } from '@mui/material'
+import {
+  Alert,
+  Box,
+  Button,
+  ButtonGroup,
+  Card,
+  CardContent,
+  CardHeader,
+  Chip,
+  CircularProgress,
+  Divider,
+  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+} from '@mui/material'
 
 // Charts & controls (sudah ada di project kamu)
 import RechartsPieChart from './RechartsPieChart'
@@ -123,6 +141,43 @@ export type Dormitory = {
   totalStudents: number
   statusCounts: Record<StatusKey, number>
   statusPercentages: Record<StatusKey, number>
+}
+
+type DashboardView = 'monitoring' | 'monthly'
+
+type StudentPermitItem = {
+  id: string
+  studentId: string
+  nis: string
+  name: string
+  dormitoryName: string
+  reason: string
+  startDate: string
+  endDate: string
+  allowedSlots: number[]
+  permitStatus: string
+  createdByName: string
+  createdByRole: string
+}
+
+type FullAbsentStudentItem = {
+  studentId: string
+  nis: string
+  name: string
+  dormitoryName: string
+  className: string
+  absentDate: string
+  slots: number[]
+  streakDays: number
+}
+
+type StudentMonitoringDashboard = {
+  date: string
+  permits: {
+    security: StudentPermitItem[]
+    other: StudentPermitItem[]
+  }
+  fullAbsentStudents: FullAbsentStudentItem[]
 }
 
 const pieColorMap: Record<string, string> = {
@@ -162,6 +217,237 @@ function normalizeDormitoryData(dorm: Dormitory): Dormitory {
   )
 
   return { ...dorm, statusPercentages: percentages }
+}
+
+function EmptyState({ message }: { message: string }) {
+  return <Alert severity='info'>{message}</Alert>
+}
+
+function PermitTable({ title, items }: { title: string; items: StudentPermitItem[] }) {
+  return (
+    <Card>
+      <CardHeader
+        title={title}
+        action={<Chip color={items.length > 0 ? 'warning' : 'default'} label={`${items.length} Santri`} />}
+      />
+      <Divider />
+      <CardContent>
+        {items.length === 0 ? (
+          <EmptyState message='Tidak ada santri izin aktif.' />
+        ) : (
+          <TableContainer>
+            <Table size='small'>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Santri</TableCell>
+                  <TableCell>Asrama</TableCell>
+                  <TableCell>Jenis</TableCell>
+                  <TableCell>Periode</TableCell>
+                  <TableCell>Jam</TableCell>
+                  <TableCell>Keterangan</TableCell>
+                  <TableCell>Pembuat</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {items.map(item => (
+                  <TableRow key={item.id}>
+                    <TableCell>
+                      <Typography variant='body2' fontWeight={600}>
+                        {item.name}
+                      </Typography>
+                      <Typography variant='caption' color='text.secondary'>
+                        NIS {item.nis}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>{item.dormitoryName}</TableCell>
+                    <TableCell>
+                      <Chip
+                        size='small'
+                        color={item.permitStatus === 'SICK' ? 'warning' : 'info'}
+                        label={item.permitStatus === 'SICK' ? 'Sakit' : 'Izin'}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      {item.startDate} - {item.endDate}
+                    </TableCell>
+                    <TableCell>{item.allowedSlots.length > 0 ? item.allowedSlots.join(', ') : 'Semua'}</TableCell>
+                    <TableCell>{item.reason}</TableCell>
+                    <TableCell>
+                      <Typography variant='body2'>{item.createdByName}</Typography>
+                      <Typography variant='caption' color='text.secondary'>
+                        {item.createdByRole}
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+function FullAbsentTable({ items }: { items: FullAbsentStudentItem[] }) {
+  return (
+    <Card>
+      <CardHeader
+        title='Santri Alpa Penuh'
+        subheader='Semua slot absensi pada hari ini berstatus alpa. Streak dihitung mundur maksimal 7 hari.'
+        action={<Chip color={items.length > 0 ? 'error' : 'default'} label={`${items.length} Santri`} />}
+      />
+      <Divider />
+      <CardContent>
+        {items.length === 0 ? (
+          <EmptyState message='Tidak ada santri alpa penuh pada hari ini.' />
+        ) : (
+          <TableContainer>
+            <Table size='small'>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Santri</TableCell>
+                  <TableCell>Asrama</TableCell>
+                  <TableCell>Kelas</TableCell>
+                  <TableCell>Jam Alpa</TableCell>
+                  <TableCell>Alpa Berurutan</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {items.map(item => (
+                  <TableRow key={item.studentId}>
+                    <TableCell>
+                      <Typography variant='body2' fontWeight={600}>
+                        {item.name}
+                      </Typography>
+                      <Typography variant='caption' color='text.secondary'>
+                        NIS {item.nis}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>{item.dormitoryName}</TableCell>
+                    <TableCell>{item.className}</TableCell>
+                    <TableCell>{item.slots.join(', ')}</TableCell>
+                    <TableCell>
+                      <Chip
+                        size='small'
+                        color={item.streakDays >= 3 ? 'error' : 'warning'}
+                        label={`${item.streakDays} hari`}
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+function StudentMonitoringView() {
+  const [data, setData] = useState<StudentMonitoringDashboard | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const controller = new AbortController()
+
+    setLoading(true)
+    setError(null)
+
+    fetch('/api/dashboard/student-monitoring?tz=Asia/Jakarta', { signal: controller.signal })
+      .then(async response => {
+        if (!response.ok) {
+          const payload = await response.json().catch(() => null)
+
+          throw new Error(payload?.error || 'Gagal memuat dashboard monitoring santri')
+        }
+
+        return response.json()
+      })
+      .then(setData)
+      .catch(error => {
+        if (error.name !== 'AbortError') setError(error.message || 'Gagal memuat dashboard monitoring santri')
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false)
+      })
+
+    return () => controller.abort()
+  }, [])
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className='flex justify-center py-10'>
+          <CircularProgress />
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (error) {
+    return <Alert severity='error'>{error}</Alert>
+  }
+
+  if (!data) {
+    return <Alert severity='warning'>Data dashboard monitoring tidak tersedia.</Alert>
+  }
+
+  return (
+    <Stack spacing={4}>
+      <Box>
+        <Typography variant='h4'>Dashboard Monitoring Santri</Typography>
+        <Typography variant='body2' color='text.secondary'>
+          Data izin aktif dan alpa penuh per {data.date}
+        </Typography>
+      </Box>
+
+      <Grid container spacing={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
+          <Card>
+            <CardContent>
+              <Typography variant='body2' color='text.secondary'>
+                Izin Keamanan
+              </Typography>
+              <Typography variant='h3' color='warning.main' fontWeight={700}>
+                {data.permits.security.length}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid size={{ xs: 12, md: 4 }}>
+          <Card>
+            <CardContent>
+              <Typography variant='body2' color='text.secondary'>
+                Izin Selain Keamanan
+              </Typography>
+              <Typography variant='h3' color='info.main' fontWeight={700}>
+                {data.permits.other.length}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid size={{ xs: 12, md: 4 }}>
+          <Card>
+            <CardContent>
+              <Typography variant='body2' color='text.secondary'>
+                Alpa Penuh Hari Ini
+              </Typography>
+              <Typography variant='h3' color='error.main' fontWeight={700}>
+                {data.fullAbsentStudents.length}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      <PermitTable title='Daftar Izin Keamanan' items={data.permits.security} />
+      <PermitTable title='Daftar Izin Selain Keamanan' items={data.permits.other} />
+      <FullAbsentTable items={data.fullAbsentStudents} />
+    </Stack>
+  )
 }
 
 // --- Komponen untuk halaman PDF (2 kolom x 3 baris per halaman A4) ---
@@ -233,6 +519,7 @@ function PdfPages({ data }: { data: Dormitory[] }) {
 }
 
 const DashboardPage = ({ dormitories }: { dormitories: Dormitory[] }) => {
+  const [view, setView] = useState<DashboardView>('monitoring')
   const normalized = useMemo(() => {
     // Ensure dormitories is an array before calling map
     if (!Array.isArray(dormitories)) return []
@@ -308,21 +595,34 @@ const DashboardPage = ({ dormitories }: { dormitories: Dormitory[] }) => {
   return (
     <div>
       <div className='flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-4'>
-        <Typography variant='h4'>Laporan Bulanan</Typography>
-        <div className='flex flex-col sm:flex-row sm:items-center gap-2'>
-          <Button
-            onClick={handleExportPdf}
-            disabled={normalized.length === 0 || exporting}
-            variant='contained'
-            className='w-full md:mt-auto'
-          >
-            {exporting ? 'Mengekspor…' : 'Export Pdf'}
+        <ButtonGroup variant='outlined'>
+          <Button variant={view === 'monitoring' ? 'contained' : 'outlined'} onClick={() => setView('monitoring')}>
+            Dashboard Monitoring
           </Button>
-          <MonthYearDropdown />
+          <Button variant={view === 'monthly' ? 'contained' : 'outlined'} onClick={() => setView('monthly')}>
+            Laporan Bulanan
+          </Button>
+        </ButtonGroup>
+        <div className='flex flex-col sm:flex-row sm:items-center gap-2'>
+          {view === 'monthly' && (
+            <>
+              <Button
+                onClick={handleExportPdf}
+                disabled={normalized.length === 0 || exporting}
+                variant='contained'
+                className='w-full md:mt-auto'
+              >
+                {exporting ? 'Mengekspor…' : 'Export Pdf'}
+              </Button>
+              <MonthYearDropdown />
+            </>
+          )}
         </div>
       </div>
 
-      {normalized.length === 0 ? (
+      {view === 'monitoring' ? (
+        <StudentMonitoringView />
+      ) : normalized.length === 0 ? (
         <Alert severity='warning'>Tidak Ada data untuk bulan ini</Alert>
       ) : (
         <Grid container spacing={6}>

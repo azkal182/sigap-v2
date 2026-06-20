@@ -11,6 +11,8 @@ type MonthRange = {
   label: string
 }
 
+type MonthlyReportSksStatus = 'Lulus' | 'Tidak Lulus' | 'Belum Tes'
+
 const PDF_THEME = {
   ink: '#172033',
   muted: '#64748b',
@@ -426,16 +428,18 @@ export async function getStudentMonthlyReport(params: MonthlyReportParams): Prom
       },
     })
 
-    const sks = sksRows.map(item => {
+    const sks: MonthlyStudentReport['sks'] = sksRows.map(item => {
       const latest = item.testRegistration[0]
       const score = latest?.test?.score ?? null
       const passingGrade = item.passingGrade ?? 0
+      const status: MonthlyReportSksStatus =
+        score === null ? 'Belum Tes' : score >= passingGrade ? 'Lulus' : 'Tidak Lulus'
 
       return {
         subjectName: item.name,
         score,
         passingGrade,
-        status: score === null ? 'Belum Tes' : score >= passingGrade ? 'Lulus' : 'Tidak Lulus',
+        status,
       }
     })
 

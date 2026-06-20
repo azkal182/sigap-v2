@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
 
   const result = await getStudentMonthlyReport({ studentId, classId, month, timeZone })
 
-  if (!result.success || !result.data) {
+  if (!result.success) {
     return new NextResponse(result.error || 'Gagal memuat data rapot', { status: 400 })
   }
 

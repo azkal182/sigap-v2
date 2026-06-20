@@ -83,7 +83,7 @@ export async function GET(req: NextRequest) {
 
   const studentsResult = await getMonthlyReportStudents({ classId, month, timeZone })
 
-  if (!studentsResult.success || !studentsResult.data) {
+  if (!studentsResult.success) {
     return new NextResponse(studentsResult.error || 'Gagal mengambil daftar santri', { status: 400 })
   }
 
@@ -96,7 +96,7 @@ export async function GET(req: NextRequest) {
   for (const student of studentsResult.data) {
     const reportResult = await getStudentMonthlyReport({ studentId: student.id, classId, month, timeZone })
 
-    if (!reportResult.success || !reportResult.data) continue
+    if (!reportResult.success) continue
 
     const pdfBuffer = await generateMonthlyStudentReportPdf(reportResult.data)
 
