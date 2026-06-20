@@ -147,6 +147,12 @@ export const menuItems: MenuConfigSection[] = [
         icon: 'tabler-chart-bar',
         permissions: ['user:view'],
       },
+      {
+        title: 'Rapot Bulanan',
+        href: '/academic/monthly-report',
+        icon: 'tabler-file-text',
+        permissions: ['student:view'],
+      },
     ],
   },
   {
