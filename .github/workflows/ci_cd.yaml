@@ -83,7 +83,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v2
         with:
-          version: 9.15.4
+          version: 9.15.2
 
       # --- Implementasi Cache ---
       - name: Cache pnpm store
@@ -317,8 +317,12 @@ jobs:
           echo "API_BASE_URL=${{ secrets.API_BASE_URL }}" >> .env
           echo "API_KEY=${{ secrets.API_KEY }}" >> .env
 
+          # Samakan versi pnpm dengan local dan CI
+          corepack enable
+          corepack prepare pnpm@9.15.2 --activate
+
           # Install dependensi
-          pnpm install --production
+          pnpm install --prod --frozen-lockfile
 
           # Verify Next.js 16 build structure and files
           echo "🔍 Verifying Next.js 16 deployment files..."
