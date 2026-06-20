@@ -3,7 +3,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { createAbsencesAction, getClassAbsencesAction, updateAbsencesAction } from './action'
+import { createAbsencesAction, createManualAbsencesAction, getClassAbsencesAction, updateAbsencesAction } from './action'
 import type { CreateAbsencesInput, GetClassAbsencesParams, UpdateAbsencesInput } from './schemas/attendent-schema'
 import { ActionError } from '@/utils/action-error'
 
@@ -32,6 +32,33 @@ export const useCreateAbsences = () => {
 
       if (scheduleId) {
         queryClient.invalidateQueries({ queryKey: ['absences', scheduleId] })
+      }
+    }
+  })
+}
+
+export const useCreateManualAbsences = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({
+      data,
+      absentDate
+    }: {
+      data: CreateAbsencesInput
+      absentDate: string
+    }) => {
+      const res = await createManualAbsencesAction({ data, absentDate })
+
+      if (!res.success) throw new Error(res.error)
+
+      return res.data
+    },
+    onSuccess: (_, variables) => {
+      const scheduleId = variables.data[0]?.scheduleId
+
+      if (scheduleId) {
+        queryClient.invalidateQueries({ queryKey: ['absences'] })
       }
     }
   })

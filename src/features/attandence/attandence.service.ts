@@ -10,7 +10,7 @@ import type { AbsenceStatus } from '@/generated/prisma/client'
 
 export async function createAbsences(
   data: CreateAbsencesInput,
-  filledByTeacherId: string,
+  filledByTeacherId: string | null,
   scheduleId: string,
 ): Promise<APIResult<{ count: number }>> {
   try {
@@ -35,7 +35,7 @@ export async function createAbsences(
       return { success: false, error: 'Jadwal tidak ditemukan.' }
     }
 
-    const isFilledByOwner = schedule.teacherId === filledByTeacherId
+    const isFilledByOwner = !!filledByTeacherId && schedule.teacherId === filledByTeacherId
 
     const tx = []
 

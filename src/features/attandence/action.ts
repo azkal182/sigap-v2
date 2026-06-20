@@ -15,6 +15,8 @@ import {
 import { handleServerError } from '@/lib/handle-error'
 import type { APIResult } from '@/types/api-types'
 import { validateAndRun } from '@/utils/validate-and-run'
+import { auth } from '@/lib/auth'
+import prisma from '@/lib/prisma'
 
 // ✅ Skema Zod untuk input Server Action
 const createAbsencesActionSchema = z.object({
@@ -60,6 +62,52 @@ export async function createAbsencesAction(
     return await createAbsences(validatedServiceData, filledByTeacherId, scheduleId)
   } catch (error) {
     const message = handleServerError('Gagal membuat absensi massal.', error)
+
+    return { success: false, error: message }
+  }
+}
+
+const createManualAbsencesActionSchema = z.object({
+  data: createAbsencesActionSchema.shape.data,
+  absentDate: createAbsencesActionSchema.shape.absentDate
+})
+
+export type CreateManualAbsencesActionInput = z.infer<typeof createManualAbsencesActionSchema>
+
+export async function createManualAbsencesAction(
+  input: CreateManualAbsencesActionInput
+): Promise<APIResult<{ count: number }>> {
+  try {
+    const session = await auth()
+
+    if (!session?.user?.id) {
+      return { success: false, error: 'Unauthorized' }
+    }
+
+    const { data, absentDate } = createManualAbsencesActionSchema.parse(input)
+    const jakartaDateTime = DateTime.fromISO(absentDate, { zone: 'utc' }).setZone('Asia/Jakarta')
+    const teacher = await prisma.teacher.findUnique({
+      where: { userId: session.user.id },
+      select: { id: true }
+    })
+
+    const absencesData = data.map(item => ({
+      ...item,
+      date: new Date(absentDate),
+      absentDate: jakartaDateTime.toFormat('yyyy-MM-dd')
+    }))
+
+    const scheduleId = absencesData[0]?.scheduleId
+
+    if (!scheduleId) {
+      return { success: false, error: 'Schedule ID is required' }
+    }
+
+    const validatedServiceData = createAbsencesSchema.parse(absencesData)
+
+    return await createAbsences(validatedServiceData, teacher?.id ?? null, scheduleId)
+  } catch (error) {
+    const message = handleServerError('Gagal membuat absensi manual.', error)
 
     return { success: false, error: message }
   }

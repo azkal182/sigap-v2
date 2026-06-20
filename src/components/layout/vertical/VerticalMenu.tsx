@@ -82,6 +82,11 @@ export const menuItems: MenuConfigSection[] = [
           },
         ],
       },
+      {
+        title: 'Absensi Manual',
+        href: '/attendance/manual',
+        icon: 'tabler-clipboard-plus',
+      },
     ],
   },
   {
