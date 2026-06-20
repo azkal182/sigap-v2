@@ -11,6 +11,22 @@ type MonthRange = {
   label: string
 }
 
+const PDF_THEME = {
+  ink: '#172033',
+  muted: '#64748b',
+  line: '#d8dee8',
+  softLine: '#e8edf4',
+  header: '#20364d',
+  headerSoft: '#eef4f8',
+  panel: '#f8fafc',
+  white: '#ffffff',
+  success: '#087f5b',
+  warning: '#b45309',
+  info: '#1d4ed8',
+  danger: '#b91c1c',
+  purple: '#6d28d9',
+}
+
 export type MonthlyReportStudentOption = {
   id: string
   nis: string
@@ -99,7 +115,7 @@ function getMonthRange(month: string, timeZone: string): MonthRange {
   return {
     start: parsed.startOf('month').toJSDate(),
     end: parsed.endOf('month').toJSDate(),
-    label: parsed.setLocale('id').toFormat('MMMM yyyy')
+    label: parsed.setLocale('id').toFormat('MMMM yyyy'),
   }
 }
 
@@ -159,7 +175,7 @@ function buildGroupedAttendance(
     slot: number
     status: AbsenceStatus
     note: string | null
-  }>
+  }>,
 ) {
   const groupedMap = new Map<string, Record<number, AbsenceStatus>>()
   let maxSlot = 0
@@ -178,8 +194,8 @@ function buildGroupedAttendance(
     maxSlot,
     groupedItems: Array.from(groupedMap.entries()).map(([date, slots]) => ({
       date,
-      slots
-    }))
+      slots,
+    })),
   }
 }
 
@@ -196,7 +212,7 @@ export async function getMonthlyReportStudents(params: {
       where: {
         classId: params.classId,
         startDate: { lte: end },
-        OR: [{ endDate: null }, { endDate: { gte: start } }]
+        OR: [{ endDate: null }, { endDate: { gte: start } }],
       },
       select: {
         student: {
@@ -204,15 +220,15 @@ export async function getMonthlyReportStudents(params: {
             id: true,
             nis: true,
             name: true,
-            status: true
-          }
-        }
+            status: true,
+          },
+        },
       },
       orderBy: {
         student: {
-          name: 'asc'
-        }
-      }
+          name: 'asc',
+        },
+      },
     })
 
     const studentsMap = new Map<string, MonthlyReportStudentOption>()
@@ -224,18 +240,18 @@ export async function getMonthlyReportStudents(params: {
         id: item.student.id,
         nis: item.student.nis,
         name: item.student.name,
-        status: item.student.status
+        status: item.student.status,
       })
     }
 
     return {
       success: true,
-      data: Array.from(studentsMap.values()).sort((a, b) => a.name.localeCompare(b.name))
+      data: Array.from(studentsMap.values()).sort((a, b) => a.name.localeCompare(b.name)),
     }
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Gagal mengambil daftar santri'
+      error: error instanceof Error ? error.message : 'Gagal mengambil daftar santri',
     }
   }
 }
@@ -257,8 +273,8 @@ export async function getStudentMonthlyReport(params: MonthlyReportParams): Prom
         motherName: true,
         parrentPhone: true,
         placeOfBirth: true,
-        dateOfBirth: true
-      }
+        dateOfBirth: true,
+      },
     })
 
     if (!student) {
@@ -272,17 +288,17 @@ export async function getStudentMonthlyReport(params: MonthlyReportParams): Prom
         name: true,
         dormitory: {
           select: {
-            name: true
-          }
+            name: true,
+          },
         },
         track: {
           select: {
             id: true,
             name: true,
-            targetDays: true
-          }
-        }
-      }
+            targetDays: true,
+          },
+        },
+      },
     })
 
     if (!classData) {
@@ -294,14 +310,14 @@ export async function getStudentMonthlyReport(params: MonthlyReportParams): Prom
         studentId: params.studentId,
         classId: params.classId,
         startDate: { lte: end },
-        OR: [{ endDate: null }, { endDate: { gte: start } }]
+        OR: [{ endDate: null }, { endDate: { gte: start } }],
       },
       orderBy: { startDate: 'asc' },
       select: {
         startDate: true,
         endDate: true,
-        status: true
-      }
+        status: true,
+      },
     })
 
     if (!reportHistory) {
@@ -318,7 +334,7 @@ export async function getStudentMonthlyReport(params: MonthlyReportParams): Prom
         trackId: classData.track.id,
         deletedAt: null,
         validFrom: { lte: end },
-        OR: [{ validTo: null }, { validTo: { gte: end } }]
+        OR: [{ validTo: null }, { validTo: { gte: end } }],
       },
       select: {
         id: true,
@@ -328,20 +344,20 @@ export async function getStudentMonthlyReport(params: MonthlyReportParams): Prom
           where: {
             studentId: params.studentId,
             status: RegistrationStatus.COMPLETED,
-            createdAt: { lte: end }
+            createdAt: { lte: end },
           },
           orderBy: {
-            createdAt: 'desc'
+            createdAt: 'desc',
           },
           take: 1,
           include: {
-            test: true
-          }
-        }
+            test: true,
+          },
+        },
       },
       orderBy: {
-        name: 'asc'
-      }
+        name: 'asc',
+      },
     })
 
     const sks = sksRows.map(item => {
@@ -353,7 +369,7 @@ export async function getStudentMonthlyReport(params: MonthlyReportParams): Prom
         subjectName: item.name,
         score,
         passingGrade,
-        status: score === null ? 'Belum Tes' : score >= passingGrade ? 'Lulus' : 'Tidak Lulus'
+        status: score === null ? 'Belum Tes' : score >= passingGrade ? 'Lulus' : 'Tidak Lulus',
       }
     })
 
@@ -364,11 +380,11 @@ export async function getStudentMonthlyReport(params: MonthlyReportParams): Prom
         studentId: params.studentId,
         date: {
           gte: start,
-          lte: end
+          lte: end,
         },
         schedule: {
-          classId: params.classId
-        }
+          classId: params.classId,
+        },
       },
       select: {
         date: true,
@@ -378,25 +394,25 @@ export async function getStudentMonthlyReport(params: MonthlyReportParams): Prom
           select: {
             subject: {
               select: {
-                name: true
-              }
+                name: true,
+              },
             },
             scheduleSlot: {
               select: {
-                slot: true
-              }
-            }
-          }
-        }
+                slot: true,
+              },
+            },
+          },
+        },
       },
-      orderBy: [{ date: 'asc' }, { schedule: { scheduleSlot: { slot: 'asc' } } }]
+      orderBy: [{ date: 'asc' }, { schedule: { scheduleSlot: { slot: 'asc' } } }],
     })
 
     const attendanceItems = attendanceRows.map(item => ({
       date: formatDate(item.date, timeZone) || '-',
       slot: item.schedule.scheduleSlot.slot,
       status: item.status,
-      note: item.note
+      note: item.note,
     }))
 
     const groupedAttendance = buildGroupedAttendance(attendanceItems)
@@ -409,25 +425,25 @@ export async function getStudentMonthlyReport(params: MonthlyReportParams): Prom
       absent: attendanceRows.filter(item => item.status === 'ABSENT').length,
       maxSlot: groupedAttendance.maxSlot,
       items: attendanceItems,
-      groupedItems: groupedAttendance.groupedItems
+      groupedItems: groupedAttendance.groupedItems,
     }
 
     const permitRows = await prisma.permit.findMany({
       where: {
         studentId: params.studentId,
         startDate: { lte: end },
-        OR: [{ endDate: null }, { endDate: { gte: start } }]
+        OR: [{ endDate: null }, { endDate: { gte: start } }],
       },
       select: {
         startDate: true,
         endDate: true,
         reason: true,
         permitSTatus: true,
-        allowedSlots: true
+        allowedSlots: true,
       },
       orderBy: {
-        startDate: 'asc'
-      }
+        startDate: 'asc',
+      },
     })
 
     return {
@@ -446,7 +462,7 @@ export async function getStudentMonthlyReport(params: MonthlyReportParams): Prom
           motherName: student.motherName,
           parrentPhone: student.parrentPhone,
           placeOfBirth: student.placeOfBirth,
-          dateOfBirth: student.dateOfBirth
+          dateOfBirth: student.dateOfBirth,
         },
         academicContext: {
           dormitoryName: classData.dormitory.name,
@@ -456,7 +472,7 @@ export async function getStudentMonthlyReport(params: MonthlyReportParams): Prom
           daysStudied,
           daysLeft,
           totalSks: sks.length,
-          passedSks
+          passedSks,
         },
         attendance,
         permits: {
@@ -468,25 +484,67 @@ export async function getStudentMonthlyReport(params: MonthlyReportParams): Prom
             endDate: formatDate(item.endDate, timeZone),
             reason: item.reason,
             type: item.permitSTatus,
-            allowedSlots: item.allowedSlots
-          }))
+            allowedSlots: item.allowedSlots,
+          })),
         },
-        sks
-      }
+        sks,
+      },
     }
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Gagal membuat rapot bulanan'
+      error: error instanceof Error ? error.message : 'Gagal membuat rapot bulanan',
     }
   }
 }
 
-function drawStatBox(doc: PDFKit.PDFDocument, x: number, y: number, width: number, label: string, value: string, color: string) {
-  doc.rect(x, y, width, 52).fillAndStroke('#f8f9fa', '#dee2e6')
-  doc.fillColor('black').font('Helvetica-Bold').fontSize(9).text(label, x + 8, y + 8, { width: width - 16, align: 'center' })
-  doc.fillColor(color).font('Helvetica-Bold').fontSize(16).text(value, x + 8, y + 24, { width: width - 16, align: 'center' })
-  doc.fillColor('black')
+function drawSectionHeader(doc: PDFKit.PDFDocument, title: string, x: number, width: number) {
+  ensureSpace(doc, 38)
+
+  const y = doc.y
+
+  doc.roundedRect(x, y, width, 26, 4).fill(PDF_THEME.headerSoft)
+  doc.rect(x, y, 4, 26).fill(PDF_THEME.header)
+  doc
+    .fillColor(PDF_THEME.ink)
+    .font('Helvetica-Bold')
+    .fontSize(11)
+    .text(title, x + 14, y + 7, {
+      width: width - 28,
+      align: 'left',
+    })
+  doc.fillColor(PDF_THEME.ink)
+  doc.y = y + 36
+}
+
+function drawStatBox(
+  doc: PDFKit.PDFDocument,
+  x: number,
+  y: number,
+  width: number,
+  label: string,
+  value: string,
+  color: string,
+) {
+  doc.roundedRect(x, y, width, 54, 6).fillAndStroke(PDF_THEME.white, PDF_THEME.line)
+  doc.rect(x, y, 4, 54).fill(color)
+  doc
+    .fillColor(PDF_THEME.muted)
+    .font('Helvetica-Bold')
+    .fontSize(8)
+    .text(label.toUpperCase(), x + 12, y + 10, {
+      width: width - 20,
+      align: 'left',
+    })
+  doc
+    .fillColor(color)
+    .font('Helvetica-Bold')
+    .fontSize(18)
+    .text(value, x + 12, y + 27, {
+      width: width - 20,
+      align: 'left',
+    })
+  doc.fillColor(PDF_THEME.ink)
 }
 
 function drawIdentityColumn(
@@ -495,15 +553,31 @@ function drawIdentityColumn(
   x: number,
   y: number,
   labelWidth: number,
-  valueWidth: number
+  valueWidth: number,
 ) {
   let currentY = y
 
   rows.forEach(([label, value]) => {
-    doc.font('Helvetica-Bold').fontSize(9).text(label, x, currentY, { width: labelWidth, align: 'left' })
-    doc.font('Helvetica-Bold').text(':', x + labelWidth, currentY, { width: 10, align: 'center' })
-    doc.font('Helvetica').text(value, x + labelWidth + 14, currentY, { width: valueWidth, align: 'left' })
-    currentY += 18
+    doc.fillColor(PDF_THEME.muted).font('Helvetica-Bold').fontSize(8).text(label.toUpperCase(), x, currentY, {
+      width: labelWidth,
+      align: 'left',
+    })
+    doc
+      .fillColor(PDF_THEME.muted)
+      .font('Helvetica-Bold')
+      .text(':', x + labelWidth, currentY, {
+        width: 10,
+        align: 'center',
+      })
+    doc
+      .fillColor(PDF_THEME.ink)
+      .font('Helvetica')
+      .fontSize(9)
+      .text(value, x + labelWidth + 14, currentY, {
+        width: valueWidth,
+        align: 'left',
+      })
+    currentY += 17
   })
 
   return currentY
@@ -525,30 +599,25 @@ function drawTableHeader(doc: PDFKit.PDFDocument, startX: number, headers: strin
   const rowHeight = 22
   const totalWidth = widths.reduce((acc, item) => acc + item, 0)
 
-  doc.rect(startX, startY, totalWidth, rowHeight).fillAndStroke('#34495e', '#2c3e50')
-  doc.fillColor('white').font('Helvetica-Bold').fontSize(9)
+  doc.rect(startX, startY, totalWidth, rowHeight).fillAndStroke(PDF_THEME.header, PDF_THEME.header)
+  doc.fillColor(PDF_THEME.white).font('Helvetica-Bold').fontSize(8)
 
   let currentX = startX
 
   headers.forEach((header, index) => {
     doc.text(header, currentX + 5, startY + 6, {
       width: widths[index] - 10,
-      align: index === 1 ? 'left' : 'center'
+      align: index === 1 ? 'left' : 'center',
     })
 
     currentX += widths[index]
   })
 
-  doc.fillColor('black')
+  doc.fillColor(PDF_THEME.ink)
   doc.y = startY + rowHeight
 }
 
-function drawAttendanceMatrixHeader(
-  doc: PDFKit.PDFDocument,
-  startX: number,
-  dateWidth: number,
-  slotWidths: number[]
-) {
+function drawAttendanceMatrixHeader(doc: PDFKit.PDFDocument, startX: number, dateWidth: number, slotWidths: number[]) {
   const startY = doc.y
   const topRowHeight = 22
   const secondRowHeight = 20
@@ -556,22 +625,24 @@ function drawAttendanceMatrixHeader(
   const totalSlotWidth = slotWidths.reduce((acc, item) => acc + item, 0)
   const totalWidth = noWidth + dateWidth + totalSlotWidth
 
-  doc.rect(startX, startY, totalWidth, topRowHeight + secondRowHeight).stroke('#dee2e6')
+  doc.rect(startX, startY, totalWidth, topRowHeight + secondRowHeight).stroke(PDF_THEME.softLine)
 
-  doc.rect(startX, startY, noWidth, topRowHeight + secondRowHeight).fillAndStroke('#34495e', '#2c3e50')
-  doc.rect(startX + noWidth, startY, dateWidth, topRowHeight + secondRowHeight).fillAndStroke('#34495e', '#2c3e50')
+  doc.rect(startX, startY, noWidth, topRowHeight + secondRowHeight).fillAndStroke(PDF_THEME.header, PDF_THEME.header)
+  doc
+    .rect(startX + noWidth, startY, dateWidth, topRowHeight + secondRowHeight)
+    .fillAndStroke(PDF_THEME.header, PDF_THEME.header)
   doc
     .rect(startX + noWidth + dateWidth, startY, totalSlotWidth, topRowHeight)
-    .fillAndStroke('#34495e', '#2c3e50')
+    .fillAndStroke(PDF_THEME.header, PDF_THEME.header)
 
   let slotX = startX + noWidth + dateWidth
 
   slotWidths.forEach(width => {
-    doc.rect(slotX, startY + topRowHeight, width, secondRowHeight).fillAndStroke('#34495e', '#2c3e50')
+    doc.rect(slotX, startY + topRowHeight, width, secondRowHeight).fillAndStroke(PDF_THEME.header, PDF_THEME.header)
     slotX += width
   })
 
-  doc.fillColor('white').font('Helvetica-Bold').fontSize(9)
+  doc.fillColor(PDF_THEME.white).font('Helvetica-Bold').fontSize(8)
   doc.text('No', startX + 5, startY + 14, { width: noWidth - 10, align: 'center' })
   doc.text('Tanggal', startX + noWidth + 5, startY + 14, { width: dateWidth - 10, align: 'left' })
   doc.text('Jam Ke', startX + noWidth + dateWidth + 5, startY + 6, { width: totalSlotWidth - 10, align: 'center' })
@@ -580,33 +651,40 @@ function drawAttendanceMatrixHeader(
   slotWidths.forEach((width, index) => {
     doc.text(String(index + 1), slotX + 5, startY + topRowHeight + 5, {
       width: width - 10,
-      align: 'center'
+      align: 'center',
     })
     slotX += width
   })
 
-  doc.fillColor('black')
+  doc.fillColor(PDF_THEME.ink)
   doc.y = startY + topRowHeight + secondRowHeight
 }
 
-function drawTableRow(doc: PDFKit.PDFDocument, startX: number, values: string[], widths: number[], alternate: boolean, rowHeight: number = 20) {
+function drawTableRow(
+  doc: PDFKit.PDFDocument,
+  startX: number,
+  values: string[],
+  widths: number[],
+  alternate: boolean,
+  rowHeight: number = 20,
+) {
   const startY = doc.y
   const totalWidth = widths.reduce((acc, item) => acc + item, 0)
 
   if (alternate) {
-    doc.rect(startX, startY, totalWidth, rowHeight).fillAndStroke('#f8f9fa', '#dee2e6')
+    doc.rect(startX, startY, totalWidth, rowHeight).fillAndStroke(PDF_THEME.panel, PDF_THEME.softLine)
   } else {
-    doc.rect(startX, startY, totalWidth, rowHeight).stroke('#dee2e6')
+    doc.rect(startX, startY, totalWidth, rowHeight).stroke(PDF_THEME.softLine)
   }
 
   let currentX = startX
-  doc.fillColor('black').font('Helvetica').fontSize(9)
+  doc.fillColor(PDF_THEME.ink).font('Helvetica').fontSize(8)
 
   values.forEach((value, index) => {
     doc.text(value, currentX + 5, startY + 5, {
       width: widths[index] - 10,
       align: index === 1 ? 'left' : 'center',
-      height: rowHeight - 8
+      height: rowHeight - 8,
     })
 
     currentX += widths[index]
@@ -626,11 +704,89 @@ function computeSlotColumnWidths(contentWidth: number, maxSlot: number) {
   return [30, dateWidth, ...Array.from({ length: safeMaxSlot }, () => slotWidth)]
 }
 
+function drawReportHeader(doc: PDFKit.PDFDocument, report: MonthlyStudentReport, x: number, width: number) {
+  const y = doc.y
+  const rightWidth = 150
+
+  doc
+    .fillColor(PDF_THEME.muted)
+    .font('Helvetica-Bold')
+    .fontSize(8)
+    .text('Rapot Bulanan Santri', x, y, {
+      width: width - rightWidth - 20,
+    })
+  doc
+    .fillColor(PDF_THEME.ink)
+    .font('Helvetica-Bold')
+    .fontSize(18)
+    .text('Pondok Pesantren Darul Falah', x, y + 15, {
+      width: width - rightWidth - 20,
+    })
+  doc
+    .fillColor(PDF_THEME.muted)
+    .font('Helvetica')
+    .fontSize(9)
+    .text('Dokumen evaluasi akademik, absensi, dan perizinan santri.', x, y + 41, {
+      width: width - rightWidth - 20,
+    })
+
+  doc.roundedRect(x + width - rightWidth, y + 8, rightWidth, 58, 6).fillAndStroke(PDF_THEME.headerSoft, PDF_THEME.line)
+  doc
+    .fillColor(PDF_THEME.header)
+    .font('Helvetica-Bold')
+    .fontSize(8)
+    .text('PERIODE RAPOT', x + width - rightWidth + 14, y + 20, {
+      width: rightWidth - 28,
+      align: 'right',
+    })
+  doc
+    .fillColor(PDF_THEME.ink)
+    .font('Helvetica-Bold')
+    .fontSize(13)
+    .text(report.monthLabel, x + width - rightWidth + 14, y + 35, {
+      width: rightWidth - 28,
+      align: 'right',
+    })
+  doc
+    .fillColor(PDF_THEME.muted)
+    .font('Helvetica')
+    .fontSize(7)
+    .text(`${report.generatedAt} WIB`, x + width - rightWidth + 14, y + 52, {
+      width: rightWidth - 28,
+      align: 'right',
+    })
+
+  doc
+    .moveTo(x, y + 74)
+    .lineTo(x + width, y + 74)
+    .lineWidth(1.2)
+    .strokeColor(PDF_THEME.line)
+    .stroke()
+  doc.lineWidth(1).strokeColor(PDF_THEME.ink)
+  doc.fillColor(PDF_THEME.ink)
+  doc.y = y + 92
+}
+
+function drawEmptyState(doc: PDFKit.PDFDocument, message: string, x: number, width: number) {
+  const y = doc.y
+
+  doc.roundedRect(x, y, width, 34, 6).fillAndStroke(PDF_THEME.panel, PDF_THEME.softLine)
+  doc
+    .fillColor(PDF_THEME.muted)
+    .font('Helvetica-Oblique')
+    .fontSize(9)
+    .text(message, x + 12, y + 12, {
+      width: width - 24,
+    })
+  doc.fillColor(PDF_THEME.ink)
+  doc.y = y + 46
+}
+
 export async function generateMonthlyStudentReportPdf(report: MonthlyStudentReport): Promise<Buffer> {
   const doc = new PDFDocument({
     margin: 50,
     size: 'A4',
-    bufferPages: true
+    bufferPages: true,
   })
 
   const chunks: Buffer[] = []
@@ -643,27 +799,19 @@ export async function generateMonthlyStudentReportPdf(report: MonthlyStudentRepo
   const left = doc.page.margins.left
   const contentWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right
 
-  doc.fontSize(18).font('Helvetica-Bold').text('SISTEM INFORMASI AKADEMIK', { align: 'center' })
-  doc.fontSize(16).text('RAPOT BULANAN SANTRI', { align: 'center' })
-  doc.moveDown(0.3)
-  doc.moveTo(left, doc.y).lineTo(left + contentWidth, doc.y).stroke()
-  doc.moveDown(0.5)
+  drawReportHeader(doc, report, left, contentWidth)
 
-  const infoY = doc.y
-  doc.fontSize(11).font('Helvetica')
-  doc.text('Periode:', left, infoY)
-  doc.text(report.monthLabel, left, infoY + 15)
-  doc.text('Dicetak pada:', 350, infoY)
-  doc.text(report.generatedAt + ' WIB', 350, infoY + 15)
-  doc.y = infoY + 42
-
-  const sectionTop = doc.y
-  doc.rect(left, sectionTop, contentWidth, 24).fillAndStroke('#34495e', '#2c3e50')
-  doc.fillColor('white').font('Helvetica-Bold').fontSize(12).text('IDENTITAS SANTRI', left + 10, sectionTop + 7)
-  doc.fillColor('black')
-  const identityStartY = sectionTop + 34
+  drawSectionHeader(doc, 'IDENTITAS SANTRI', left, contentWidth)
+  const identityPanelY = doc.y
+  const identityPanelHeight = 104
+  const identityPaddingX = 16
+  doc
+    .roundedRect(left, identityPanelY, contentWidth, identityPanelHeight, 6)
+    .fillAndStroke(PDF_THEME.white, PDF_THEME.line)
+  const identityStartY = identityPanelY + 14
   const colGap = 24
-  const colWidth = (contentWidth - colGap) / 2
+  const identityContentWidth = contentWidth - identityPaddingX * 2
+  const colWidth = (identityContentWidth - colGap) / 2
   const labelWidth = 78
   const valueWidth = colWidth - labelWidth - 14
   const leftRows: Array<[string, string]> = [
@@ -671,50 +819,121 @@ export async function generateMonthlyStudentReportPdf(report: MonthlyStudentRepo
     ['Nama', report.student.name],
     ['Status', toIndonesianStudentStatus(report.student.status)],
     ['Jenis Kelamin', report.student.gender === 'PUTRI' ? 'Putri' : report.student.gender === 'PUTRA' ? 'Putra' : '-'],
-    ['TTL', `${report.student.placeOfBirth || '-'}, ${formatDate(report.student.dateOfBirth, 'Asia/Jakarta') || '-'}`]
+    ['TTL', `${report.student.placeOfBirth || '-'}, ${formatDate(report.student.dateOfBirth, 'Asia/Jakarta') || '-'}`],
   ]
   const rightRows: Array<[string, string]> = [
     ['Ayah', report.student.fatherName || '-'],
     ['Ibu', report.student.motherName || '-'],
     ['No. Wali', report.student.parrentPhone || '-'],
     ['Asrama', report.academicContext.dormitoryName],
-    ['Kelas / Fan', `${report.academicContext.className} / ${report.academicContext.trackName}`]
+    ['Kelas / Fan', `${report.academicContext.className} / ${report.academicContext.trackName}`],
   ]
 
-  const leftColumnEndY = drawIdentityColumn(doc, leftRows, left, identityStartY, labelWidth, valueWidth)
-  const rightColumnEndY = drawIdentityColumn(doc, rightRows, left + colWidth + colGap, identityStartY, labelWidth, valueWidth)
+  const leftColumnEndY = drawIdentityColumn(
+    doc,
+    leftRows,
+    left + identityPaddingX,
+    identityStartY,
+    labelWidth,
+    valueWidth,
+  )
+  const rightColumnEndY = drawIdentityColumn(
+    doc,
+    rightRows,
+    left + identityPaddingX + colWidth + colGap,
+    identityStartY,
+    labelWidth,
+    valueWidth,
+  )
 
-  doc.y = Math.max(leftColumnEndY, rightColumnEndY) + 12
+  doc.y = Math.max(identityPanelY + identityPanelHeight, leftColumnEndY, rightColumnEndY) + 14
 
   const boxY = doc.y
   const boxWidth = (contentWidth - 24) / 4
-  drawStatBox(doc, left, boxY, boxWidth, 'Target Hari', String(report.academicContext.targetDays), '#2c3e50')
-  drawStatBox(doc, left + boxWidth + 8, boxY, boxWidth, 'Hari Belajar', String(report.academicContext.daysStudied), '#2563eb')
-  drawStatBox(doc, left + (boxWidth + 8) * 2, boxY, boxWidth, 'Total SKS', String(report.academicContext.totalSks), '#7c3aed')
-  drawStatBox(doc, left + (boxWidth + 8) * 3, boxY, boxWidth, 'SKS Lulus', String(report.academicContext.passedSks), '#059669')
+  drawStatBox(
+    doc,
+    left,
+    boxY,
+    boxWidth,
+    'Target Fan / Hari',
+    `${report.academicContext.targetDays} HARI`,
+    PDF_THEME.header,
+  )
+  drawStatBox(
+    doc,
+    left + boxWidth + 8,
+    boxY,
+    boxWidth,
+    'Lama di Fan',
+    `${report.academicContext.daysStudied} HARI`,
+    report.academicContext.daysStudied > report.academicContext.targetDays ? PDF_THEME.danger : PDF_THEME.info,
+  )
+  drawStatBox(
+    doc,
+    left + (boxWidth + 8) * 2,
+    boxY,
+    boxWidth,
+    'Total SKS',
+    String(report.academicContext.totalSks),
+    PDF_THEME.purple,
+  )
+  drawStatBox(
+    doc,
+    left + (boxWidth + 8) * 3,
+    boxY,
+    boxWidth,
+    'SKS Lulus',
+    String(report.academicContext.passedSks),
+    PDF_THEME.success,
+  )
   doc.y = boxY + 68
 
   ensureSpace(doc, 140)
-  const summaryY = doc.y
-  doc.rect(left, summaryY, contentWidth, 24).fillAndStroke('#34495e', '#2c3e50')
-  doc.fillColor('white').font('Helvetica-Bold').fontSize(12).text('RINGKASAN ABSENSI', left + 10, summaryY + 7)
-  doc.fillColor('black')
-  doc.y = summaryY + 34
+  drawSectionHeader(doc, 'RINGKASAN ABSENSI', left, contentWidth)
 
   const attBoxWidth = (contentWidth - 32) / 5
   const attendanceBoxY = doc.y
-  drawStatBox(doc, left, attendanceBoxY, attBoxWidth, 'Hadir', String(report.attendance.present), '#059669')
-  drawStatBox(doc, left + attBoxWidth + 8, attendanceBoxY, attBoxWidth, 'Sakit', String(report.attendance.sick), '#d97706')
-  drawStatBox(doc, left + (attBoxWidth + 8) * 2, attendanceBoxY, attBoxWidth, 'Izin', String(report.attendance.permit), '#2563eb')
-  drawStatBox(doc, left + (attBoxWidth + 8) * 3, attendanceBoxY, attBoxWidth, 'Alpa', String(report.attendance.absent), '#dc2626')
-  drawStatBox(doc, left + (attBoxWidth + 8) * 4, attendanceBoxY, attBoxWidth, 'Izin Bulan Ini', String(report.permits.total), '#7c3aed')
+  drawStatBox(doc, left, attendanceBoxY, attBoxWidth, 'Hadir', String(report.attendance.present), PDF_THEME.success)
+  drawStatBox(
+    doc,
+    left + attBoxWidth + 8,
+    attendanceBoxY,
+    attBoxWidth,
+    'Sakit',
+    String(report.attendance.sick),
+    PDF_THEME.warning,
+  )
+  drawStatBox(
+    doc,
+    left + (attBoxWidth + 8) * 2,
+    attendanceBoxY,
+    attBoxWidth,
+    'Izin',
+    String(report.attendance.permit),
+    PDF_THEME.info,
+  )
+  drawStatBox(
+    doc,
+    left + (attBoxWidth + 8) * 3,
+    attendanceBoxY,
+    attBoxWidth,
+    'Alpa',
+    String(report.attendance.absent),
+    PDF_THEME.danger,
+  )
+  drawStatBox(
+    doc,
+    left + (attBoxWidth + 8) * 4,
+    attendanceBoxY,
+    attBoxWidth,
+    'Izin Bulan Ini',
+    String(report.permits.total),
+    PDF_THEME.purple,
+  )
   doc.y = attendanceBoxY + 68
 
   ensureSpace(doc, 120)
-  doc.rect(left, doc.y, contentWidth, 24).fillAndStroke('#34495e', '#2c3e50')
-  doc.fillColor('white').font('Helvetica-Bold').fontSize(12).text('CAPAIAN SKS', left + 10, doc.y + 7)
-  doc.fillColor('black')
-  doc.y += 32
+  drawSectionHeader(doc, 'CAPAIAN SKS', left, contentWidth)
 
   drawTableHeader(doc, left, ['No', 'Materi / SKS', 'Nilai', 'KKM', 'Status'], [30, 205, 50, 50, 160])
   report.sks.forEach((item, index) => {
@@ -722,23 +941,24 @@ export async function generateMonthlyStudentReportPdf(report: MonthlyStudentRepo
     drawTableRow(
       doc,
       left,
-      [String(index + 1), item.subjectName, item.score === null ? '-' : String(item.score), String(item.passingGrade), item.status],
+      [
+        String(index + 1),
+        item.subjectName,
+        item.score === null ? '-' : String(item.score),
+        String(item.passingGrade),
+        item.status,
+      ],
       [30, 205, 50, 50, 160],
-      index % 2 === 1
+      index % 2 === 1,
     )
   })
 
-  doc.addPage()
-  doc.y = doc.page.margins.top
-
-  doc.rect(left, doc.y, contentWidth, 24).fillAndStroke('#34495e', '#2c3e50')
-  doc.fillColor('white').font('Helvetica-Bold').fontSize(12).text('DETAIL ABSENSI', left + 10, doc.y + 7)
-  doc.fillColor('black')
-  doc.y += 32
+  doc.y += 12
+  ensureSpace(doc, 120)
+  drawSectionHeader(doc, 'DETAIL ABSENSI', left, contentWidth)
 
   if (report.attendance.groupedItems.length === 0) {
-    doc.font('Helvetica-Oblique').fontSize(10).text('Tidak ada catatan absensi pada periode ini.')
-    doc.moveDown(1)
+    drawEmptyState(doc, 'Tidak ada catatan absensi pada periode ini.', left, contentWidth)
   } else {
     const slotWidths = computeSlotColumnWidths(contentWidth, report.attendance.maxSlot)
     const dateWidth = slotWidths[1]
@@ -758,23 +978,20 @@ export async function generateMonthlyStudentReportPdf(report: MonthlyStudentRepo
             const status = item.slots[slot]
 
             return status ? toIndonesianAttendanceStatus(status) : '-'
-          })
+          }),
         ],
         slotWidths,
-        index % 2 === 1
+        index % 2 === 1,
       )
     })
     doc.moveDown(1)
   }
 
   ensureSpace(doc, 120)
-  doc.rect(left, doc.y, contentWidth, 24).fillAndStroke('#34495e', '#2c3e50')
-  doc.fillColor('white').font('Helvetica-Bold').fontSize(12).text('CATATAN PERIZINAN', left + 10, doc.y + 7)
-  doc.fillColor('black')
-  doc.y += 32
+  drawSectionHeader(doc, 'CATATAN PERIZINAN', left, contentWidth)
 
   if (report.permits.items.length === 0) {
-    doc.font('Helvetica-Oblique').fontSize(10).text('Tidak ada izin pada periode ini.')
+    drawEmptyState(doc, 'Tidak ada izin pada periode ini.', left, contentWidth)
   } else {
     drawTableHeader(doc, left, ['No', 'Mulai', 'Selesai', 'Jenis', 'Keterangan'], [30, 85, 85, 70, 225])
     report.permits.items.forEach((item, index) => {
@@ -785,7 +1002,7 @@ export async function generateMonthlyStudentReportPdf(report: MonthlyStudentRepo
         [String(index + 1), item.startDate, item.endDate || '-', item.type === 'SICK' ? 'Sakit' : 'Izin', item.reason],
         [30, 85, 85, 70, 225],
         index % 2 === 1,
-        26
+        26,
       )
     })
   }
@@ -794,10 +1011,24 @@ export async function generateMonthlyStudentReportPdf(report: MonthlyStudentRepo
 
   for (let i = 0; i < range.count; i++) {
     doc.switchToPage(range.start + i)
-    const footerY = doc.page.height - doc.page.margins.bottom - 12
-    doc.fontSize(9).font('Helvetica').text(`Halaman ${i + 1} dari ${range.count}`, left, footerY, {
-      width: contentWidth,
-      align: 'center'
+    const footerY = doc.page.height - doc.page.margins.bottom - 18
+    doc
+      .moveTo(left, footerY - 8)
+      .lineTo(left + contentWidth, footerY - 8)
+      .strokeColor(PDF_THEME.softLine)
+      .stroke()
+    doc.strokeColor(PDF_THEME.ink)
+    doc
+      .fillColor(PDF_THEME.muted)
+      .fontSize(8)
+      .font('Helvetica')
+      .text('Rapot Bulanan Santri', left, footerY, {
+        width: contentWidth / 2,
+        align: 'left',
+      })
+    doc.text(`Halaman ${i + 1} dari ${range.count}`, left + contentWidth / 2, footerY, {
+      width: contentWidth / 2,
+      align: 'right',
     })
   }
 
