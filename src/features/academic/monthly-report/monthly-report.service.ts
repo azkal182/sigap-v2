@@ -165,6 +165,10 @@ function toUpperSnakeCase(value: string) {
     .toUpperCase()
 }
 
+function isImplicitPresentEnabled() {
+  return process.env.MONTHLY_REPORT_IMPLICIT_PRESENT !== 'false'
+}
+
 function calculateDaysStudied(startDate: Date, endDate: Date) {
   return Math.max(0, Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)))
 }
@@ -196,6 +200,68 @@ function buildGroupedAttendance(
       date,
       slots,
     })),
+  }
+}
+
+function buildNormalizedAttendance(
+  items: Array<{
+    date: string
+    slot: number
+    status: AbsenceStatus
+    note: string | null
+  }>,
+  enableImplicitPresent: boolean,
+) {
+  const groupedAttendance = buildGroupedAttendance(items)
+
+  if (!enableImplicitPresent || groupedAttendance.maxSlot === 0) {
+    return {
+      ...groupedAttendance,
+      items,
+      present: items.filter(item => item.status === 'PRESENT').length,
+      sick: items.filter(item => item.status === 'SICK').length,
+      permit: items.filter(item => item.status === 'PERMIT').length,
+      absent: items.filter(item => item.status === 'ABSENT').length,
+    }
+  }
+
+  const normalizedItems = [...items]
+
+  const normalizedGroupedItems = groupedAttendance.groupedItems.map(item => {
+    const slots: Record<number, AbsenceStatus> = { ...item.slots }
+
+    for (let slot = 1; slot <= groupedAttendance.maxSlot; slot++) {
+      if (!slots[slot]) {
+        slots[slot] = 'PRESENT'
+        normalizedItems.push({
+          date: item.date,
+          slot,
+          status: 'PRESENT',
+          note: null,
+        })
+      }
+    }
+
+    return {
+      date: item.date,
+      slots,
+    }
+  })
+
+  return {
+    maxSlot: groupedAttendance.maxSlot,
+    groupedItems: normalizedGroupedItems,
+    items: normalizedItems.sort((a, b) => {
+      const dateOrder = a.date.localeCompare(b.date)
+
+      if (dateOrder !== 0) return dateOrder
+
+      return a.slot - b.slot
+    }),
+    present: normalizedItems.filter(item => item.status === 'PRESENT').length,
+    sick: normalizedItems.filter(item => item.status === 'SICK').length,
+    permit: normalizedItems.filter(item => item.status === 'PERMIT').length,
+    absent: normalizedItems.filter(item => item.status === 'ABSENT').length,
   }
 }
 
@@ -415,17 +481,17 @@ export async function getStudentMonthlyReport(params: MonthlyReportParams): Prom
       note: item.note,
     }))
 
-    const groupedAttendance = buildGroupedAttendance(attendanceItems)
+    const normalizedAttendance = buildNormalizedAttendance(attendanceItems, isImplicitPresentEnabled())
 
     const attendance = {
-      totalRecords: attendanceRows.length,
-      present: attendanceRows.filter(item => item.status === 'PRESENT').length,
-      sick: attendanceRows.filter(item => item.status === 'SICK').length,
-      permit: attendanceRows.filter(item => item.status === 'PERMIT').length,
-      absent: attendanceRows.filter(item => item.status === 'ABSENT').length,
-      maxSlot: groupedAttendance.maxSlot,
-      items: attendanceItems,
-      groupedItems: groupedAttendance.groupedItems,
+      totalRecords: normalizedAttendance.items.length,
+      present: normalizedAttendance.present,
+      sick: normalizedAttendance.sick,
+      permit: normalizedAttendance.permit,
+      absent: normalizedAttendance.absent,
+      maxSlot: normalizedAttendance.maxSlot,
+      items: normalizedAttendance.items,
+      groupedItems: normalizedAttendance.groupedItems,
     }
 
     const permitRows = await prisma.permit.findMany({
