@@ -8,6 +8,7 @@ import {
   createScheduleSlot,
   createSks,
   createSubject,
+  deactivateClass,
   getClassByDormitoryId,
   getClassDetailById,
   getDormitoriesFilter,
@@ -40,6 +41,7 @@ import {
   createScheduleSlotSchema,
   CreateSksSchema,
   CreateSubjectSchema,
+  deactivateClassSchema,
   filterDormitorySchema,
   moveDormitorySchema,
   moveTeacherScheduleSchema,
@@ -57,6 +59,7 @@ import type {
   ClassFormInput,
   CreateSksInput,
   CreateSubjectInput,
+  DeactivateClassInput,
   FilterDormitoryParams,
   MoveDormitoryInput,
   SubjectFormInput,
@@ -69,6 +72,7 @@ import type {
   CreateScheduleResult,
   CreateScheduleSlotData,
   CreateSlotResponse,
+  DeactivateClassResult,
   DormitoryDetailResponse,
   SimpleResponse,
   SksResponse,
@@ -455,6 +459,10 @@ export async function updateClassAction(
   data: Partial<ClassFormInput>
 ) {
   return validateAndRun(classFormSchema, data, updateClass)
+}
+
+export async function deactivateClassAction(input: DeactivateClassInput): Promise<SimpleResponse<DeactivateClassResult>> {
+  return validateAndRun(deactivateClassSchema, input, deactivateClass)
 }
 
 export async function updateSubjectAction(data: Partial<SubjectFormInput>) {

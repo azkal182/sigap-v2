@@ -9,6 +9,7 @@ import {
   type ClassFormInput,
   type CreateScheduleInput,
   type CreateScheduleSlotInput,
+  type DeactivateClassInput,
   type FilterDormitoryParams,
   type MoveDormitoryInput,
   type MoveTeacherScheduleInput,
@@ -331,6 +332,12 @@ export type SubjectList = {
 export type ClassDetailResponse = APIResult<StudentList>
 export type ClassListResponse = APIResult<ClassList[]>
 export type SubjectListResponse = APIResult<SubjectList[]>
+
+export type DeactivateClassResult = {
+  id: string
+  name: string
+  deactivatedSchedules: number
+}
 
 export type SksItem = {
   id: string
@@ -2174,6 +2181,97 @@ export async function updateClass(
     return {
       success: false,
       error: 'Failed to update track. Please try again.'
+    }
+  }
+}
+
+export async function deactivateClass(input: DeactivateClassInput): Promise<SimpleResponse<DeactivateClassResult>> {
+  try {
+    const existing = await db.class.findUnique({
+      where: { id: input.id },
+      select: {
+        id: true,
+        name: true,
+        active: true,
+        _count: {
+          select: {
+            histories: {
+              where: {
+                status: HistoryStatus.STUDYING,
+                endDate: null
+              }
+            }
+          }
+        }
+      }
+    })
+
+    if (!existing) {
+      return { success: false, error: 'Kelas tidak ditemukan' }
+    }
+
+    if (existing._count.histories > 0) {
+      return {
+        success: false,
+        error: `Kelas masih memiliki ${existing._count.histories} santri aktif. Pindahkan santri terlebih dahulu sebelum menghapus kelas.`
+      }
+    }
+
+    if (existing.active === false) {
+      return {
+        success: true,
+        data: {
+          id: existing.id,
+          name: existing.name,
+          deactivatedSchedules: 0
+        }
+      }
+    }
+
+    const now = new Date()
+
+    const result = await db.$transaction(async tx => {
+      const updatedClass = await tx.class.update({
+        where: { id: input.id },
+        data: {
+          active: false,
+          teacherId: null
+        },
+        select: {
+          id: true,
+          name: true
+        }
+      })
+
+      const schedules = await tx.schedule.updateMany({
+        where: {
+          classId: input.id,
+          active: true
+        },
+        data: {
+          active: false,
+          validTo: now
+        }
+      })
+
+      return {
+        id: updatedClass.id,
+        name: updatedClass.name,
+        deactivatedSchedules: schedules.count
+      }
+    })
+
+    return {
+      success: true,
+      data: result,
+      message: 'Kelas berhasil dihapus dari daftar aktif'
+    }
+  } catch (error: unknown) {
+    console.error('Error in deactivateClass:', error)
+
+    return {
+      success: false,
+      error: 'Gagal menghapus kelas. Silakan coba lagi.'
     }
   }
 }

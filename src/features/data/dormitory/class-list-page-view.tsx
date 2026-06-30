@@ -36,6 +36,7 @@ import {
   useCreateClass,
   useCreateSks,
   useCreateSubject,
+  useDeactivateClass,
   useDormitodyDetail,
   useSoftDeleteSks,
   useSksAdminWithFilter,
@@ -52,6 +53,7 @@ import SksFormDialog from './components/sks-dialog'
 import CustomTextField from '@/@core/components/mui/TextField'
 import { dateToHHMM, hhmmToDate } from '@/utils/time'
 import AppReactDatepicker from '@/lib/styles/AppReactDatepicker'
+import { useConfirm } from '@/hooks/useConfirm'
 
 type Slot = {
   id: number
@@ -72,6 +74,8 @@ const ClassListPageView = ({ trackId, dormitoryId }: { trackId: string; dormitor
   const { data, isLoading } = useClass(dormitoryId, trackId)
   const { mutate: createClass } = useCreateClass()
   const { mutate: updateClass } = useUpdateClass()
+  const { mutateAsync: deactivateClass } = useDeactivateClass()
+  const confirm = useConfirm()
   const { data: dormitoryDetail } = useDormitodyDetail(dormitoryId)
   const { data: trackDetail } = useTrackDetail(trackId)
   const { data: dataSubject } = useSubject(trackId)
@@ -227,6 +231,68 @@ const ClassListPageView = ({ trackId, dormitoryId }: { trackId: string; dormitor
     setActiveTab(newValue)
   }
 
+  const handleDeleteClass = async (item: { id: string; name: string; studentCount: number }) => {
+    if (item.studentCount > 0) {
+      await confirm({
+        title: 'Kelas belum bisa dihapus',
+        description: (
+          <div className='space-y-2'>
+            <Typography variant='body2'>
+              Kelas <strong>{item.name}</strong> masih memiliki <strong>{item.studentCount} santri aktif</strong>.
+            </Typography>
+            <Typography variant='body2' color='text.secondary'>
+              Pindahkan semua santri ke kelas lain terlebih dahulu agar riwayat akademik tetap aman.
+            </Typography>
+          </div>
+        ),
+        confirmText: 'Mengerti',
+        cancelText: 'Tutup',
+        confirmColor: 'primary',
+        icon: <i className='tabler-alert-circle text-warning' />,
+        onConfirm: async () => {}
+      })
+
+      return
+    }
+
+    const ok = await confirm({
+      title: 'Hapus kelas dari daftar aktif?',
+      description: (
+        <div className='space-y-2'>
+          <Typography variant='body2'>
+            Kelas <strong>{item.name}</strong> akan diarsipkan dan tidak muncul lagi di daftar kelas aktif.
+          </Typography>
+          <Typography variant='body2' color='text.secondary'>
+            Riwayat santri tetap disimpan. Jadwal aktif kelas ini akan ikut dinonaktifkan agar tidak muncul lagi di jadwal
+            atau absensi.
+          </Typography>
+          <Typography variant='body2' color='error.main' fontWeight={600}>
+            Tindakan ini tidak menghapus riwayat, tetapi kelas tidak bisa dipakai lagi sebagai kelas aktif.
+          </Typography>
+        </div>
+      ),
+      confirmText: 'Ya, hapus kelas',
+      cancelText: 'Batal',
+      confirmColor: 'error',
+      icon: <i className='tabler-alert-triangle text-error' />,
+      onConfirm: async () => {}
+    })
+
+    if (!ok) return
+
+    try {
+      const result = await deactivateClass({ id: item.id })
+
+      toast.success(
+        result.deactivatedSchedules > 0
+          ? `Kelas berhasil dihapus. ${result.deactivatedSchedules} jadwal aktif ikut dinonaktifkan.`
+          : 'Kelas berhasil dihapus dari daftar aktif.'
+      )
+    } catch (error: any) {
+      toast.error(error?.message ?? 'Gagal menghapus kelas')
+    }
+  }
+
   const sksRows = dataSks?.data ?? []
 
   return (
@@ -293,7 +359,16 @@ const ClassListPageView = ({ trackId, dormitoryId }: { trackId: string; dormitor
                           >
                             <i className='tabler-edit text-green-400' />
                           </IconButton>
-                          <IconButton size='small'>
+                          <IconButton
+                            size='small'
+                            onClick={() =>
+                              handleDeleteClass({
+                                id: item.id,
+                                name: item.name,
+                                studentCount: item.studentCount
+                              })
+                            }
+                          >
                             <i className='tabler-trash text-red-400' />
                           </IconButton>
                           <Link href={`/data/dormitory/${dormitoryId}/${trackId}/${item.id}`}>

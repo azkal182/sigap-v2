@@ -192,6 +192,10 @@ export const classFormSchema = z.object({
   teacherName: z.string().min(1, 'Nama pengajar wajib diisi')
 })
 
+export const deactivateClassSchema = z.object({
+  id: z.string().uuid('ID kelas tidak valid')
+})
+
 export const subjectFormSchema = z.object({
   id: z.string().optional(),
   name: z.string().min(1, 'Nama kelas wajib diisi'),
@@ -217,6 +221,7 @@ export type MoveDormitoryInput = z.infer<typeof moveDormitorySchema>
 export type SubjectFormInput = z.infer<typeof subjectFormSchema>
 
 export type ClassFormInput = z.infer<typeof classFormSchema>
+export type DeactivateClassInput = z.infer<typeof deactivateClassSchema>
 
 export type TrackOptionParams = z.infer<typeof trackOptionSchema>
 export type SksOptionParams = z.infer<typeof sksOptionSchema>

@@ -8,6 +8,7 @@ import {
   removeTrackFromDormitoryAction,
   getClassByDormitoryIdAction,
   createClassAction,
+  deactivateClassAction,
   getDormitoryList,
   getTrackDetailAction,
   getClassDetailByIdAction,
@@ -244,6 +245,34 @@ export const useCreateClass = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({
         predicate: query => query.queryKey?.[0] === 'class'
+      })
+    }
+  })
+}
+
+export const useDeactivateClass = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ id }: { id: string }) => {
+      const res = await deactivateClassAction({ id })
+
+      if (!res.success) throw new ActionError(res.error, res.issues)
+
+      return res.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        predicate: query => query.queryKey?.[0] === 'class'
+      })
+      queryClient.invalidateQueries({
+        predicate: query => query.queryKey?.[0] === 'schedule_class'
+      })
+      queryClient.invalidateQueries({
+        predicate: query => query.queryKey?.[0] === 'schedule_teacher'
+      })
+      queryClient.invalidateQueries({
+        predicate: query => query.queryKey?.[0] === 'schedule_user'
       })
     }
   })
