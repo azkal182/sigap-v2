@@ -2,16 +2,31 @@
 
 import type { TeacherListResponse, TeacherOptionResponse } from '@/features/data/teacher/teacher.service'
 import {
+  deactivateTeacher,
   createTeacher,
   createTeacherWithDormitories,
   assignTeacherToDormitory,
   getTeacherWithDormitories,
+  permanentlyDeleteTeacher,
+  reactivateTeacher,
+  removeTeacherFromDormitory,
   updateTeacher,
   getTeacherOption,
   resetPasswordTeacher
 } from '@/features/data/teacher/teacher.service'
-import type { CreateTeacherInput, FilterTeacherParams, ResetPasswordTeacherInput } from '../shemas/teacher-schema'
-import { CreateTeacherSchema, ResetPasswordTeacherSchema } from '../shemas/teacher-schema'
+import type {
+  CreateTeacherInput,
+  FilterTeacherParams,
+  RemoveTeacherDormitoryInput,
+  ResetPasswordTeacherInput,
+  TeacherByIdInput
+} from '../shemas/teacher-schema'
+import {
+  CreateTeacherSchema,
+  RemoveTeacherDormitorySchema,
+  ResetPasswordTeacherSchema,
+  TeacherByIdSchema
+} from '../shemas/teacher-schema'
 import { handleServerError } from '@/lib/handle-error'
 import { validateAndRun } from '@/utils/validate-and-run'
 
@@ -138,4 +153,20 @@ export async function editTeacherAction(input: CreateTeacherInput) {
 
 export async function resetPasswordTeacherAction(input: ResetPasswordTeacherInput) {
   return validateAndRun(ResetPasswordTeacherSchema, input, resetPasswordTeacher)
+}
+
+export async function deactivateTeacherAction(input: TeacherByIdInput) {
+  return validateAndRun(TeacherByIdSchema, input, deactivateTeacher)
+}
+
+export async function reactivateTeacherAction(input: TeacherByIdInput) {
+  return validateAndRun(TeacherByIdSchema, input, reactivateTeacher)
+}
+
+export async function permanentlyDeleteTeacherAction(input: TeacherByIdInput) {
+  return validateAndRun(TeacherByIdSchema, input, permanentlyDeleteTeacher)
+}
+
+export async function removeTeacherFromDormitoryAction(input: RemoveTeacherDormitoryInput) {
+  return validateAndRun(RemoveTeacherDormitorySchema, input, removeTeacherFromDormitory)
 }

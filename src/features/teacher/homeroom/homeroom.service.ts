@@ -39,6 +39,8 @@ export async function getHomeroomStudentAcademicOverview(): Promise<APIResult<Ho
         role: { select: { name: true } },
         teacher: {
           select: {
+            active: true,
+            deletedAt: true,
             managedClass: {
               select: {
                 id: true,
@@ -54,6 +56,10 @@ export async function getHomeroomStudentAcademicOverview(): Promise<APIResult<Ho
 
     if (!user || user.role.name !== 'PENGAJAR') {
       return { success: false, error: 'Akses khusus pengajar' }
+    }
+
+    if (!user.teacher?.active || user.teacher.deletedAt) {
+      return { success: false, error: 'Pengajar sudah nonaktif' }
     }
 
     const managedClass = user.teacher?.managedClass

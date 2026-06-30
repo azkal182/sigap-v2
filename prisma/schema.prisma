@@ -230,6 +230,8 @@ model FormalClass {
 model Teacher {
     id                 String                @id @default(uuid())
     name               String
+    active             Boolean               @default(true)
+    deletedAt          DateTime?
     subjects           TeacherSubjectClass[]
     schedules          Schedule[]
     absences           TeacherAbsence[]
@@ -247,6 +249,8 @@ model Teacher {
     managedClass Class? // back-relation: wali kelas (one-to-one, nullable)
 
     @@index([name])
+    @@index([active])
+    @@index([deletedAt])
 }
 
 model Dormitory {

@@ -74,8 +74,8 @@ export async function getStudentsFromTeacherSchedule(
     // console.log('[DEBUG] today:', today)
 
     // 0) Ambil teacher + dorm yang diampu
-    const teacher = await prisma.teacher.findUnique({
-      where: { userId },
+    const teacher = await prisma.teacher.findFirst({
+      where: { userId, active: true, deletedAt: null },
       select: {
         id: true,
         name: true,
@@ -657,8 +657,8 @@ export async function getStudentsFromTeacherScheduleV2(
     const nowMid = DateTime.fromISO(today, { zone: ZONE }).set({ hour: 12 }).toJSDate()
 
     // 0) Ambil teacher + dorm yang diampu
-    const teacher = await prisma.teacher.findUnique({
-      where: { userId },
+    const teacher = await prisma.teacher.findFirst({
+      where: { userId, active: true, deletedAt: null },
       select: {
         id: true,
         teacherDormitories: { select: { dormitoryId: true } }

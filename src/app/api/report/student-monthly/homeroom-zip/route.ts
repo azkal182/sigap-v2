@@ -60,6 +60,8 @@ export async function GET(req: NextRequest) {
       role: { select: { name: true } },
       teacher: {
         select: {
+          active: true,
+          deletedAt: true,
           managedClass: {
             select: {
               id: true,
@@ -73,6 +75,10 @@ export async function GET(req: NextRequest) {
 
   if (!user || user.role.name !== 'PENGAJAR') {
     return new NextResponse('Akses khusus pengajar', { status: 403 })
+  }
+
+  if (!user.teacher?.active || user.teacher.deletedAt) {
+    return new NextResponse('Pengajar sudah nonaktif', { status: 403 })
   }
 
   const managedClass = user.teacher?.managedClass

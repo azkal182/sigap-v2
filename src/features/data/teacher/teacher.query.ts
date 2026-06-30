@@ -3,13 +3,23 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import {
   createTeacherAction,
+  deactivateTeacherAction,
   getFilterTeachersAction,
   editTeacherAction, // ⬅️
   getTeacherOptionAction,
+  permanentlyDeleteTeacherAction,
+  reactivateTeacherAction,
+  removeTeacherFromDormitoryAction,
   resetPasswordTeacherAction
 } from './actions/teacher.action'
 
-import type { CreateTeacherInput, FilterTeacherParams, ResetPasswordTeacherInput } from './shemas/teacher-schema'
+import type {
+  CreateTeacherInput,
+  FilterTeacherParams,
+  RemoveTeacherDormitoryInput,
+  ResetPasswordTeacherInput,
+  TeacherByIdInput
+} from './shemas/teacher-schema'
 
 export function useTeachers(params: FilterTeacherParams, isValid: boolean) {
   return useQuery({
@@ -89,6 +99,78 @@ export const useResetPasswordTeacher = () => {
       if (!res.success) throw new Error(res.error)
 
       return res
+    }
+  })
+}
+
+export const useDeactivateTeacher = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (input: TeacherByIdInput) => {
+      const res = await deactivateTeacherAction(input)
+
+      if (!res.success) throw new Error(res.error)
+
+      return res
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['teachers'] })
+      queryClient.invalidateQueries({ queryKey: ['teachers_options'] })
+    }
+  })
+}
+
+export const useReactivateTeacher = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (input: TeacherByIdInput) => {
+      const res = await reactivateTeacherAction(input)
+
+      if (!res.success) throw new Error(res.error)
+
+      return res
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['teachers'] })
+      queryClient.invalidateQueries({ queryKey: ['teachers_options'] })
+    }
+  })
+}
+
+export const usePermanentlyDeleteTeacher = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (input: TeacherByIdInput) => {
+      const res = await permanentlyDeleteTeacherAction(input)
+
+      if (!res.success) throw new Error(res.error)
+
+      return res
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['teachers'] })
+      queryClient.invalidateQueries({ queryKey: ['teachers_options'] })
+    }
+  })
+}
+
+export const useRemoveTeacherFromDormitory = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (input: RemoveTeacherDormitoryInput) => {
+      const res = await removeTeacherFromDormitoryAction(input)
+
+      if (!res.success) throw new Error(res.error)
+
+      return res
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['teachers'] })
+      queryClient.invalidateQueries({ queryKey: ['teachers_options'] })
     }
   })
 }

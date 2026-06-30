@@ -19,6 +19,8 @@ export const getTeachersByDormitory = async ({ dormitoryIds }: GetTeachersParams
     where:
       dormitoryIds && dormitoryIds.length > 0
         ? {
+            active: true,
+            deletedAt: null,
             teacherDormitories: {
               some: {
                 dormitoryId: {
@@ -27,7 +29,10 @@ export const getTeachersByDormitory = async ({ dormitoryIds }: GetTeachersParams
               }
             }
           }
-        : undefined,
+        : {
+            active: true,
+            deletedAt: null
+          },
     select: {
       id: true,
       name: true,

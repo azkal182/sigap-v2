@@ -5,14 +5,22 @@ import Link from 'next/link'
 
 import type { ColumnDef } from '@tanstack/react-table'
 
-import { Button, Chip, IconButton, Stack } from '@mui/material'
+import { Button, Chip, FormControlLabel, IconButton, Stack, Switch, Tooltip } from '@mui/material'
 
 import { toast } from 'react-toastify'
 
 import type { CreateTeacherInput } from './shemas/teacher-schema'
 import { filterTeacherSchema } from './shemas/teacher-schema'
 import { useCustomSearchParams } from '@/hooks/useCustomSearchParams'
-import { useCreateTeacher, useEditTeacher, useResetPasswordTeacher, useTeachers } from './teacher.query'
+import {
+  useCreateTeacher,
+  useDeactivateTeacher,
+  useEditTeacher,
+  useReactivateTeacher,
+  useRemoveTeacherFromDormitory,
+  useResetPasswordTeacher,
+  useTeachers
+} from './teacher.query'
 import { DataTableWithParams } from '@/components/DataTableWithParams'
 import TeacherFormDialog from './components/teacher-dialog'
 import type { TeacherItem } from './teacher.service'
@@ -46,6 +54,9 @@ const TeacherPageView = () => {
   const { mutate: createTeacher } = useCreateTeacher()
   const { mutate: editTeacher } = useEditTeacher()
   const { mutate: resetPasswordTeacher } = useResetPasswordTeacher()
+  const { mutate: deactivateTeacher } = useDeactivateTeacher()
+  const { mutate: reactivateTeacher } = useReactivateTeacher()
+  const { mutate: removeTeacherFromDormitory } = useRemoveTeacherFromDormitory()
 
   const columns = useMemo<ColumnDef<any>[]>(
     () => [
@@ -65,10 +76,27 @@ const TeacherPageView = () => {
         header: 'Username'
       },
       {
+        id: 'status',
+        header: 'Status',
+        cell: ({ row }) => {
+          const teacher = row.original
+
+          return (
+            <Chip
+              size='small'
+              label={teacher.active && !teacher.deletedAt ? 'Aktif' : 'Nonaktif'}
+              color={teacher.active && !teacher.deletedAt ? 'success' : 'default'}
+              variant={teacher.active && !teacher.deletedAt ? 'filled' : 'outlined'}
+            />
+          )
+        }
+      },
+      {
         id: 'dormitories',
         header: 'Asrama',
         cell: ({ row }) => {
-          const dormitories = row.original.dormitories.map((item: any) => item.name)
+          const teacher = row.original
+          const dormitories = teacher.dormitories
 
           return (
             <Stack
@@ -78,8 +106,15 @@ const TeacherPageView = () => {
               useFlexGap
               sx={{ maxWidth: 250 }} // opsional, untuk batasi lebar agar wrap terlihat
             >
-              {dormitories.map((item: any, index: number) => (
-                <Chip size='small' key={index} label={item} color='primary' />
+              {dormitories.length === 0 && <Chip size='small' label='Tanpa asrama' variant='outlined' />}
+              {dormitories.map((item: any) => (
+                <Chip
+                  size='small'
+                  key={item.id}
+                  label={item.name}
+                  color='primary'
+                  onDelete={() => handleRemoveTeacherFromDormitory(teacher, item)}
+                />
               ))}
             </Stack>
           )
@@ -96,20 +131,31 @@ const TeacherPageView = () => {
 
           return (
             <div className='flex gap-2'>
-              <IconButton size='small' onClick={() => handleOpenConfirmDialog(dorm.name, dorm.id)}>
-                <i className='tabler-lock text-yellow-400' />
-              </IconButton>
-              <IconButton size='small' onClick={() => handleOpenEditDialog(dorm)}>
-                <i className='tabler-edit text-green-400' />
-              </IconButton>
-              {/* <IconButton size='small' onClick={() => console.log('Delete', dorm.id)}>
-                <i className='tabler-trash text-red-400' />
-              </IconButton>
-              <Link href={`/data/dormitory/${dorm.id}`}>
-                <IconButton size='small'>
-                  <i className='tabler-eye text-primary' />
+              <Tooltip title='Reset password'>
+                <IconButton size='small' onClick={() => handleOpenConfirmDialog(dorm.name, dorm.id)}>
+                  <i className='tabler-lock text-yellow-400' />
                 </IconButton>
-              </Link> */}
+              </Tooltip>
+              <Tooltip title='Edit pengajar'>
+                <IconButton size='small' onClick={() => handleOpenEditDialog(dorm)}>
+                  <i className='tabler-edit text-green-400' />
+                </IconButton>
+              </Tooltip>
+              {dorm.active && !dorm.deletedAt ? (
+                <Tooltip title='Nonaktifkan pengajar'>
+                  <IconButton size='small' onClick={() => handleDeactivateTeacher(dorm)}>
+                    <i className='tabler-user-off text-orange-400' />
+                  </IconButton>
+                </Tooltip>
+              ) : (
+                <Tooltip title='Aktifkan kembali pengajar'>
+                  <IconButton size='small' onClick={() => handleReactivateTeacher(dorm)}>
+                    <i className='tabler-user-check text-green-500' />
+                  </IconButton>
+                </Tooltip>
+              )}
+              {/* Hapus permanen sengaja disembunyikan dulu.
+                  Service/action masih ada untuk digunakan nanti jika fitur ini diaktifkan kembali. */}
             </div>
           )
         }
@@ -211,6 +257,95 @@ const TeacherPageView = () => {
     setDialogOpen(true)
   }, [])
 
+  const handleRemoveTeacherFromDormitory = useCallback(
+    async (teacher: TeacherItem, dormitory: { id: string; name: string }) => {
+      const ok = await confirm({
+        title: 'Lepas pengajar dari asrama?',
+        description: (
+          <>
+            Pengajar <strong>{teacher.name}</strong> akan dilepas dari <strong>{dormitory.name}</strong>.
+            <br />
+            Riwayat pengajar tetap disimpan. Sistem akan menolak jika masih ada jadwal aktif pengajar di asrama ini.
+          </>
+        ),
+        confirmText: 'Ya, lepas',
+        confirmColor: 'warning',
+        onConfirm: async () => {}
+      })
+
+      if (!ok) return
+
+      removeTeacherFromDormitory(
+        { teacherId: teacher.id, dormitoryId: dormitory.id },
+        {
+          onSuccess: res => {
+            toast.success(res.message ?? `Pengajar ${teacher.name} berhasil dilepas dari ${dormitory.name}`)
+          },
+          onError: (error: any) => {
+            toast.error(error.message || 'Gagal melepas pengajar dari asrama')
+          }
+        }
+      )
+    },
+    [confirm, removeTeacherFromDormitory]
+  )
+
+  const handleDeactivateTeacher = useCallback(
+    async (teacher: TeacherItem) => {
+      const ok = await confirm({
+        title: 'Nonaktifkan pengajar?',
+        description: (
+          <>
+            Pengajar <strong>{teacher.name}</strong> akan dinonaktifkan dan tidak muncul di pilihan pengajar baru.
+            <br />
+            Perubahan ini tidak menutup/menghapus jadwal atau riwayat yang sudah ada.
+          </>
+        ),
+        confirmText: 'Ya, nonaktifkan',
+        confirmColor: 'warning',
+        onConfirm: async () => {}
+      })
+
+      if (!ok) return
+
+      deactivateTeacher(
+        { id: teacher.id },
+        {
+          onSuccess: res => toast.success(res.message ?? `Pengajar ${teacher.name} berhasil dinonaktifkan`),
+          onError: (error: any) => toast.error(error.message || 'Gagal menonaktifkan pengajar')
+        }
+      )
+    },
+    [confirm, deactivateTeacher]
+  )
+
+  const handleReactivateTeacher = useCallback(
+    async (teacher: TeacherItem) => {
+      const ok = await confirm({
+        title: 'Aktifkan kembali pengajar?',
+        description: (
+          <>
+            Pengajar <strong>{teacher.name}</strong> akan aktif kembali dan bisa dipilih untuk data pengajar.
+          </>
+        ),
+        confirmText: 'Ya, aktifkan',
+        confirmColor: 'success',
+        onConfirm: async () => {}
+      })
+
+      if (!ok) return
+
+      reactivateTeacher(
+        { id: teacher.id },
+        {
+          onSuccess: res => toast.success(res.message ?? `Pengajar ${teacher.name} berhasil diaktifkan`),
+          onError: (error: any) => toast.error(error.message || 'Gagal mengaktifkan pengajar')
+        }
+      )
+    },
+    [confirm, reactivateTeacher]
+  )
+
   const handleSubmit = (data: CreateTeacherInput) => {
     if (dialogMode === 'edit' && data.id) {
       editTeacher(data, {
@@ -253,6 +388,18 @@ const TeacherPageView = () => {
         totalItems={data?.pagination.total}
         isLoading={queryLoading || !searchParams.isReady}
         searchPlaceholder='Cari Pengajar...'
+        customFilters={
+          <FormControlLabel
+            control={
+              <Switch
+                checked={!!searchParams.params.includeInactive}
+                onChange={(_, checked) => searchParams.updateParams({ includeInactive: checked, page: 1 })}
+              />
+            }
+            label='Tampilkan nonaktif'
+          />
+        }
+        getRowColorClass={row => (!row.active || row.deletedAt ? 'bg-gray-50 opacity-80' : '')}
         addButton={
           <div className='w-full grid grid-cols-1 gap-2 sm:auto-cols-max sm:grid-flow-col'>
             {/* Hindari <Link><Button/></Link>; gunakan Button as <a> */}
