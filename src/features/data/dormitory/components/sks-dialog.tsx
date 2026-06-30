@@ -4,12 +4,15 @@ import { useEffect } from 'react'
 
 import { useForm, Controller } from 'react-hook-form' // Import Controller
 import { zodResolver } from '@hookform/resolvers/zod'
+import type { z } from 'zod'
 
 import FormDialog from '@/components/form-dialog'
 import CustomTextField from '@/@core/components/mui/TextField'
 import AppReactDatepicker from '@/lib/styles/AppReactDatepicker'
 import type { CreateSksInput } from '../schemas/dormitory-schema'
 import { CreateSksSchema } from '../schemas/dormitory-schema'
+
+type CreateSksFormValues = z.input<typeof CreateSksSchema>
 
 interface SksFormDialogProps {
   open: boolean
@@ -33,13 +36,14 @@ const SksFormDialog: React.FC<SksFormDialogProps> = ({
     handleSubmit,
     reset,
     formState: { errors, isValid }
-  } = useForm<CreateSksInput>({
+  } = useForm<CreateSksFormValues, unknown, CreateSksInput>({
     resolver: zodResolver(CreateSksSchema),
     mode: 'onChange',
     defaultValues: {
       id: '',
       name: '',
       trackId: '',
+      passingGrade: '',
       validFrom: undefined,
       validTo: null
     }
@@ -51,6 +55,10 @@ const SksFormDialog: React.FC<SksFormDialogProps> = ({
         id: defaultValues.id ?? '',
         name: defaultValues.name ?? '',
         trackId: trackId,
+        passingGrade:
+          defaultValues.passingGrade === null || defaultValues.passingGrade === undefined
+            ? ''
+            : defaultValues.passingGrade,
         validFrom: defaultValues.validFrom ?? undefined,
         validTo: defaultValues.validTo ?? null
       })
@@ -90,6 +98,34 @@ const SksFormDialog: React.FC<SksFormDialogProps> = ({
             {...field} // Spread field props (value, onChange, onBlur, name, ref)
             error={!!errors.name}
             helperText={errors.name?.message}
+            InputLabelProps={{ className: 'text-gray-700' }}
+            InputProps={{
+              className: 'rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500'
+            }}
+          />
+        )}
+      />
+
+      <Controller
+        name='passingGrade'
+        control={control}
+        render={({ field }) => (
+          <CustomTextField
+            label='KKM'
+            type='number'
+            fullWidth
+            required
+            variant='outlined'
+            margin='dense'
+            className='mb-4'
+            value={field.value ?? ''}
+            onChange={event => field.onChange(event.target.value === '' ? '' : Number(event.target.value))}
+            onBlur={field.onBlur}
+            name={field.name}
+            inputRef={field.ref}
+            error={!!errors.passingGrade}
+            helperText={errors.passingGrade?.message ?? 'Nilai minimum kelulusan SKS, 0–100'}
+            inputProps={{ min: 0, max: 100, step: 1 }}
             InputLabelProps={{ className: 'text-gray-700' }}
             InputProps={{
               className: 'rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500'

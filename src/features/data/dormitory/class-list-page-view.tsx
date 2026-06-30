@@ -191,7 +191,13 @@ const ClassListPageView = ({ trackId, dormitoryId }: { trackId: string; dormitor
   const handleSubmitSks = (form: CreateSksInput) => {
     if (sksDialog.mode === 'create') {
       createSks(
-        { name: form.name, trackId, validFrom: form.validFrom, validTo: form.validTo },
+        {
+          name: form.name,
+          passingGrade: form.passingGrade,
+          trackId,
+          validFrom: form.validFrom,
+          validTo: form.validTo,
+        },
         {
           onSuccess: () => {
             toast.success('SKS berhasil dibuat!')
@@ -208,6 +214,7 @@ const ClassListPageView = ({ trackId, dormitoryId }: { trackId: string; dormitor
         {
           id: form.id,
           name: form.name,
+          passingGrade: form.passingGrade,
           sksKey: form.sksKey,
           trackId,
           validFrom: form.validFrom,
@@ -455,6 +462,7 @@ const ClassListPageView = ({ trackId, dormitoryId }: { trackId: string; dormitor
                 <TableRow>
                   <TableCell className='w-6'>NO</TableCell>
                   <TableCell>JENIS SKS</TableCell>
+                  <TableCell>KKM</TableCell>
                   <TableCell>BERLAKU MULAI</TableCell>
                   <TableCell>BERLAKU SAMPAI</TableCell>
                   <TableCell>DIHAPUS</TableCell>
@@ -466,6 +474,7 @@ const ClassListPageView = ({ trackId, dormitoryId }: { trackId: string; dormitor
                   <TableRow key={i}>
                     <TableCell>{i + 1}</TableCell>
                     <TableCell>{item.name}</TableCell>
+                    <TableCell>{item.passingGrade ?? 0}</TableCell>
                     <TableCell>{new Date(item.validFrom).toLocaleDateString('id-ID')}</TableCell>
                     <TableCell>{item.validTo ? new Date(item.validTo).toLocaleDateString('id-ID') : '-'}</TableCell>
                     <TableCell>{item.deletedAt ? new Date(item.deletedAt).toLocaleDateString('id-ID') : '-'}</TableCell>
@@ -477,6 +486,7 @@ const ClassListPageView = ({ trackId, dormitoryId }: { trackId: string; dormitor
                             openSksDialog('edit', {
                               id: item.id,
                               name: item.name,
+                              passingGrade: item.passingGrade ?? 0,
                               sksKey: item.sksKey,
                               trackId,
                               validFrom: item.validFrom,

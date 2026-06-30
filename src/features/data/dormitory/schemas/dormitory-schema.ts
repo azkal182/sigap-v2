@@ -25,6 +25,17 @@ export const CreateSubjectSchema = z.object({
 export const CreateSksSchema = z.object({
   name: z.string().min(3, 'Nama minimal 3 karakter'),
   trackId: z.string(),
+  passingGrade: z.preprocess(
+    value => (value === '' || value === null || value === undefined ? undefined : Number(value)),
+    z
+      .number({
+        required_error: 'KKM wajib diisi',
+        invalid_type_error: 'KKM wajib diisi'
+      })
+      .int('KKM harus berupa angka bulat')
+      .min(0, 'KKM minimal 0')
+      .max(100, 'KKM maksimal 100')
+  ),
   id: z.string().optional(),
   sksKey: z.string().optional(),
   validFrom: z.coerce.date().optional(),

@@ -108,7 +108,7 @@ export async function updateSksVersionedAction(
       }
     }
 
-    const { id, trackId, name, sksKey, validFrom, validTo } = validated.data
+    const { id, trackId, name, passingGrade, sksKey, validFrom, validTo } = validated.data
 
     if (!id) {
       return { success: false, error: 'id wajib diisi untuk update' }
@@ -118,7 +118,7 @@ export async function updateSksVersionedAction(
       return { success: false, error: 'validFrom wajib diisi untuk update' }
     }
 
-    return updateSksVersioned({ id, trackId, name, sksKey, validFrom, validTo })
+    return updateSksVersioned({ id, trackId, name, passingGrade, sksKey, validFrom, validTo })
   } catch (error) {
     const message = handleServerError('Gagal memperbarui SKS', error)
 
@@ -319,9 +319,9 @@ export async function createSksAction(data: CreateSksInput): Promise<SimpleRespo
       }
     }
 
-    const { trackId, name, validFrom, validTo } = validated.data
+    const { trackId, name, passingGrade, validFrom, validTo } = validated.data
 
-    return createSks({ trackId, name, validFrom, validTo })
+    return createSks({ trackId, name, passingGrade, validFrom, validTo })
   } catch (error) {
     const message = handleServerError('Gagal menambahkan Pelajaran baru', error)
 

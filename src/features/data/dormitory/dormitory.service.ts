@@ -35,6 +35,7 @@ export type SksAdminItem = {
   id: string
   name: string
   sksKey: string | null
+  passingGrade: number | null
   validFrom: Date
   validTo: Date | null
   deletedAt: Date | null
@@ -63,6 +64,7 @@ export const getSksAdminByTrackId = async (params: SksAdminParams): Promise<SksA
         id: true,
         name: true,
         sksKey: true,
+        passingGrade: true,
         validFrom: true,
         validTo: true,
         deletedAt: true
@@ -111,12 +113,13 @@ export async function updateSksVersioned(input: {
   id: string
   trackId: string
   name: string
+  passingGrade: number
   sksKey?: string
   validFrom: Date
   validTo?: Date | null
 }): Promise<SimpleResponse<{ id: string; name: string }>> {
   try {
-    const { id, trackId, name, validFrom, validTo } = input
+    const { id, trackId, name, passingGrade, validFrom, validTo } = input
 
     const current = await db.sks.findUnique({
       where: { id },
@@ -234,7 +237,7 @@ export async function updateSksVersioned(input: {
           trackId,
           name,
           sksKey: logicalKey,
-          passingGrade: current.passingGrade,
+          passingGrade,
           validFrom,
           validTo: validTo ?? null,
           deletedAt: null
@@ -1121,11 +1124,13 @@ export const getSksByTrackId = async (trackId: string): Promise<SksResponse> => 
 export async function createSks({
   name,
   trackId,
+  passingGrade,
   validFrom,
   validTo
 }: {
   name: string
   trackId: string
+  passingGrade: number
   validFrom?: Date
   validTo?: Date | null
 }): Promise<SimpleResponse<{ id: string; name: string }>> {
@@ -1143,6 +1148,7 @@ export async function createSks({
       data: {
         name,
         trackId,
+        passingGrade,
         sksKey: name,
         validFrom: validFrom ?? new Date(),
         validTo: validTo ?? null,
