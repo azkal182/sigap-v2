@@ -772,6 +772,76 @@ export async function updateTrack(
 
 export async function removeTrackFromDormitory(trackId: string, dormitoryId: string): Promise<SimpleResponse<null>> {
   try {
+    const relation = await db.dormitoryTrack.findUnique({
+      where: {
+        dormitoryId_trackId: {
+          dormitoryId,
+          trackId
+        }
+      },
+      select: {
+        dormitory: { select: { name: true } },
+        track: { select: { name: true } }
+      }
+    })
+
+    if (!relation) {
+      return {
+        success: false,
+        error: 'Fan tidak terhubung dengan asrama ini.'
+      }
+    }
+
+    const activeClasses = await db.class.findMany({
+      where: {
+        dormitoryId,
+        trackId,
+        active: true
+      },
+      select: {
+        id: true,
+        name: true,
+        _count: {
+          select: {
+            histories: {
+              where: {
+                status: HistoryStatus.STUDYING,
+                endDate: null
+              }
+            }
+          }
+        }
+      },
+      orderBy: { name: 'asc' }
+    })
+
+    const activeStudentCount = activeClasses.reduce((sum, cls) => sum + cls._count.histories, 0)
+
+    if (activeStudentCount > 0) {
+      const classPreview = activeClasses
+        .filter(cls => cls._count.histories > 0)
+        .slice(0, 3)
+        .map(cls => `${cls.name} (${cls._count.histories} santri)`)
+        .join(', ')
+
+      return {
+        success: false,
+        error: `Fan ${relation.track.name} belum bisa dihapus dari asrama ${relation.dormitory.name} karena masih memiliki ${activeStudentCount} santri aktif${classPreview ? `: ${classPreview}` : ''}. Pindahkan santri terlebih dahulu.`
+      }
+    }
+
+    if (activeClasses.length > 0) {
+      const classPreview = activeClasses
+        .slice(0, 3)
+        .map(cls => cls.name)
+        .join(', ')
+
+      return {
+        success: false,
+        error: `Fan ${relation.track.name} belum bisa dihapus karena masih memiliki ${activeClasses.length} kelas aktif${classPreview ? `: ${classPreview}` : ''}. Hapus atau arsipkan kelas terlebih dahulu.`
+      }
+    }
+
     await db.dormitoryTrack.delete({
       where: {
         dormitoryId_trackId: {

@@ -40,6 +40,7 @@ import {
 import type { CreateScheduleSlotInput, TrackFormSchema } from './schemas/dormitory-schema'
 
 import ScheduleSlotForm from './components/ScheduleSlotForm'
+import { useConfirm } from '@/hooks/useConfirm'
 
 import { styled } from '@mui/material/styles'
 import MuiMenu from '@mui/material/Menu'
@@ -116,7 +117,8 @@ const DormitoryDetailPageView: React.FC<DormitoryDetailPageViewProps> = ({ id })
   const { data: dataSlots, refetch } = useSlotData(id)
   const { mutate: createTrack } = useCreateTrackForDormitory()
   const { mutate: updateTrack } = useUpdateTrack()
-  const { mutate: deleteTrack } = useRemoveTrackFromDormitory()
+  const { mutateAsync: deleteTrack } = useRemoveTrackFromDormitory()
+  const confirm = useConfirm()
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const [selectedTrack, setSelectedTrack] = useState<Track | null>(null)
@@ -225,8 +227,38 @@ const DormitoryDetailPageView: React.FC<DormitoryDetailPageViewProps> = ({ id })
     handleCloseDialog()
   }
 
-  const handleDeleteTrack = (trackId: string) => {
-    deleteTrack({ trackId, dormitoryId: id })
+  const handleDeleteTrack = async (track: Track) => {
+    const ok = await confirm({
+      title: 'Hapus fan dari asrama?',
+      description: (
+        <div className='space-y-2'>
+          <Typography variant='body2'>
+            Fan <strong>{track.name}</strong> akan dilepas dari daftar fan asrama ini.
+          </Typography>
+          <Typography variant='body2' color='text.secondary'>
+            Data fan global, SKS, dan riwayat santri tidak akan dihapus. Namun fan hanya boleh dihapus jika tidak memiliki
+            kelas aktif dan tidak ada santri aktif pada fan ini.
+          </Typography>
+          <Typography variant='body2' color='warning.main' fontWeight={600}>
+            Jika masih ada kelas atau santri aktif, sistem akan menolak penghapusan.
+          </Typography>
+        </div>
+      ),
+      confirmText: 'Ya, hapus fan',
+      cancelText: 'Batal',
+      confirmColor: 'error',
+      icon: <i className='tabler-alert-triangle text-error' />,
+      onConfirm: async () => {}
+    })
+
+    if (!ok) return
+
+    try {
+      await deleteTrack({ trackId: track.id, dormitoryId: id })
+      toast.success(`Fan ${track.name} berhasil dihapus dari asrama.`)
+    } catch (error: any) {
+      toast.error(error?.message ?? 'Gagal menghapus fan dari asrama.')
+    }
   }
 
   return (
@@ -284,7 +316,7 @@ const DormitoryDetailPageView: React.FC<DormitoryDetailPageViewProps> = ({ id })
                         <IconButton size='small' onClick={() => handleOpenEditDialog(track)}>
                           <i className='tabler-edit text-green-400' />
                         </IconButton>
-                        <IconButton disabled size='small' onClick={() => handleDeleteTrack(track.id)}>
+                        <IconButton size='small' onClick={() => handleDeleteTrack(track)}>
                           <i className='tabler-trash text-red-400' />
                         </IconButton>
                         <Link href={`/data/dormitory/${data.id}/${track.id}`}>
@@ -372,8 +404,8 @@ const DormitoryDetailPageView: React.FC<DormitoryDetailPageViewProps> = ({ id })
             px: 1.5,
           }}
           onClick={() => {
-            if (selectedTrack) handleDeleteTrack(selectedTrack.id)
             handleMenuClose()
+            if (selectedTrack) void handleDeleteTrack(selectedTrack)
           }}
         >
           <ListItemIcon sx={{ minWidth: 20 }}>
