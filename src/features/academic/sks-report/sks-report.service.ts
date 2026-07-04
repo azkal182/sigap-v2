@@ -488,7 +488,9 @@ export async function getTrackStudentDetails(
         },
         testRegistration: {
           where: {
-            sksId: { in: activeSksIds },
+            sks :{
+              trackId: trackId
+            }
           },
           select: {
             status: true,
