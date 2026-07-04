@@ -851,8 +851,18 @@ export async function getStudentDetail(id: string): Promise<StudentItem | null> 
     sksByTrack = dormitoryTracks.map(dt => {
       const track = dt.track
 
+      // Get names of all active SKS for the current curriculum
+      const activeSksNames = new Set(track.sks.filter(sks => {
+        return sks.validFrom <= referenceDate &&
+          (sks.validTo === null || sks.validTo >= referenceDate) &&
+          sks.deletedAt === null
+      }).map(sks => sks.name))
+
       // Filter valid SKS based on referenceDate
       const validSks = track.sks.filter(sks => {
+        // Ignore if the subject name is no longer part of the active curriculum
+        if (!activeSksNames.has(sks.name)) return false
+
         const hasRegistration = sks.testRegistration.length > 0
 
         // If has test registration, preserve it (historical data)

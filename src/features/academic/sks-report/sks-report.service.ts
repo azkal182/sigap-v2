@@ -515,6 +515,10 @@ export async function getTrackStudentDetails(
       },
     })
 
+    const activeSksNames = new Set(allSksInTrack.filter(sks => {
+      return sks.validFrom <= now && (sks.validTo === null || sks.validTo >= now)
+    }).map(sks => sks.name))
+
     const filteredStudents: TrackStudentDetailItem[] = []
 
     for (const student of students) {
@@ -525,6 +529,8 @@ export async function getTrackStudentDetails(
       const daysStudied = Math.floor((now.getTime() - historyStartDate.getTime()) / (1000 * 60 * 60 * 24))
       const daysLeft = targetDays - daysStudied
       const validSks = allSksInTrack.filter(sks => {
+        if (!activeSksNames.has(sks.name)) return false
+
         const hasRegistration = student.testRegistration.some(r => r.sksId === sks.id)
         if (hasRegistration) return true
         return sks.validFrom <= now && (sks.validTo === null || sks.validTo >= now)
