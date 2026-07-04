@@ -433,20 +433,19 @@ export async function getTrackStudentDetails(
     const targetDays = track.targetDays || 180
     const now = new Date()
 
-    const activeSks = await db.sks.findMany({
+    const allSksInTrack = await db.sks.findMany({
       where: {
         trackId,
         deletedAt: null,
-        validFrom: { lte: now },
-        OR: [{ validTo: null }, { validTo: { gte: now } }],
       },
       select: {
         id: true,
+        name: true,
+        passingGrade: true,
+        validFrom: true,
+        validTo: true,
       },
     })
-
-    const activeSksIds = activeSks.map(sks => sks.id)
-    const totalSks = activeSksIds.length
 
     const students = await db.student.findMany({
       where: {
@@ -488,13 +487,26 @@ export async function getTrackStudentDetails(
         },
         testRegistration: {
           where: {
-            sks :{
-              trackId: trackId
-            }
+            sks: {
+              trackId: trackId,
+            },
+            test: {
+              isNot: null,
+            },
           },
           select: {
             status: true,
             sksId: true,
+            test: {
+              select: {
+                score: true,
+              },
+            },
+            sks: {
+              select: {
+                passingGrade: true,
+              },
+            },
           },
         },
       },
@@ -512,11 +524,32 @@ export async function getTrackStudentDetails(
       const historyStartDate = currentHistory.startDate
       const daysStudied = Math.floor((now.getTime() - historyStartDate.getTime()) / (1000 * 60 * 60 * 24))
       const daysLeft = targetDays - daysStudied
-      const completedSks = new Set(
-        student.testRegistration
-          .filter(item => item.status === RegistrationStatus.COMPLETED)
-          .map(item => item.sksId),
-      ).size
+      const validSks = allSksInTrack.filter(sks => {
+        const hasRegistration = student.testRegistration.some(r => r.sksId === sks.id)
+        if (hasRegistration) return true
+        return sks.validFrom <= now && (sks.validTo === null || sks.validTo >= now)
+      })
+
+      const sksGroupedByName = validSks.reduce((acc, sks) => {
+        if (!acc[sks.name]) acc[sks.name] = []
+        acc[sks.name].push(sks)
+        return acc
+      }, {} as Record<string, typeof allSksInTrack>)
+
+      const dedupedSks = Object.values(sksGroupedByName).map(group => {
+        const withScore = group.find(sks => {
+          const reg = student.testRegistration.find(r => r.sksId === sks.id)
+          return reg?.test != null
+        })
+        if (withScore) return withScore
+        return group.reduce((latest, current) => (current.validFrom > latest.validFrom ? current : latest))
+      })
+
+      const totalSks = dedupedSks.length
+      const completedSks = dedupedSks.filter(sks => {
+        const reg = student.testRegistration.find(r => r.sksId === sks.id)
+        return reg?.test?.score !== null && reg?.test?.score !== undefined && sks.passingGrade !== null && reg!.test!.score >= sks.passingGrade
+      }).length
 
       const status = getStudentStatus({
         daysLeft,
