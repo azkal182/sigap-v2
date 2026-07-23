@@ -152,3 +152,176 @@ export async function getAcademicByNisV2(nis: string) {
 
   return { student, tracks: trackStats, currentTrack }
 }
+
+export type GetActivePermitsV2Params = {
+  dormitoryId?: string
+  date?: string // format: YYYY-MM-DD, default: hari ini (Asia/Jakarta)
+  createdByRole?: string // filter berdasarkan role pembuat izin, default: 'KEAMANAN'
+}
+
+export async function getActivePermitsV2(params: GetActivePermitsV2Params = {}) {
+  const { dormitoryId, date, createdByRole = 'KEAMANAN' } = params
+
+  // Tentukan tanggal referensi (timezone Jakarta)
+  const refDay = date
+    ? DateTime.fromISO(date, { zone: 'Asia/Jakarta' })
+    : DateTime.now().setZone('Asia/Jakarta')
+
+  const dayStart = refDay.startOf('day').toJSDate()
+  const dayEnd = refDay.endOf('day').toJSDate()
+
+  const permits = await prisma.permit.findMany({
+    where: {
+      // Perizinan aktif: startDate <= akhir hari ini DAN (endDate null ATAU endDate >= awal hari ini)
+      startDate: { lte: dayEnd },
+      OR: [{ endDate: null }, { endDate: { gte: dayStart } }],
+      // Hanya tampilkan izin yang dibuat oleh role tertentu (default: KEAMANAN)
+      createdBy: {
+        role: { name: createdByRole }
+      },
+      // Filter asrama jika disediakan
+      ...(dormitoryId
+        ? {
+            student: {
+              dormitoryId
+            }
+          }
+        : {})
+    },
+    orderBy: { startDate: 'desc' },
+    select: {
+      id: true,
+      startDate: true,
+      endDate: true,
+      reason: true,
+      allowedSlots: true,
+      permitSTatus: true,
+      student: {
+        select: {
+          id: true,
+          nis: true,
+          name: true,
+          gender: true,
+          dormitory: { select: { id: true, name: true } },
+          regency: { select: { label: true, name: true } }
+        }
+      },
+      createdBy: {
+        select: {
+          name: true,
+          role: { select: { name: true } }
+        }
+      }
+    }
+  })
+
+  const summary = {
+    total: permits.length,
+    sick: permits.filter(p => p.permitSTatus === 'SICK').length,
+    permit: permits.filter(p => p.permitSTatus === 'PERMIT').length
+  }
+
+  return {
+    summary,
+    date: refDay.toISODate(),
+    permits: permits.map(p => ({
+      id: p.id,
+      startDate: p.startDate,
+      endDate: p.endDate,
+      reason: p.reason,
+      allowedSlots: p.allowedSlots,
+      type: p.permitSTatus,
+      student: {
+        id: p.student.id,
+        nis: p.student.nis,
+        name: p.student.name,
+        gender: p.student.gender,
+        dormitory: p.student.dormitory?.name ?? null,
+        regency: p.student.regency?.label ?? p.student.regency?.name ?? null
+      },
+      createdBy: p.createdBy
+        ? `${p.createdBy.name} (${p.createdBy.role?.name ?? '-'})`
+        : null
+    }))
+  }
+}
+
+/**
+ * Mengecek status perizinan santri berdasarkan NIS,
+ * khusus perizinan yang diinput oleh role KEAMANAN.
+ */
+export async function getPermitByNisKeamananV2(nis: string) {
+  const student = await getStudentByNis(nis)
+  if (!student) return null
+
+  const now = DateTime.now().setZone('Asia/Jakarta')
+  const nowJs = now.toJSDate()
+
+  // Cek apakah santri sedang dalam izin aktif (dari KEAMANAN)
+  const activePermit = await prisma.permit.findFirst({
+    where: {
+      studentId: student.id,
+      startDate: { lte: nowJs },
+      OR: [{ endDate: null }, { endDate: { gte: nowJs } }],
+      createdBy: { role: { name: 'KEAMANAN' } }
+    },
+    orderBy: { startDate: 'desc' },
+    select: {
+      id: true,
+      startDate: true,
+      endDate: true,
+      reason: true,
+      allowedSlots: true,
+      permitSTatus: true,
+      createdBy: {
+        select: { name: true, role: { select: { name: true } } }
+      }
+    }
+  })
+
+  // Riwayat izin 30 hari terakhir (dari KEAMANAN)
+  const { start, end } = baselineRange()
+  const history = await prisma.permit.findMany({
+    where: {
+      studentId: student.id,
+      startDate: { gte: start, lte: end },
+      createdBy: { role: { name: 'KEAMANAN' } }
+    },
+    orderBy: { startDate: 'desc' },
+    select: {
+      id: true,
+      startDate: true,
+      endDate: true,
+      reason: true,
+      allowedSlots: true,
+      permitSTatus: true
+    }
+  })
+
+  const summary = {
+    totalLast30Days: history.length,
+    sick: history.filter(p => p.permitSTatus === 'SICK').length,
+    permit: history.filter(p => p.permitSTatus === 'PERMIT').length
+  }
+
+  return {
+    student,
+    isOnPermit: activePermit !== null,
+    activePermit: activePermit
+      ? {
+          id: activePermit.id,
+          startDate: activePermit.startDate,
+          endDate: activePermit.endDate,
+          reason: activePermit.reason,
+          allowedSlots: activePermit.allowedSlots,
+          type: activePermit.permitSTatus,
+          createdBy: activePermit.createdBy
+            ? `${activePermit.createdBy.name} (${activePermit.createdBy.role?.name ?? '-'})`
+            : null
+        }
+      : null,
+    summary,
+    history,
+    baseline: { startDate: start, endDate: end }
+  }
+}
