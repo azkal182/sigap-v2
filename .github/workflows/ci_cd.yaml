@@ -361,17 +361,27 @@ jobs:
             fi
           fi
 
+          # Load NVM agar node/pnpm tersedia di non-interactive shell
+          export NVM_DIR="$HOME/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+          NODE_BIN=$(which node)
+          PNPM_BIN=$(which pnpm)
+          echo "Using node: $NODE_BIN"
+          echo "Using pnpm: $PNPM_BIN"
+
           # Restart PM2 dengan penanganan error yang lebih baik
           echo "🔄 Restarting PM2 process..."
-          if pm2 describe ${{ matrix.app }} > /dev/null; then
+          if pm2 describe ${{ matrix.app }} > /dev/null 2>&1; then
             echo "Stopping existing process..."
             pm2 stop ${{ matrix.app }} || echo "Failed to stop process (may not be running)"
             pm2 delete ${{ matrix.app }} || echo "Failed to delete process (may not exist)"
           fi
 
-          # Start dengan logging yang lebih detail
+          # Start dengan path absolut node dari NVM (fix: pm2 start npm gagal karena NVM)
           echo "Starting application on port ${{ matrix.port }}..."
-          pm2 start npm --name "${{ matrix.app }}" -- start -- -p ${{ matrix.port }}
+          pm2 start "$NODE_BIN" \
+            --name "${{ matrix.app }}" \
+            -- node_modules/next/dist/bin/next start -p ${{ matrix.port }}
 
           # Verifikasi aplikasi berjalan
           sleep 5
