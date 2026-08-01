@@ -254,6 +254,15 @@ jobs:
           rsync -avz build-files.tar.gz ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }}:/home/${{ secrets.VPS_USER }}/project/${{ matrix.folder }}/
 
           ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} << EOF
+
+          # Load NVM di awal agar node/pnpm tersedia sepanjang sesi
+          export NVM_DIR="\$HOME/.nvm"
+          [ -s "\$NVM_DIR/nvm.sh" ] && \. "\$NVM_DIR/nvm.sh"
+          NODE_BIN=$(which node)
+          PNPM_BIN=$(which pnpm)
+          echo "Using node: \$NODE_BIN"
+          echo "Using pnpm: \$PNPM_BIN"
+
           cd /home/${{ secrets.VPS_USER }}/project/${{ matrix.folder }}
 
           # Hapus file lama termasuk semua file build Next.js 16
@@ -317,12 +326,8 @@ jobs:
           echo "API_BASE_URL=${{ secrets.API_BASE_URL }}" >> .env
           echo "API_KEY=${{ secrets.API_KEY }}" >> .env
 
-          # Samakan versi pnpm dengan local dan CI
-          corepack enable
-          corepack prepare pnpm@9.15.2 --activate
-
-          # Install dependensi
-          pnpm install --prod --frozen-lockfile
+          # Install dependensi dengan pnpm dari NVM
+          "$PNPM_BIN" install --prod --frozen-lockfile
 
           # Verify Next.js 16 build structure and files
           echo "🔍 Verifying Next.js 16 deployment files..."
@@ -361,13 +366,6 @@ jobs:
             fi
           fi
 
-          # Load NVM agar node/pnpm tersedia di non-interactive shell
-          export NVM_DIR="$HOME/.nvm"
-          [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-          NODE_BIN=$(which node)
-          PNPM_BIN=$(which pnpm)
-          echo "Using node: $NODE_BIN"
-          echo "Using pnpm: $PNPM_BIN"
 
           # Restart PM2 dengan penanganan error yang lebih baik
           echo "🔄 Restarting PM2 process..."
