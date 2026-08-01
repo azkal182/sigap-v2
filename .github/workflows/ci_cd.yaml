@@ -257,9 +257,9 @@ jobs:
 
           # Load NVM di awal agar node/pnpm tersedia sepanjang sesi
           export NVM_DIR="\$HOME/.nvm"
-          [ -s "\$NVM_DIR/nvm.sh" ] && \. "\$NVM_DIR/nvm.sh"
-          NODE_BIN=$(which node)
-          PNPM_BIN=$(which pnpm)
+          [ -s "\$NVM_DIR/nvm.sh" ] && . "\$NVM_DIR/nvm.sh"
+          NODE_BIN=\$(nvm which current)
+          PNPM_BIN="\$(dirname \$NODE_BIN)/pnpm"
           echo "Using node: \$NODE_BIN"
           echo "Using pnpm: \$PNPM_BIN"
 
@@ -327,7 +327,7 @@ jobs:
           echo "API_KEY=${{ secrets.API_KEY }}" >> .env
 
           # Install dependensi dengan pnpm dari NVM
-          "$PNPM_BIN" install --prod --frozen-lockfile
+          "\$PNPM_BIN" install --prod --frozen-lockfile
 
           # Verify Next.js 16 build structure and files
           echo "🔍 Verifying Next.js 16 deployment files..."
@@ -377,7 +377,7 @@ jobs:
 
           # Start dengan path absolut node dari NVM (fix: pm2 start npm gagal karena NVM)
           echo "Starting application on port ${{ matrix.port }}..."
-          pm2 start "$NODE_BIN" \
+          pm2 start "\$NODE_BIN" \
             --name "${{ matrix.app }}" \
             -- node_modules/next/dist/bin/next start -p ${{ matrix.port }}
 
