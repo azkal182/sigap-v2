@@ -311,6 +311,7 @@ export type ClassList = {
   name: string
   teacher: string
   studentCount: number
+  active: boolean
 }
 
 export type Student = {
@@ -866,18 +867,23 @@ export async function removeTrackFromDormitory(trackId: string, dormitoryId: str
   }
 }
 
-export async function getClassByDormitoryId(dormitoryId: string, trackId: string): Promise<ClassListResponse> {
+export async function getClassByDormitoryId(
+  dormitoryId: string,
+  trackId: string,
+  includeInactive = false
+): Promise<ClassListResponse> {
   try {
     const data = await db.class.findMany({
       where: {
         dormitoryId,
         trackId,
-        active: true
+        ...(includeInactive ? {} : { active: true })
       },
       select: {
         id: true,
         name: true,
         teacher: true,
+        active: true,
         _count: {
           select: {
             histories: {
@@ -887,7 +893,11 @@ export async function getClassByDormitoryId(dormitoryId: string, trackId: string
             }
           }
         }
-      }
+      },
+      orderBy: [
+        { active: 'desc' },
+        { name: 'asc' }
+      ]
     })
 
     return {

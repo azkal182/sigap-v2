@@ -203,11 +203,11 @@ export const useRemoveTrackFromDormitory = () => {
   })
 }
 
-export const useClass = (dormitoryId: string, trackId: string) => {
+export const useClass = (dormitoryId: string, trackId: string, includeInactive = false) => {
   return useQuery({
-    queryKey: ['class', { dormitoryId, trackId }],
+    queryKey: ['class', { dormitoryId, trackId, includeInactive }],
     queryFn: async () => {
-      const res = await getClassByDormitoryIdAction(dormitoryId, trackId)
+      const res = await getClassByDormitoryIdAction(dormitoryId, trackId, includeInactive)
 
       if (res === null) return null
 

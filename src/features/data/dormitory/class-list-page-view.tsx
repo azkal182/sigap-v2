@@ -70,8 +70,9 @@ const slotData: Slot[] = [
 
 const ClassListPageView = ({ trackId, dormitoryId }: { trackId: string; dormitoryId: string }) => {
   const [showAllSksVersions, setShowAllSksVersions] = useState(false)
+  const [showInactiveClasses, setShowInactiveClasses] = useState(false)
 
-  const { data, isLoading } = useClass(dormitoryId, trackId)
+  const { data, isLoading } = useClass(dormitoryId, trackId, showInactiveClasses)
   const { mutate: createClass } = useCreateClass()
   const { mutate: updateClass } = useUpdateClass()
   const { mutateAsync: deactivateClass } = useDeactivateClass()
@@ -317,9 +318,21 @@ const ClassListPageView = ({ trackId, dormitoryId }: { trackId: string; dormitor
 
         {/* Tab 1: Daftar Kelas */}
         <TabPanel value='1'>
-          <Button onClick={() => openClassDialog('create')} variant='contained' className='mb-4'>
-            Tambah Kelas
-          </Button>
+          <div className='flex flex-wrap items-center gap-4 mb-4'>
+            <Button onClick={() => openClassDialog('create')} variant='contained'>
+              Tambah Kelas
+            </Button>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={showInactiveClasses}
+                  onChange={e => setShowInactiveClasses(e.target.checked)}
+                  name='showInactiveClasses'
+                />
+              }
+              label='Tampilkan kelas yang diarsipkan'
+            />
+          </div>
 
           <TableContainer component={Paper}>
             <Table>
@@ -329,33 +342,70 @@ const ClassListPageView = ({ trackId, dormitoryId }: { trackId: string; dormitor
                   <TableCell>NAMA</TableCell>
                   <TableCell>WALI Kelas</TableCell>
                   <TableCell>Jumlah Santri</TableCell>
+                  <TableCell>STATUS</TableCell>
                   <TableCell>AKSI</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={5} align='center'>
+                    <TableCell colSpan={6} align='center'>
                       <Typography variant='body2'>Memuat data...</Typography>
                     </TableCell>
                   </TableRow>
                 ) : data?.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} align='center'>
+                    <TableCell colSpan={6} align='center'>
                       <Typography variant='body2'>Tidak ada data kelas ditemukan.</Typography>
                     </TableCell>
                   </TableRow>
                 ) : (
                   data?.map((item, index) => (
-                    <TableRow key={item.id}>
+                    <TableRow
+                      key={item.id}
+                      sx={!item.active ? { backgroundColor: 'action.hover', opacity: 0.7 } : {}}
+                    >
                       <TableCell>{index + 1}</TableCell>
-                      <TableCell>{item.name}</TableCell>
+                      <TableCell>
+                        <span>{item.name}</span>
+                        {!item.active && (
+                          <Typography
+                            component='span'
+                            variant='caption'
+                            sx={{
+                              ml: 1,
+                              px: 0.75,
+                              py: 0.25,
+                              borderRadius: 1,
+                              backgroundColor: 'warning.light',
+                              color: 'warning.contrastText',
+                              fontWeight: 600,
+                              fontSize: '0.65rem',
+                              verticalAlign: 'middle'
+                            }}
+                          >
+                            Diarsipkan
+                          </Typography>
+                        )}
+                      </TableCell>
                       <TableCell>{item.teacher}</TableCell>
                       <TableCell>{item.studentCount}</TableCell>
+                      <TableCell>
+                        {item.active ? (
+                          <Typography variant='caption' color='success.main' fontWeight={600}>
+                            Aktif
+                          </Typography>
+                        ) : (
+                          <Typography variant='caption' color='text.disabled' fontWeight={600}>
+                            Tidak Aktif
+                          </Typography>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <div className='flex gap-2'>
                           <IconButton
                             size='small'
+                            disabled={!item.active}
                             onClick={() =>
                               openClassDialog('edit', {
                                 id: item.id,
@@ -368,6 +418,7 @@ const ClassListPageView = ({ trackId, dormitoryId }: { trackId: string; dormitor
                           </IconButton>
                           <IconButton
                             size='small'
+                            disabled={!item.active}
                             onClick={() =>
                               handleDeleteClass({
                                 id: item.id,
@@ -378,11 +429,13 @@ const ClassListPageView = ({ trackId, dormitoryId }: { trackId: string; dormitor
                           >
                             <i className='tabler-trash text-red-400' />
                           </IconButton>
-                          <Link href={`/data/dormitory/${dormitoryId}/${trackId}/${item.id}`}>
-                            <IconButton size='small'>
-                              <i className='tabler-eye text-primary' />
-                            </IconButton>
-                          </Link>
+
+                            <Link href={`/data/dormitory/${dormitoryId}/${trackId}/${item.id}`}>
+                              <IconButton size='small'>
+                                <i className='tabler-eye text-primary' />
+                              </IconButton>
+                            </Link>
+
                         </div>
                       </TableCell>
                     </TableRow>

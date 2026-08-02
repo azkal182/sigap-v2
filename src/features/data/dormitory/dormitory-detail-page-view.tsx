@@ -316,9 +316,6 @@ const DormitoryDetailPageView: React.FC<DormitoryDetailPageViewProps> = ({ id })
                         <IconButton size='small' onClick={() => handleOpenEditDialog(track)}>
                           <i className='tabler-edit text-green-400' />
                         </IconButton>
-                        <IconButton size='small' onClick={() => handleDeleteTrack(track)}>
-                          <i className='tabler-trash text-red-400' />
-                        </IconButton>
                         <Link href={`/data/dormitory/${data.id}/${track.id}`}>
                           <IconButton size='small'>
                             <i className='tabler-eye text-primary' />
@@ -396,23 +393,7 @@ const DormitoryDetailPageView: React.FC<DormitoryDetailPageViewProps> = ({ id })
           <ListItemText primary='Edit' primaryTypographyProps={{ fontSize: 13, ml: 0 }} />
         </MenuItem>
 
-        <MenuItem
-          className='gap-1'
-          sx={{
-            minHeight: 32,
-            py: 0.5,
-            px: 1.5,
-          }}
-          onClick={() => {
-            handleMenuClose()
-            if (selectedTrack) void handleDeleteTrack(selectedTrack)
-          }}
-        >
-          <ListItemIcon sx={{ minWidth: 20 }}>
-            <i className='tabler-trash text-sm text-red-400' />
-          </ListItemIcon>
-          <ListItemText primary='Hapus' primaryTypographyProps={{ fontSize: 13, ml: 0 }} />
-        </MenuItem>
+
 
         <MenuItem
           className='gap-1'

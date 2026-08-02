@@ -229,9 +229,13 @@ export async function removeTrackFromDormitoryAction(
   }
 }
 
-export async function getClassByDormitoryIdAction(dormitoryId: string, trackId: string): Promise<ClassListResponse> {
+export async function getClassByDormitoryIdAction(
+  dormitoryId: string,
+  trackId: string,
+  includeInactive = false
+): Promise<ClassListResponse> {
   try {
-    const data = await getClassByDormitoryId(dormitoryId, trackId)
+    const data = await getClassByDormitoryId(dormitoryId, trackId, includeInactive)
 
     // console.log('done ')
     // console.log(JSON.stringify(data, null, 2))
