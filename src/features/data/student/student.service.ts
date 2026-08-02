@@ -738,6 +738,7 @@ export async function getStudentDetail(id: string): Promise<StudentItem | null> 
       id: student.id,
       name: student.name,
       nis: student.nis,
+      status: student.status,
       gender: student.gender,
       fatherName: student.fatherName || null,
       motherName: student.motherName || null,
@@ -1350,6 +1351,114 @@ export async function reactivateStudent(input: ReactivateStudentInput): Promise<
     return { success: true, data: undefined }
   } catch (error) {
     const message = handleServerError('Gagal reactivate student:', error)
+    return { success: false, error: message }
+  }
+}
+
+// ==================== ASSIGN TO DORMITORY (Student baru tanpa riwayat) ====================
+
+export type AssignStudentToDormitoryInput = {
+  studentId: string
+  assignDate: Date
+  dormitoryId: string
+  trackId: string
+  classId: string
+}
+
+export async function assignStudentToDormitory(
+  input: AssignStudentToDormitoryInput
+): Promise<APIResult<void>> {
+  const { studentId, assignDate, dormitoryId, trackId, classId } = input
+
+  try {
+    // 1. Get student
+    const student = await db.student.findUnique({
+      where: { id: studentId },
+      include: {
+        histories: {
+          where: { status: 'STUDYING' },
+          take: 1,
+        },
+      },
+    })
+
+    if (!student) {
+      return { success: false, error: 'Student tidak ditemukan' }
+    }
+
+    if (student.status !== 'ACTIVE') {
+      return { success: false, error: 'Hanya student dengan status ACTIVE yang bisa dimasukkan ke asrama melalui fitur ini. Gunakan Reaktivasi untuk student non-aktif.' }
+    }
+
+    if (student.histories.length > 0) {
+      return { success: false, error: 'Student sudah memiliki riwayat belajar aktif. Gunakan fitur pindah kelas jika perlu.' }
+    }
+
+    // 2. Validate dormitory
+    const dormitory = await db.dormitory.findUnique({
+      where: { id: dormitoryId },
+      select: { id: true, name: true },
+    })
+
+    if (!dormitory) {
+      return { success: false, error: 'Asrama tidak ditemukan' }
+    }
+
+    // 3. Validate fan terdaftar di asrama
+    const dormitoryTrack = await db.dormitoryTrack.findUnique({
+      where: { dormitoryId_trackId: { dormitoryId, trackId } },
+    })
+
+    if (!dormitoryTrack) {
+      return { success: false, error: 'Fan tidak terdaftar pada asrama yang dipilih' }
+    }
+
+    // 4. Validate class aktif
+    const classData = await db.class.findFirst({
+      where: { id: classId, dormitoryId, trackId, active: true },
+      include: { track: true, dormitory: true },
+    })
+
+    if (!classData) {
+      return { success: false, error: 'Kelas tidak sesuai dengan asrama dan fan yang dipilih, atau sudah tidak aktif' }
+    }
+
+    // 5. Execute transaction
+    await db.$transaction(async tx => {
+      // Update student dormitory reference
+      await tx.student.update({
+        where: { id: studentId },
+        data: { dormitoryId },
+      })
+
+      // Create DormitoryHistory
+      await tx.dormitoryHistory.create({
+        data: {
+          studentId,
+          dormitoryId,
+          startDate: assignDate,
+          status: 'ACTIVE',
+          dormNameAtThatTime: dormitory.name,
+        },
+      })
+
+      // Create History (riwayat belajar)
+      await tx.history.create({
+        data: {
+          studentId,
+          classId,
+          startDate: assignDate,
+          status: 'STUDYING',
+          classNameAtThatTime: classData.name,
+          trackNameAtThatTime: classData.track.name,
+          dormNameAtThatTime: classData.dormitory.name,
+        },
+      })
+    })
+
+    return { success: true, data: undefined }
+  } catch (error) {
+    const message = handleServerError('Gagal memasukkan student ke asrama:', error)
     return { success: false, error: message }
   }
 }

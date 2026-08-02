@@ -903,7 +903,10 @@ export async function getClassByDormitoryId(
     return {
       success: true,
       data: data.map(item => ({
-        ...item,
+        id: item.id,
+        name: item.name,
+        teacher: item.teacher,
+        active: item.active ?? false,
         studentCount: item._count.histories
       }))
     }

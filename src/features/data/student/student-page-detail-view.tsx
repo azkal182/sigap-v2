@@ -37,8 +37,9 @@ import { useManualSksScore } from '@/features/academic/query'
 import type { ManualSksScoreInput } from '@/features/academic/test-schema'
 import StudentExitDialog from './components/student-exit-dialog'
 import StudentReactivateDialog from './components/student-reactivate-dialog'
-import { exitStudentAction, reactivateStudentAction } from './actions/student-exit.action'
-import type { ExitStudentInput, ReactivateStudentInput } from './student.service'
+import StudentAssignDormitoryDialog from './components/student-assign-dormitory-dialog'
+import { exitStudentAction, reactivateStudentAction, assignStudentToDormitoryAction } from './actions/student-exit.action'
+import type { ExitStudentInput, ReactivateStudentInput, AssignStudentToDormitoryInput } from './student.service'
 
 interface StudentForm {
   id: string
@@ -97,6 +98,7 @@ export default function StudentPageDetailView({ id }: { id: string }) {
   const [openManualScoreDialog, setOpenManualScoreDialog] = useState(false)
   const [openExitDialog, setOpenExitDialog] = useState(false)
   const [openReactivateDialog, setOpenReactivateDialog] = useState(false)
+  const [openAssignDormitoryDialog, setOpenAssignDormitoryDialog] = useState(false)
 
   const { data: studentDetail, isLoading, refetch } = useStudentDetail(id)
   const { mutate: saveManualSksScore } = useManualSksScore()
@@ -232,6 +234,20 @@ export default function StudentPageDetailView({ id }: { id: string }) {
     }
   }
 
+  // Handler for assign to dormitory dialog
+  const handleAssignToDormitory = async (data: Omit<AssignStudentToDormitoryInput, 'studentId'>) => {
+    const result = await assignStudentToDormitoryAction({
+      studentId: id,
+      ...data,
+    })
+
+    if (result.success) {
+      refetch()
+    } else {
+      throw new Error(result.error)
+    }
+  }
+
   if (id === 'add') {
     return (
       <Box mt={4}>
@@ -294,9 +310,18 @@ export default function StudentPageDetailView({ id }: { id: string }) {
             studentDetail?.status === 'ACTIVE' ? (
               !isEditing ? (
                 <Box display='flex' gap={2}>
-                  <Button variant='outlined' color='error' onClick={() => setOpenExitDialog(true)}>
-                    Keluarkan dari Pondok
-                  </Button>
+                  {/* Student aktif TANPA asrama → tampilkan tombol "Masukkan ke Asrama" */}
+                  {!studentDetail.activeDormitory && (
+                    <Button variant='contained' color='success' onClick={() => setOpenAssignDormitoryDialog(true)}>
+                      Masukkan ke Asrama
+                    </Button>
+                  )}
+                  {/* Tombol keluar hanya jika sudah punya asrama */}
+                  {studentDetail.activeDormitory && (
+                    <Button variant='outlined' color='error' onClick={() => setOpenExitDialog(true)}>
+                      Keluarkan dari Pondok
+                    </Button>
+                  )}
                   <Button variant='contained' onClick={handleEditClick}>
                     Edit
                   </Button>
@@ -641,6 +666,17 @@ export default function StudentPageDetailView({ id }: { id: string }) {
           open={openReactivateDialog}
           onClose={() => setOpenReactivateDialog(false)}
           onSubmit={handleReactivateStudent}
+          studentId={studentDetail.id}
+          studentName={studentDetail.name}
+        />
+      )}
+
+      {/* Assign to Dormitory Dialog */}
+      {studentDetail && (
+        <StudentAssignDormitoryDialog
+          open={openAssignDormitoryDialog}
+          onClose={() => setOpenAssignDormitoryDialog(false)}
+          onSubmit={handleAssignToDormitory}
           studentId={studentDetail.id}
           studentName={studentDetail.name}
         />
