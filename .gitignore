@@ -43,3 +43,6 @@ next-env.d.ts
 /src/generated/prisma
 
 scripts/update-valid-from-2025-08-28.ts
+
+# db migration export files (keep .gitkeep, ignore actual JSON dumps)
+scripts/export-data/*.json
