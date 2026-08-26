@@ -200,14 +200,14 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        app: [sigap]
+        app: [sigap, dev]
         include:
-          # - app: dev
-          #   port: 4042
-          #   folder: dev
-          #   db: dev
-          #   env: staging
-          #   url: https://dev.amtsilatipusat.com
+          - app: dev
+            port: 4042
+            folder: dev
+            db: sigap_dev
+            env: staging
+            url: https://dev.amtsilatipusat.com
           - app: sigap
             port: 4043
             folder: sigap
