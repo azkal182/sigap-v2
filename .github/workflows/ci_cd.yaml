@@ -49,7 +49,7 @@ jobs:
           - app: dev
             port: 4042
             folder: dev
-            db: dev
+            db: sigap_dev
             env: staging
             url: https://dev.amtsilatipusat.com
           - app: sigap
