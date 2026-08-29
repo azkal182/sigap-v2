@@ -44,7 +44,7 @@ type StudentWithAbsence = {
   } | null
 }
 
-type AttendanceStatus = AbsenceStatus
+type AttendanceStatus = AbsenceStatus | null
 
 type Attendance = {
   id?: string // ID absensi, opsional untuk create
@@ -98,6 +98,7 @@ export default function Page() {
   const isSubmitting = isCreating || isUpdating
   const isSubmitError = isCreateError || isUpdateError
   const submitError = createError || updateError
+  const hasUncheckedAttendance = attendances.some(att => att.status === null)
 
   const hari = now.toFormat('cccc')
   const jam = now.toFormat('HH:mm')
@@ -155,13 +156,19 @@ export default function Page() {
         setSubjectName(data.subjectName)
 
         // ✅ Inisialisasi attendances dari data students yang sudah ada
-        const initialAttendances = data.students.map(student => ({
-          studentId: student.id,
-          scheduleId: data.scheduleId,
-          status: student.absence?.status || AbsenceStatus.PRESENT,
-          note: student.absence?.note || '',
-          id: student.absence?.id || undefined
-        }))
+        const initialAttendances = data.students.map(student => {
+          const existingStatus = student.absence?.status
+          const hasExistingAbsence = !!student.absence?.id
+          const isPermitOrSick = existingStatus === AbsenceStatus.PERMIT || existingStatus === AbsenceStatus.SICK
+
+          return {
+            studentId: student.id,
+            scheduleId: data.scheduleId,
+            status: hasExistingAbsence || isPermitOrSick ? existingStatus : null,
+            note: student.absence?.note || '',
+            id: student.absence?.id || undefined
+          }
+        })
 
         setAttendances(initialAttendances)
 
@@ -203,9 +210,19 @@ export default function Page() {
       return
     }
 
+    const selectedAttendances = attendances.filter(
+      (att): att is Attendance & { status: AbsenceStatus } => att.status !== null
+    )
+
+    if (selectedAttendances.length !== attendances.length) {
+      toast.error('Semua santri wajib dipilih status absensinya.')
+
+      return
+    }
+
     if (isAttendanceFilled) {
       // ✅ Mode UPDATE: Kirim absensi yang memiliki ID
-      const updatedAbsences = attendances
+      const updatedAbsences = selectedAttendances
         .filter(att => !!att.id)
         .map(att => ({
           id: att.id!,
@@ -223,7 +240,7 @@ export default function Page() {
       })
     } else {
       // ✅ Mode CREATE: Kirim semua data absensi baru
-      const absencesToSubmit: CreateAbsencesInput = attendances.map(att => ({
+      const absencesToSubmit: CreateAbsencesInput = selectedAttendances.map(att => ({
         studentId: att.studentId,
         scheduleId: att.scheduleId,
         status: att.status,
@@ -354,6 +371,11 @@ export default function Page() {
       {isSubmitError && (
         <Box mt={2}>
           <Typography color='error'>Terjadi kesalahan saat menyimpan: {submitError?.message}</Typography>
+        </Box>
+      )}
+      {hasUncheckedAttendance && (
+        <Box mt={2}>
+          <Typography color='warning.main'>Semua santri wajib dipilih status absensinya sebelum submit.</Typography>
         </Box>
       )}
       <TableContainer component={Paper} sx={{ maxHeight: 'calc(100vh - 250px)', overflow: 'auto', mt: 2 }}>

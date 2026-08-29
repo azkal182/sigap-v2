@@ -36,7 +36,7 @@ type ManualAbsenceRow = {
   id: string | null
   studentId: string
   scheduleId: string
-  status: AbsenceStatus
+  status: AbsenceStatus | null
   note: string
 }
 
@@ -75,6 +75,7 @@ export default function ManualAttendancePageView() {
   const slots = slotQuery.data?.data ?? []
 
   const hasExistingAbsences = useMemo(() => absenceRows.some(item => !!item.id), [absenceRows])
+  const hasUncheckedAttendance = absenceRows.some(item => item.status === null)
 
   useEffect(() => {
     setTrackId('')
@@ -106,7 +107,7 @@ export default function ManualAttendancePageView() {
         id: student.absence?.id ?? null,
         studentId: student.id,
         scheduleId: data.scheduleId,
-        status: student.absence?.status ?? AbsenceStatus.PRESENT,
+        status: student.absence?.status ?? null,
         note: student.absence?.note ?? ''
       }))
     )
@@ -127,7 +128,17 @@ export default function ManualAttendancePageView() {
       return
     }
 
-    const updates = absenceRows
+    const selectedAbsenceRows = absenceRows.filter(
+      (item): ManualAbsenceRow & { status: AbsenceStatus } => item.status !== null
+    )
+
+    if (selectedAbsenceRows.length !== absenceRows.length) {
+      toast.error('Semua santri wajib dipilih status absensinya.')
+
+      return
+    }
+
+    const updates = selectedAbsenceRows
       .filter(item => !!item.id)
       .map(item => ({
         id: item.id!,
@@ -135,7 +146,7 @@ export default function ManualAttendancePageView() {
         note: item.note || undefined
       })) as UpdateAbsencesInput
 
-    const creates = absenceRows
+    const creates = selectedAbsenceRows
       .filter(item => !item.id)
       .map(item => ({
         studentId: item.studentId,
@@ -283,6 +294,10 @@ export default function ManualAttendancePageView() {
                   {absenceQuery.data.dormitoryName} | {attendanceDate}
                 </Typography>
               </Box>
+
+              {hasUncheckedAttendance && (
+                <Alert severity='warning'>Semua santri wajib dipilih status absensinya sebelum submit.</Alert>
+              )}
 
               <TableContainer component={Paper} sx={{ maxHeight: 'calc(100vh - 320px)', overflow: 'auto' }}>
                 <Table stickyHeader>

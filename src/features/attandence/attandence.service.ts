@@ -622,6 +622,7 @@ export async function getClassAbsences(params: GetClassAbsenceParams): Promise<A
         class: { select: { id: true, name: true, dormitory: { select: { name: true } } } },
         teacher: { select: { id: true } },
         subject: { select: { name: true } },
+        scheduleSlot: { select: { slot: true } },
       },
     })
 
@@ -659,6 +660,7 @@ export async function getClassAbsences(params: GetClassAbsenceParams): Promise<A
 
     // Use the LATEST (most recent) schedule for metadata
     const schedule = allScheduleVersions[0]
+    const slotNumber = schedule.scheduleSlot.slot
 
     // Collect ALL schedule IDs to query absences
     const scheduleIds = allScheduleVersions.map(s => s.id)
@@ -742,6 +744,15 @@ export async function getClassAbsences(params: GetClassAbsenceParams): Promise<A
           select: { id: true, status: true, note: true },
           take: 1,
         },
+        permits: {
+          where: {
+            startDate: { lte: dateEnd },
+            OR: [{ endDate: null }, { endDate: { gte: dateStart } }],
+            AND: [{ OR: [{ allowedSlots: { has: slotNumber } }, { allowedSlots: { equals: [] } }] }],
+          },
+          select: { reason: true, permitSTatus: true },
+          take: 1,
+        },
       },
       orderBy: { name: 'asc' },
     })
@@ -759,13 +770,22 @@ export async function getClassAbsences(params: GetClassAbsenceParams): Promise<A
 
     const studentsWithAbsence: StudentWithAbsence[] = students.map(s => {
       const a = s.absences[0] ?? null
+      const activePermit = s.permits[0] ?? null
+
+      const defaultAbsence = activePermit
+        ? {
+            id: null,
+            status: activePermit.permitSTatus === 'SICK' ? ('SICK' as AbsenceStatus) : ('PERMIT' as AbsenceStatus),
+            note: activePermit.reason,
+          }
+        : { id: null, status: null, note: null }
 
       return {
         id: s.id,
         name: s.name,
         nis: s.nis,
         dormitoryId: s.dormitoryId!,
-        absence: a ? { id: a.id, status: a.status, note: a.note } : { id: null, status: null, note: null },
+        absence: a ? { id: a.id, status: a.status, note: a.note } : defaultAbsence,
       }
     })
 
