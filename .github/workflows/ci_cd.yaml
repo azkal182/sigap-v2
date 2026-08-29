@@ -55,7 +55,7 @@ jobs:
           - app: sigap
             port: 4043
             folder: sigap
-            db: sigap
+            db: sigap_v2
             env: production
             url: https://sigap.amtsilatipusat.com
 
@@ -211,7 +211,7 @@ jobs:
           - app: sigap
             port: 4043
             folder: sigap
-            db: sigap
+            db: sigap_v2
             env: production
             url: https://sigap.amtsilatipusat.com
 
