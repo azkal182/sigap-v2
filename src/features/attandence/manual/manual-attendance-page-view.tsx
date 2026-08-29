@@ -20,7 +20,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Typography
+  Typography,
 } from '@mui/material'
 import { DateTime } from 'luxon'
 import { toast } from 'react-toastify'
@@ -28,7 +28,11 @@ import { toast } from 'react-toastify'
 import CustomTextField from '@/@core/components/mui/TextField'
 import { AbsenceStatus } from '@/generated/prisma/enums'
 import { useCreateManualAbsences, useGetClassAbsences, useUpdateAbsences } from '@/features/attandence/query'
-import type { CreateAbsencesInput, GetClassAbsencesParams, UpdateAbsencesInput } from '@/features/attandence/schemas/attendent-schema'
+import type {
+  CreateAbsencesInput,
+  GetClassAbsencesParams,
+  UpdateAbsencesInput,
+} from '@/features/attandence/schemas/attendent-schema'
 import { useDormitoryList, useClass, useSlotData } from '@/features/data/dormitory/dormitory.query'
 import { useTrackByDormIds } from '@/features/dormitory/dormitory-track/query'
 
@@ -62,7 +66,7 @@ export default function ManualAttendancePageView() {
   const params: GetClassAbsencesParams = {
     classId,
     slotId,
-    absentDate: attendanceDate
+    absentDate: attendanceDate,
   }
 
   const isFilterComplete = !!classId && !!slotId && !!attendanceDate
@@ -108,8 +112,8 @@ export default function ManualAttendancePageView() {
         studentId: student.id,
         scheduleId: data.scheduleId,
         status: student.absence?.status ?? null,
-        note: student.absence?.note ?? ''
-      }))
+        note: student.absence?.note ?? '',
+      })),
     )
   }, [absenceQuery.data])
 
@@ -129,7 +133,7 @@ export default function ManualAttendancePageView() {
     }
 
     const selectedAbsenceRows = absenceRows.filter(
-      (item): ManualAbsenceRow & { status: AbsenceStatus } => item.status !== null
+      (item): item is ManualAbsenceRow & { status: AbsenceStatus } => item.status !== null,
     )
 
     if (selectedAbsenceRows.length !== absenceRows.length) {
@@ -143,7 +147,7 @@ export default function ManualAttendancePageView() {
       .map(item => ({
         id: item.id!,
         status: item.status,
-        note: item.note || undefined
+        note: item.note || undefined,
       })) as UpdateAbsencesInput
 
     const creates = selectedAbsenceRows
@@ -152,7 +156,7 @@ export default function ManualAttendancePageView() {
         studentId: item.studentId,
         scheduleId: item.scheduleId,
         status: item.status,
-        note: item.note || undefined
+        note: item.note || undefined,
       })) as CreateAbsencesInput
 
     const absentDate = DateTime.fromISO(attendanceDate, { zone: 'Asia/Jakarta' }).startOf('day').toUTC().toISO()
@@ -368,7 +372,13 @@ export default function ManualAttendancePageView() {
 
               <Box className='flex justify-end'>
                 <Button variant='contained' onClick={handleSubmit} disabled={isSubmitting}>
-                  {isSubmitting ? <CircularProgress size={20} /> : hasExistingAbsences ? 'Update Absensi' : 'Submit Absensi'}
+                  {isSubmitting ? (
+                    <CircularProgress size={20} />
+                  ) : hasExistingAbsences ? (
+                    'Update Absensi'
+                  ) : (
+                    'Submit Absensi'
+                  )}
                 </Button>
               </Box>
             </Stack>
