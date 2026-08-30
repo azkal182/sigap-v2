@@ -3,6 +3,7 @@ import { DateTime } from 'luxon'
 import type { Prisma } from '@/generated/prisma/client'
 import type { APIResult } from '@/types/api-types'
 import prisma from '@/lib/prisma'
+import { dispatchShadowEvent } from '@/lib/shadow-testing'
 
 export type TeacherAttendanceResult = Prisma.TeacherAbsenceGetPayload<{
   include: {
@@ -73,17 +74,48 @@ export async function updateTeacherAttendanceBulk(params: {
   }[]
 }): Promise<APIResult<Prisma.TeacherAbsenceGetPayload<{}>[]>> {
   try {
-    const updatedRecords = await prisma.$transaction(
-      params.updates.map(u =>
-        prisma.teacherAbsence.update({
-          where: { id: u.absenceId },
-          data: {
-            status: u.status,
-            note: u.note
-          }
-        })
+    const updatedRecords = await prisma.$transaction(async tx => {
+      const results = await Promise.all(
+        params.updates.map(u =>
+          tx.teacherAbsence.update({
+            where: { id: u.absenceId },
+            data: {
+              status: u.status,
+              note: u.note
+            },
+            include: {
+              schedule: {
+                select: {
+                  scheduleSlotId: true,
+                  class: { select: { dormitoryId: true } }
+                }
+              }
+            }
+          })
+        )
       )
-    )
+
+      // ── Shadow Event Dispatch ─────────────────────────────────────────────
+      await dispatchShadowEvent(tx, {
+        eventType: 'teacher_absence.updated',
+        aggregateType: 'teacher_absence',
+        aggregateId: results[0]?.schedule.class.dormitoryId ?? 'batch',
+        userId: 'system', // updateTeacherAttendanceBulk tidak menerima userId
+        payload: {
+          dormitoryId: results[0]?.schedule.class.dormitoryId,
+          scheduleSlotId: results[0]?.schedule.scheduleSlotId,
+          attendDate: results[0]?.dateKey,
+          items: results.map(res => ({
+            teacherId: res.teacherId,
+            scheduleId: res.scheduleId,
+            status: res.status,
+            note: res.note ?? null,
+          })),
+        },
+      })
+
+      return results
+    })
 
     return {
       success: true,

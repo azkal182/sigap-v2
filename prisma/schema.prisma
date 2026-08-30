@@ -811,3 +811,62 @@ model DaurohVideo {
     @@index([studentId])
     @@index([periodId, studentId])
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SHADOW TESTING — Outbox Pattern
+// Tabel ini menyimpan event bisnis yang akan dibaca oleh Shadow Worker
+// (saat ini masih non-aktif, Worker belum tersedia)
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum ShadowEventStatus {
+    PENDING    // Event baru, belum diproses Worker
+    PROCESSED  // Worker berhasil mengirim ke Rewrite
+    FAILED     // Worker sudah retry tapi tetap gagal
+    SKIPPED    // Event diabaikan (duplikat / out-of-order)
+}
+
+model ShadowEvent {
+    /// UUID unik sebagai idempotency key (juga digunakan sebagai X-Shadow-Event-Id)
+    id            String           @id @default(uuid())
+
+    /// Tipe business event, contoh: "attendance.created", "attendance.updated"
+    eventType     String           @map("event_type")
+
+    /// Tipe aggregate/domain, contoh: "attendance", "permit"
+    aggregateType String           @map("aggregate_type")
+
+    /// ID dari record bisnis yang memicu event, contoh: ID absensi
+    aggregateId   String           @map("aggregate_id")
+
+    /// Legacy User ID yang melakukan aksi (akan dikirim sebagai X-Shadow-User-Id)
+    userId        String           @map("user_id")
+
+    /// Waktu event terjadi di Legacy App
+    occurredAt    DateTime         @default(now()) @map("occurred_at")
+
+    /// Payload bisnis asli (belum ditransformasi — tugas Worker untuk transformasi)
+    payload       Json
+
+    /// Versi event pada aggregate yang sama (untuk deteksi out-of-order di Worker)
+    version       Int              @default(1)
+
+    /// Status pengiriman event ke Shadow Worker / Rewrite
+    status        ShadowEventStatus @default(PENDING)
+
+    /// Jumlah percobaan retry yang sudah dilakukan Worker
+    attempts      Int              @default(0)
+
+    /// Pesan error jika status FAILED
+    lastError     String?          @map("last_error")
+
+    /// Waktu event berhasil diproses Worker
+    processedAt   DateTime?        @map("processed_at")
+
+    createdAt     DateTime         @default(now()) @map("created_at")
+    updatedAt     DateTime         @updatedAt @map("updated_at")
+
+    @@index([status, createdAt])
+    @@index([aggregateType, aggregateId])
+    @@index([eventType, status])
+    @@map("shadow_events")
+}
