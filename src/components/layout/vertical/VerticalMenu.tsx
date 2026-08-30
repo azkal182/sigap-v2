@@ -83,6 +83,12 @@ export const menuItems: MenuConfigSection[] = [
         ],
       },
       {
+        title: 'Deteksi Absensi',
+        href: '/attendance/detection',
+        icon: 'tabler-scan',
+        permissions: ['user:view'],
+      },
+      {
         title: 'Absensi Manual',
         href: '/attendance/manual',
         icon: 'tabler-clipboard-plus',
