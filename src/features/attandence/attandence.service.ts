@@ -5,6 +5,7 @@ import db from '@/lib/prisma'
 import type { CreateAbsencesInput, UpdateAbsencesInput } from './schemas/attendent-schema'
 import type { APIResult } from '@/types/api-types'
 import type { AbsenceStatus } from '@/generated/prisma/client'
+import { dispatchShadowEvent } from '@/lib/shadow-testing'
 
 // Asumsikan tipe ini ada
 
@@ -28,7 +29,7 @@ export async function createAbsences(
 
     const schedule = await db.schedule.findUnique({
       where: { id: scheduleId },
-      select: { teacherId: true },
+      select: { teacherId: true, classId: true, scheduleSlotId: true },
     })
 
     if (!schedule) {
@@ -37,11 +38,13 @@ export async function createAbsences(
 
     const isFilledByOwner = !!filledByTeacherId && schedule.teacherId === filledByTeacherId
 
-    const tx = []
-
-    if (isFilledByOwner) {
-      tx.push(
-        db.teacherAbsence.updateMany({
+    // ── Shadow Testing: Jalankan dalam transaksi interaktif ───────────────────
+    // Menggunakan callback $transaction agar dispatchShadowEvent bisa
+    // dimasukkan dalam transaksi yang sama (Outbox Pattern).
+    // Jika createMany gagal → shadow event ikut rollback (atomicity terjamin).
+    const result = await db.$transaction(async tx => {
+      if (isFilledByOwner) {
+        await tx.teacherAbsence.updateMany({
           where: {
             teacherId: filledByTeacherId,
             scheduleId: scheduleId,
@@ -53,22 +56,38 @@ export async function createAbsences(
           data: {
             status: 'PRESENT',
           },
-        }),
-      )
-    }
+        })
+      }
 
-    // selalu tambahkan createMany (tidak tergantung kondisi)
-    tx.push(
-      db.absence.createMany({
+      const createResult = await tx.absence.createMany({
         data: dataWithContext,
         skipDuplicates: true,
-      }),
-    )
+      })
 
-    const results = await db.$transaction(tx)
-    const createResult = results[tx.length - 1] // hasil dari createMany
+      // ── Shadow Event Dispatch ─────────────────────────────────────────────
+      // Dipanggil di dalam transaksi yang sama.
+      // Kode ini 100% final — tidak akan berubah saat Shadow Worker dibuat.
+      await dispatchShadowEvent(tx, {
+        eventType: 'attendance.created',
+        aggregateType: 'attendance',
+        aggregateId: scheduleId,
+        userId: filledByTeacherId ?? 'system',
+        payload: {
+          classId: schedule.classId,
+          scheduleSlotId: schedule.scheduleSlotId,
+          absentDate: dataWithContext[0]?.absentDate,
+          items: dataWithContext.map(abs => ({
+            studentId: abs.studentId,
+            status: abs.status,
+            note: abs.note ?? null,
+          })),
+        },
+      })
 
-    return { success: true, data: { count: createResult.count } }
+      return createResult
+    })
+
+    return { success: true, data: { count: result.count } }
   } catch (error) {
     console.error('Failed to create absences in batch:', error)
 
@@ -78,24 +97,47 @@ export async function createAbsences(
 
 export async function updateAbsences(data: UpdateAbsencesInput): Promise<APIResult<{ count: number }>> {
   try {
-    // console.log('Updating absences with data:', JSON.stringify(data, null, 2))
-    // Karena Prisma tidak memiliki updateMany, kita menggunakan transaksi
-    const result = await db.$transaction(
-      data.map(abs =>
-        db.absence.update({
-          where: { id: abs.id },
-          data: {
+    // Karena Prisma tidak memiliki updateMany, kita menggunakan transaksi callback
+    // agar dispatchShadowEvent bisa disertakan dalam transaksi yang sama (Outbox Pattern)
+    const result = await db.$transaction(async tx => {
+      const updated = await Promise.all(
+        data.map(abs =>
+          tx.absence.update({
+            where: { id: abs.id },
+            data: {
+              status: abs.status,
+              note: abs.note,
+            },
+            include: {
+              schedule: { select: { classId: true, scheduleSlotId: true } }
+            },
+          }),
+        ),
+      )
+
+      // ── Shadow Event Dispatch ─────────────────────────────────────────────
+      await dispatchShadowEvent(tx, {
+        eventType: 'attendance.updated',
+        aggregateType: 'attendance',
+        aggregateId: updated[0]?.schedule.classId ?? 'batch',
+        userId: 'system', // updateAbsences tidak menerima userId — diisi system
+        payload: {
+          classId: updated[0]?.schedule.classId,
+          scheduleSlotId: updated[0]?.schedule.scheduleSlotId,
+          absentDate: updated[0]?.absentDate,
+          items: updated.map(abs => ({
+            studentId: abs.studentId,
             status: abs.status,
-            note: abs.note,
-          },
-        }),
-      ),
-    )
+            note: abs.note ?? null,
+          })),
+        },
+      })
+
+      return updated
+    })
 
     return { success: true, data: { count: result.length } }
   } catch (error) {
-    // console.error('Failed to update absences in batch:', error)
-
     return { success: false, error: 'Gagal memperbarui absensi massal.' }
   }
 }

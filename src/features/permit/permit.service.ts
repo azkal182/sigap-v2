@@ -10,6 +10,7 @@ import { backendCreatePermitSchema, closePermitSchema, extendPermitSchema } from
 import prisma from '@/lib/prisma'
 import type { APIResult } from '@/types/api-types'
 import type { Permit, Prisma } from '@/generated/prisma/client'
+import { dispatchShadowEvent } from '@/lib/shadow-testing'
 
 type ResponsePermits = Prisma.PermitGetPayload<{
   select: {
@@ -306,16 +307,39 @@ export async function createPermitService(
     return { success: false, error: 'Student sudah memiliki izin yang overlap pada rentang waktu tersebut' }
   }
 
-  const newPermit = await prisma.permit.create({
-    data: {
-      createdByUserId: userId,
-      studentId,
-      startDate: startDateJkt,
-      endDate: endDateJkt, // ✅ bisa null
-      allowedSlots,
-      reason,
-      permitSTatus
-    }
+  // ── Bungkus dalam $transaction agar shadow event ATOMIC dengan data bisnis ──
+  const newPermit = await prisma.$transaction(async tx => {
+    const created = await tx.permit.create({
+      data: {
+        createdByUserId: userId,
+        studentId,
+        startDate: startDateJkt,
+        endDate: endDateJkt,
+        allowedSlots,
+        reason,
+        permitSTatus
+      }
+    })
+
+    // ── Shadow Event Dispatch ─────────────────────────────────────────────
+    await dispatchShadowEvent(tx, {
+      eventType: 'permit.created',
+      aggregateType: 'permit',
+      aggregateId: created.id,
+      userId,
+      payload: {
+        permitId: created.id,
+        studentId,
+        createdByUserId: userId,
+        startDate: startDateJkt.toISOString(),
+        endDate: endDateJkt?.toISOString() ?? null,
+        allowedSlots,
+        reason,
+        permitSTatus,
+      },
+    })
+
+    return created
   })
 
   return { success: true, data: newPermit, message: 'Permit created successfully' }
