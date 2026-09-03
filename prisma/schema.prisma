@@ -271,6 +271,8 @@ model Dormitory {
     dormitoryRoom     DormitoryRoom[]
     scheduleSlots     ScheduleSlot[]
     SubstitutionBatch SubstitutionBatch[]
+    holidays          Holiday[]
+
 }
 
 model DormitoryRoom {
@@ -313,7 +315,9 @@ model Track {
     dormitoryTracks DormitoryTrack[] // pivot relasi ke dormitory
     level           Int?             @default(0)
 
-    sks Sks[]
+    sks      Sks[]
+    holidays Holiday[]
+
 }
 
 model Sks {
@@ -432,6 +436,8 @@ model Class {
     histories    History[]
     schedules    Schedule[]
     teacherLinks TeacherSubjectClass[]
+    holidays     Holiday[]
+
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
@@ -812,6 +818,7 @@ model DaurohVideo {
     @@index([periodId, studentId])
 }
 
+
 // ─────────────────────────────────────────────────────────────────────────────
 // SHADOW TESTING — Outbox Pattern
 // Tabel ini menyimpan event bisnis yang akan dibaca oleh Shadow Worker
@@ -869,4 +876,37 @@ model ShadowEvent {
     @@index([aggregateType, aggregateId])
     @@index([eventType, status])
     @@map("shadow_events")
+}
+
+enum HolidayScope {
+    GLOBAL
+    DORMITORY
+    TRACK
+    CLASS
+}
+
+model Holiday {
+    id          String       @id @default(uuid())
+    name        String
+    isRecurring Boolean      @default(false)
+    dayOfWeek   Int?         
+    startDate   DateTime?    
+    endDate     DateTime?    
+    scope       HolidayScope 
+
+    dormitoryId String?
+    trackId     String?
+    classId     String?
+
+    dormitory   Dormitory?   @relation(fields: [dormitoryId], references: [id])
+    track       Track?       @relation(fields: [trackId], references: [id])
+    class       Class?       @relation(fields: [classId], references: [id])
+
+    createdAt   DateTime     @default(now())
+    updatedAt   DateTime     @updatedAt
+
+    @@index([startDate, endDate])
+    @@index([dayOfWeek])
+    @@index([scope])
+
 }
