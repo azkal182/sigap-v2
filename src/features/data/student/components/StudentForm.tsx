@@ -113,6 +113,7 @@ export default function StudentForm() {
   } = useForm<StudentFormInput>({
     resolver: zodResolver(studentFormSchema),
     defaultValues: {
+      idAnggota: '',
       nis: '',
       name: '',
       placeOfBirth: '',
@@ -291,6 +292,7 @@ export default function StudentForm() {
       const genderValue = mapExternalGenderToFormValue(student.kelamin)
       const parentPhone = normalizePhone(student.kontak?.hp_ortu || student.kontak?.hp)
 
+      applyFieldIfExists('idAnggota', normalizeText(student.id_anggota))
       applyFieldIfExists('nis', normalizeText(student.nis_santri || student.id_anggota))
       applyFieldIfExists('name', normalizeText(student.nama))
       applyFieldIfExists('placeOfBirth', normalizeText(student.tempat_lahir))
@@ -380,7 +382,7 @@ export default function StudentForm() {
             Form Pendaftaran Santri
           </Typography>
           <Typography variant='body2' color='text.secondary'>
-            Anda bisa isi manual atau ambil data awal dari API eksternal.
+            Pilih data santri dari API eksternal. Data identitas tidak diisi manual.
           </Typography>
         </Box>
 
@@ -406,6 +408,23 @@ export default function StudentForm() {
           {/* Data Diri */}
           <Grid item xs={12} sm={6}>
             <Controller
+              name='idAnggota'
+              control={control}
+              render={({ field }) => (
+                <CustomTextField
+                  {...field}
+                  label='ID Anggota'
+                  fullWidth
+                  required
+                  inputProps={{ readOnly: true }}
+                  error={!!errors.idAnggota}
+                  helperText={errors.idAnggota?.message || 'Diambil dari API eksternal'}
+                />
+              )}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Controller
               name='nis'
               control={control}
               render={({ field }) => (
@@ -414,6 +433,7 @@ export default function StudentForm() {
                   label='NIS (Nomor Induk Santri)'
                   fullWidth
                   required
+                  inputProps={{ readOnly: true }}
                   error={!!errors.nis}
                   helperText={errors.nis?.message}
                 />
@@ -430,6 +450,7 @@ export default function StudentForm() {
                   label='Nama Lengkap'
                   fullWidth
                   required
+                  inputProps={{ readOnly: true }}
                   error={!!errors.name}
                   helperText={errors.name?.message}
                 />
@@ -446,6 +467,7 @@ export default function StudentForm() {
                   label='Tempat Lahir'
                   fullWidth
                   required
+                  inputProps={{ readOnly: true }}
                   error={!!errors.placeOfBirth}
                   helperText={errors.placeOfBirth?.message}
                 />
@@ -462,6 +484,7 @@ export default function StudentForm() {
                   showMonthDropdown
                   selected={field.value}
                   onChange={date => field.onChange(date)}
+                  disabled
                   customInput={
                     <CustomTextField
                       label='Tanggal Lahir'
@@ -482,9 +505,9 @@ export default function StudentForm() {
                 name='gender'
                 control={control}
                 render={({ field }) => (
-                  <RadioGroup {...field} row>
-                    <FormControlLabel value='PUTRA' control={<Radio />} label='Putra' />
-                    <FormControlLabel value='PUTRI' control={<Radio />} label='Putri' />
+                    <RadioGroup {...field} row>
+                    <FormControlLabel value='PUTRA' control={<Radio disabled />} label='Putra' />
+                    <FormControlLabel value='PUTRI' control={<Radio disabled />} label='Putri' />
                   </RadioGroup>
                 )}
               />
@@ -503,6 +526,7 @@ export default function StudentForm() {
                   label='Nama Ayah'
                   fullWidth
                   required
+                  inputProps={{ readOnly: true }}
                   error={!!errors.fatherName}
                   helperText={errors.fatherName?.message}
                 />
@@ -519,6 +543,7 @@ export default function StudentForm() {
                   label='Nama Ibu'
                   fullWidth
                   required
+                  inputProps={{ readOnly: true }}
                   error={!!errors.motherName}
                   helperText={errors.motherName?.message}
                 />
@@ -536,6 +561,7 @@ export default function StudentForm() {
                   type='tel'
                   fullWidth
                   required
+                  inputProps={{ readOnly: true }}
                   error={!!errors.parentPhone}
                   helperText={errors.parentPhone?.message}
                 />

@@ -2,12 +2,14 @@ import { DateTime } from 'luxon'
 
 import db from '@/lib/prisma'
 import type { FilterStudentParams, StudentFormInput } from './schemas/student-schema'
+import { getExternalStudentByIdAnggota, mapExternalGenderToFormValue } from './student-external.service'
 import { HistoryStatus, Prisma, RegistrationStatus, StudentStatus } from '@/generated/prisma/client'
 import { handleServerError } from '@/lib/handle-error'
 import type { APIPaginatedResult, APIResult } from '@/types/api-types'
 
 export type StudentItem = {
   id: string
+  idAnggota: string | null
   name: string
   nis: string
   fatherName: string | null
@@ -175,6 +177,7 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
                 OR: [
                   { name: { contains: search, mode: Prisma.QueryMode.insensitive }, status: StudentStatus.ACTIVE },
                   { nis: { contains: search, mode: Prisma.QueryMode.insensitive }, status: StudentStatus.ACTIVE },
+                  { idAnggota: { contains: search, mode: Prisma.QueryMode.insensitive }, status: StudentStatus.ACTIVE },
                 ],
               },
             ]
@@ -257,6 +260,7 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
       orderBy: [{ villageId: { sort: 'asc', nulls: 'first' } as any }, orderBy],
       select: {
         id: true,
+        idAnggota: true,
         name: true,
         nis: true,
         gender: true,
@@ -394,6 +398,7 @@ export async function getStudentsWithFilter(options: FilterStudentParams): Promi
 
         const baseData = {
           id: s.id,
+          idAnggota: s.idAnggota,
           name: s.name,
           gender: s.gender,
           nis: s.nis,
@@ -598,6 +603,7 @@ export async function getStudentDetail(id: string): Promise<StudentItem | null> 
     },
     select: {
       id: true,
+      idAnggota: true,
       name: true,
       nis: true,
       status: true,
@@ -736,6 +742,7 @@ export async function getStudentDetail(id: string): Promise<StudentItem | null> 
   if (!student.histories || student.histories.length === 0) {
     return {
       id: student.id,
+      idAnggota: student.idAnggota,
       name: student.name,
       nis: student.nis,
       status: student.status,
@@ -993,6 +1000,7 @@ export async function getStudentDetail(id: string): Promise<StudentItem | null> 
 
   const data = {
     id: student.id,
+    idAnggota: student.idAnggota,
     name: student.name,
     nis: student.nis,
     status: student.status,
@@ -1042,6 +1050,7 @@ export async function addStudent(input: StudentFormInput): Promise<
 > {
   try {
     const {
+      idAnggota,
       nis,
       name,
       placeOfBirth,
@@ -1057,10 +1066,36 @@ export async function addStudent(input: StudentFormInput): Promise<
       provinceId,
     } = input
 
-    const studentExist = await db.student.findUnique({ where: { nis } })
+    const externalStudent = await getExternalStudentByIdAnggota(idAnggota)
+
+    if (!externalStudent) {
+      return { success: false, error: 'ID Anggota tidak ditemukan pada API eksternal.' }
+    }
+
+    const externalNis = externalStudent.nis_santri?.trim() || externalStudent.id_anggota.trim()
+    const externalGender = mapExternalGenderToFormValue(externalStudent.kelamin)
+    const externalBirthDate = externalStudent.tgl_lahir ? new Date(`${externalStudent.tgl_lahir}T00:00:00`) : null
+    const canonicalInput = {
+      nis: externalNis,
+      name: externalStudent.nama.trim(),
+      placeOfBirth: externalStudent.tempat_lahir?.trim() || placeOfBirth,
+      dateOfBirth: externalBirthDate && !Number.isNaN(externalBirthDate.getTime()) ? externalBirthDate : dateOfBirth,
+      fatherName: externalStudent.keluarga?.nama_ayah?.trim() || fatherName,
+      motherName: externalStudent.keluarga?.nama_ibu?.trim() || motherName,
+      parrentPhone: externalStudent.kontak?.hp_ortu?.trim() || externalStudent.kontak?.hp?.trim() || parentPhone,
+      gender: externalGender || gender,
+    }
+
+    const studentExist = await db.student.findUnique({ where: { nis: canonicalInput.nis } })
 
     if (studentExist) {
       return { success: false, error: 'nis sudah digunakan oleh santri lain!' }
+    }
+
+    const memberExist = await db.student.findUnique({ where: { idAnggota: externalStudent.id_anggota.trim() } })
+
+    if (memberExist) {
+      return { success: false, error: 'id anggota sudah digunakan oleh santri lain!' }
     }
 
     const result = await db.$transaction(async tx => {
@@ -1079,14 +1114,15 @@ export async function addStudent(input: StudentFormInput): Promise<
       // 1) buat student
       const student = await tx.student.create({
         data: {
-          nis,
-          name,
-          placeOfBirth,
-          dateOfBirth,
-          fatherName,
-          motherName,
-          parrentPhone: parentPhone, // field di schema kamu: "parrentPhone"
-          gender,
+          idAnggota: externalStudent.id_anggota.trim(),
+          nis: canonicalInput.nis,
+          name: canonicalInput.name,
+          placeOfBirth: canonicalInput.placeOfBirth,
+          dateOfBirth: canonicalInput.dateOfBirth,
+          fatherName: canonicalInput.fatherName,
+          motherName: canonicalInput.motherName,
+          parrentPhone: canonicalInput.parrentPhone,
+          gender: canonicalInput.gender,
           villageId,
           districtId,
           regencyId,

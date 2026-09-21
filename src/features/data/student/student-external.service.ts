@@ -92,6 +92,14 @@ export async function searchExternalStudents(search: string): Promise<ExternalSt
   return payload.data?.items ?? []
 }
 
+export async function getExternalStudentByIdAnggota(idAnggota: string): Promise<ExternalStudentItem | null> {
+  const normalizedId = idAnggota.trim()
+  if (!normalizedId) return null
+
+  const students = await searchExternalStudents(normalizedId)
+  return students.find(student => student.id_anggota.trim() === normalizedId) ?? null
+}
+
 export function getExternalStudentVillageName(student: ExternalStudentItem) {
   const desaBaru = student.alamat_new?.desa
 

@@ -348,6 +348,14 @@ export default function StudentPageDetailView({ id }: { id: string }) {
           <form onSubmit={handleSaveClick}>
             <Grid container spacing={4}>
               <Grid item xs={12}>
+                <Box>
+                  <Typography variant='caption' color='text.secondary'>
+                    ID Anggota
+                  </Typography>
+                  <Typography>{studentDetail?.idAnggota ?? '-'}</Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={12}>
                 <FormItem label='NIS' name='nis' value={formData.nis} onChange={handleChange} disabled />
               </Grid>
               <Grid item xs={12}>

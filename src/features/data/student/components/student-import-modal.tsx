@@ -150,6 +150,7 @@ export default function StudentImportModal({ open, onClose, onImport, isImportin
                 }}
               >
                 <PreviewRow label='NIS' value={selectedStudent.nis_santri} />
+                <PreviewRow label='ID Anggota' value={selectedStudent.id_anggota} />
                 <PreviewRow label='Nama' value={selectedStudent.nama} />
                 <PreviewRow label='Jenis Kelamin' value={selectedStudent.kelamin} />
                 <PreviewRow

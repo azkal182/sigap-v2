@@ -11,8 +11,20 @@ function baselineRange(): DateRange {
   return { start: start.toJSDate(), end: end.toJSDate() }
 }
 
+type StudentIdentifier = { nis?: string; idAnggota?: string }
+
+async function getStudentByIdentifier(identifier: StudentIdentifier) {
+  const where = identifier.idAnggota ? { idAnggota: identifier.idAnggota } : { nis: identifier.nis! }
+
+  return prisma.student.findUnique({ where, select: { id: true, idAnggota: true, nis: true, name: true } })
+}
+
 async function getStudentByNis(nis: string) {
-  return prisma.student.findUnique({ where: { nis }, select: { id: true, nis: true, name: true } })
+  return getStudentByIdentifier({ nis })
+}
+
+async function getStudentByIdAnggota(idAnggota: string) {
+  return getStudentByIdentifier({ idAnggota })
 }
 
 export async function getPermitByNisV2(nis: string) {
@@ -324,4 +336,140 @@ export async function getPermitByNisKeamananV2(nis: string) {
     history,
     baseline: { startDate: start, endDate: end }
   }
+}
+
+export async function getPermitByIdAnggotaKeamananV2(idAnggota: string) {
+  return getPermitByIdentifierKeamananV2({ idAnggota })
+}
+
+async function getPermitByIdentifierKeamananV2(identifier: StudentIdentifier) {
+  const student = await getStudentByIdentifier(identifier)
+  if (!student) return null
+
+  const now = DateTime.now().setZone('Asia/Jakarta')
+  const nowJs = now.toJSDate()
+  const activePermit = await prisma.permit.findFirst({
+    where: {
+      studentId: student.id,
+      startDate: { lte: nowJs },
+      OR: [{ endDate: null }, { endDate: { gte: nowJs } }],
+      createdBy: { role: { name: 'KEAMANAN' } }
+    },
+    orderBy: { startDate: 'desc' },
+    select: {
+      id: true,
+      startDate: true,
+      endDate: true,
+      reason: true,
+      allowedSlots: true,
+      permitSTatus: true,
+      createdBy: { select: { name: true, role: { select: { name: true } } } }
+    }
+  })
+
+  const { start, end } = baselineRange()
+  const history = await prisma.permit.findMany({
+    where: {
+      studentId: student.id,
+      startDate: { gte: start, lte: end },
+      createdBy: { role: { name: 'KEAMANAN' } }
+    },
+    orderBy: { startDate: 'desc' },
+    select: { id: true, startDate: true, endDate: true, reason: true, allowedSlots: true, permitSTatus: true }
+  })
+
+  return {
+    student,
+    isOnPermit: activePermit !== null,
+    activePermit: activePermit
+      ? {
+          id: activePermit.id,
+          startDate: activePermit.startDate,
+          endDate: activePermit.endDate,
+          reason: activePermit.reason,
+          allowedSlots: activePermit.allowedSlots,
+          type: activePermit.permitSTatus,
+          createdBy: activePermit.createdBy ? `${activePermit.createdBy.name} (${activePermit.createdBy.role?.name ?? '-'})` : null
+        }
+      : null,
+    summary: {
+      totalLast30Days: history.length,
+      sick: history.filter(p => p.permitSTatus === 'SICK').length,
+      permit: history.filter(p => p.permitSTatus === 'PERMIT').length
+    },
+    history,
+    baseline: { startDate: start, endDate: end }
+  }
+}
+
+export async function getAttendanceByIdAnggotaV2(idAnggota: string) {
+  const student = await getStudentByIdAnggota(idAnggota)
+  if (!student) return null
+  const { start, end } = baselineRange()
+  const records = await prisma.absence.findMany({
+    where: { studentId: student.id, date: { gte: start, lte: end } },
+    orderBy: { date: 'desc' },
+    select: {
+      id: true, date: true, absentDate: true, status: true, note: true,
+      schedule: { select: { subject: { select: { name: true } }, scheduleSlot: { select: { slot: true } } } }
+    }
+  })
+  return {
+    student,
+    summary: {
+      total: records.length,
+      present: records.filter(r => r.status === AbsenceStatus.PRESENT).length,
+      sick: records.filter(r => r.status === AbsenceStatus.SICK).length,
+      permit: records.filter(r => r.status === AbsenceStatus.PERMIT).length,
+      absent: records.filter(r => r.status === AbsenceStatus.ABSENT).length
+    },
+    records,
+    baseline: { startDate: start, endDate: end }
+  }
+}
+
+export async function getAcademicByIdAnggotaV2(idAnggota: string) {
+  const student = await getStudentByIdAnggota(idAnggota)
+  if (!student) return null
+  return getAcademicByStudentV2(student)
+}
+
+async function getAcademicByStudentV2(student: { id: string; idAnggota: string | null; nis: string; name: string }) {
+  const now = new Date()
+  const histories = await prisma.history.findMany({
+    where: { studentId: student.id },
+    select: { status: true, startDate: true, endDate: true, class: { select: { track: { select: { id: true, name: true } } } } },
+    orderBy: { startDate: 'asc' }
+  })
+  const trackMap = new Map<string, { id: string; name: string }>()
+  histories.forEach(h => trackMap.set(h.class.track.id, h.class.track))
+  const tracks = Array.from(trackMap.values())
+  const registration = await prisma.testRegistration.findMany({
+    where: { studentId: student.id, status: RegistrationStatus.COMPLETED },
+    select: { sksId: true, sks: { select: { trackId: true, deletedAt: true, validFrom: true, validTo: true } } }
+  })
+  const completedByTrack = new Map<string, Set<string>>()
+  for (const r of registration) {
+    if (!r.sks?.trackId) continue
+    const isActive = !r.sks.deletedAt && r.sks.validFrom <= now && (!r.sks.validTo || r.sks.validTo >= now)
+    if (!isActive) continue
+    if (!completedByTrack.has(r.sks.trackId)) completedByTrack.set(r.sks.trackId, new Set())
+    completedByTrack.get(r.sks.trackId)!.add(r.sksId)
+  }
+  const trackStats = await Promise.all(tracks.map(async t => {
+    const activeSks = await prisma.sks.findMany({
+      where: { trackId: t.id, deletedAt: null, validFrom: { lte: now }, OR: [{ validTo: null }, { validTo: { gte: now } }] },
+      select: { id: true, name: true }
+    })
+    const sks = await Promise.all(activeSks.map(async sks => {
+      const latestTest = await prisma.test.findFirst({
+        where: { registration: { studentId: student.id, sksId: sks.id } }, orderBy: { createdAt: 'desc' }, select: { score: true }
+      })
+      return { sksId: sks.id, sksName: sks.name, completed: registration.some(r => r.sksId === sks.id), score: latestTest?.score ?? null }
+    }))
+    const completed = completedByTrack.get(t.id)?.size ?? 0
+    return { trackId: t.id, trackName: t.name, totalSksActive: activeSks.length, completedSksActive: completed, remainingSksActive: Math.max(0, activeSks.length - completed), sks }
+  }))
+  const current = histories.findLast(h => h.status === HistoryStatus.STUDYING)
+  return { student, tracks: trackStats, currentTrack: current ? trackStats.find(t => t.trackId === current.class.track.id) ?? null : null }
 }

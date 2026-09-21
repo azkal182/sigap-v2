@@ -109,6 +109,12 @@ enum AbsenceStatus {
     ABSENT
 }
 
+enum SalaryGrade {
+    GOLONGAN_A
+    GOLONGAN_B
+    GOLONGAN_C
+}
+
 enum Permittatus {
     SICK
     PERMIT
@@ -129,6 +135,7 @@ enum GenderType {
 model Student {
     id           String   @id @default(uuid())
     nis          String   @unique
+    idAnggota    String?  @unique @map("id_anggota")
     name         String
     placeOfBirth String
     dateOfBirth  DateTime
@@ -241,6 +248,14 @@ model Teacher {
     teacherDormitories TeacherDormitory[]
 
     phoneWhatsapp String? @unique
+
+    salaryGrade         SalaryGrade?
+    substituteTeacherId String?      @unique
+    substituteTeacher   Teacher?     @relation("PermanentSubstitute", fields: [substituteTeacherId], references: [id])
+    primaryTeacher      Teacher?     @relation("PermanentSubstitute")
+
+    substituteAttendances SubstituteTeacherAttendance[] @relation("SubstituteTeacherAttendanceSubstitute")
+    primaryAttendances    SubstituteTeacherAttendance[] @relation("SubstituteTeacherAttendancePrimary")
 
     userId               String                 @unique
     user                 User                   @relation(fields: [userId], references: [id])
@@ -600,12 +615,35 @@ model Schedule {
     teacherAbsence TeacherAbsence[]
 
     substitutions ScheduleSubstitution[]
+    substituteTeacherAttendances SubstituteTeacherAttendance[]
 
     @@index([classId, dayOfWeek])
     @@index([teacherId, dayOfWeek])
     @@index([teacherId, dayOfWeek, scheduleSlotId, validFrom, validTo])
     @@index([classId, dayOfWeek, scheduleSlotId, validFrom, validTo])
     @@index([dayOfWeek, scheduleSlotId, active, validFrom, validTo])
+}
+
+model SubstituteTeacherAttendance {
+    id           String        @id @default(uuid())
+    substituteId String
+    primaryId    String
+    scheduleId   String
+    date         DateTime
+    dateKey      String        @db.VarChar(10)
+    status       AbsenceStatus @default(PRESENT)
+    note         String?
+    createdAt    DateTime      @default(now())
+    updatedAt    DateTime      @updatedAt
+
+    substitute Teacher  @relation("SubstituteTeacherAttendanceSubstitute", fields: [substituteId], references: [id])
+    primary    Teacher  @relation("SubstituteTeacherAttendancePrimary", fields: [primaryId], references: [id])
+    schedule   Schedule @relation(fields: [scheduleId], references: [id])
+
+    @@unique([substituteId, scheduleId, dateKey])
+    @@index([dateKey])
+    @@index([primaryId, dateKey])
+    @@index([substituteId, dateKey])
 }
 
 // ABSENSI SANTRI

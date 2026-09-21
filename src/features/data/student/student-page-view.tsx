@@ -100,6 +100,7 @@ const StudentPageView = () => {
         cell: ({ row }) => (searchParams.params.page - 1) * searchParams.params.limit + (row.index + 1),
         enableSorting: false
       },
+      { accessorKey: 'idAnggota', header: 'ID Anggota' },
       { accessorKey: 'nis', header: 'NIS' },
       { accessorKey: 'name', header: 'Nama' },
       { accessorKey: 'ttl', header: 'TTL', enableSorting: false },

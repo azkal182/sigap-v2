@@ -7,13 +7,24 @@ import prisma from '@/lib/prisma'
 import { DateTime } from 'luxon'
 
 const getStudentDetail = async (nis: string) => {
+  // GET dapat menerima NIS atau ID Anggota. Histori lama tetap dicari dengan NIS.
+  const identifier = await prisma.student.findFirst({
+    where: { OR: [{ nis }, { idAnggota: nis }] },
+    select: { nis: true },
+  })
+
+  if (!identifier) return null
+
+  const resolvedNis = identifier.nis
+
   // Ambil semua data yang diperlukan dalam satu query
   const student = await prisma.student.findFirst({
     where: {
-      nis,
+      nis: resolvedNis,
     },
     select: {
       id: true,
+      idAnggota: true,
       name: true,
       nis: true,
       status: true,
@@ -118,7 +129,7 @@ const getStudentDetail = async (nis: string) => {
                       testRegistration: {
                         // Ambil satu pendaftaran dengan attemptNumber tertinggi
                         where: {
-                          studentId: nis,
+                          studentId: resolvedNis,
 
                           //   status: RegistrationStatus.COMPLETED
                         },
@@ -152,6 +163,7 @@ const getStudentDetail = async (nis: string) => {
   if (!student.histories || student.histories.length === 0) {
     return {
       id: student.id,
+      idAnggota: student.idAnggota,
       name: student.name,
       nis: student.nis,
       gender: student.gender,
@@ -244,7 +256,7 @@ const getStudentDetail = async (nis: string) => {
                 deletedAt: true,
                 testRegistration: {
                   where: {
-                    studentId: nis,
+                    studentId: resolvedNis,
                   },
                   orderBy: {
                     createdAt: 'desc',
@@ -398,6 +410,7 @@ const getStudentDetail = async (nis: string) => {
 
   const data = {
     id: student.id,
+    idAnggota: student.idAnggota,
     name: student.name,
     nis: student.nis,
     status: student.status,

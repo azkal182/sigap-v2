@@ -28,6 +28,7 @@ export const filterStudentSchema = basePaginationSchema.extend({
 
 export const studentFormSchema = z
   .object({
+    idAnggota: z.string().min(1, 'Student harus dipilih dari API eksternal'),
     nis: z.string().min(1, 'NIS wajib diisi'),
     name: z.string().min(3, 'Nama lengkap wajib diisi'),
     placeOfBirth: z.string().min(1, 'Tempat lahir wajib diisi'),
