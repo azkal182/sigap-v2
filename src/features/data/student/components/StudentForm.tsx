@@ -605,6 +605,7 @@ export default function StudentForm() {
                   select
                   fullWidth
                   label='Asrama'
+                  required
                   error={!!errors.dormitoryId}
                   helperText={errors.dormitoryId?.message}
                 >

@@ -860,11 +860,17 @@ export async function getStudentDetail(id: string): Promise<StudentItem | null> 
       const track = dt.track
 
       // Get names of all active SKS for the current curriculum
-      const activeSksNames = new Set(track.sks.filter(sks => {
-        return sks.validFrom <= referenceDate &&
-          (sks.validTo === null || sks.validTo >= referenceDate) &&
-          sks.deletedAt === null
-      }).map(sks => sks.name))
+      const activeSksNames = new Set(
+        track.sks
+          .filter(sks => {
+            return (
+              sks.validFrom <= referenceDate &&
+              (sks.validTo === null || sks.validTo >= referenceDate) &&
+              sks.deletedAt === null
+            )
+          })
+          .map(sks => sks.name),
+      )
 
       // Filter valid SKS based on referenceDate
       const validSks = track.sks.filter(sks => {
@@ -1065,6 +1071,10 @@ export async function addStudent(input: StudentFormInput): Promise<
       regencyId,
       provinceId,
     } = input
+
+    if (!dormitoryId) {
+      return { success: false, error: 'Asrama wajib dipilih' }
+    }
 
     const externalStudent = await getExternalStudentByIdAnggota(idAnggota)
 
@@ -1401,9 +1411,7 @@ export type AssignStudentToDormitoryInput = {
   classId: string
 }
 
-export async function assignStudentToDormitory(
-  input: AssignStudentToDormitoryInput
-): Promise<APIResult<void>> {
+export async function assignStudentToDormitory(input: AssignStudentToDormitoryInput): Promise<APIResult<void>> {
   const { studentId, assignDate, dormitoryId, trackId, classId } = input
 
   try {
@@ -1423,11 +1431,18 @@ export async function assignStudentToDormitory(
     }
 
     if (student.status !== 'ACTIVE') {
-      return { success: false, error: 'Hanya student dengan status ACTIVE yang bisa dimasukkan ke asrama melalui fitur ini. Gunakan Reaktivasi untuk student non-aktif.' }
+      return {
+        success: false,
+        error:
+          'Hanya student dengan status ACTIVE yang bisa dimasukkan ke asrama melalui fitur ini. Gunakan Reaktivasi untuk student non-aktif.',
+      }
     }
 
     if (student.histories.length > 0) {
-      return { success: false, error: 'Student sudah memiliki riwayat belajar aktif. Gunakan fitur pindah kelas jika perlu.' }
+      return {
+        success: false,
+        error: 'Student sudah memiliki riwayat belajar aktif. Gunakan fitur pindah kelas jika perlu.',
+      }
     }
 
     // 2. Validate dormitory

@@ -12,7 +12,7 @@ export const filterStudentSchema = basePaginationSchema.extend({
   dormitoryIds: z
     .union([
       z.string().array(), // Bisa array string
-      z.string() // Atau string tunggal
+      z.string(), // Atau string tunggal
     ])
     .optional()
     .default([])
@@ -23,7 +23,7 @@ export const filterStudentSchema = basePaginationSchema.extend({
       }
 
       return val
-    })
+    }),
 })
 
 export const studentFormSchema = z
@@ -40,27 +40,27 @@ export const studentFormSchema = z
       .min(10, 'Nomor HP minimal 10 digit')
       .regex(/^(\+62|0)8[1-9][0-9]{7,9}$/, 'Format nomor HP tidak valid'),
     gender: z.enum(['PUTRA', 'PUTRI'], { errorMap: () => ({ message: 'Jenis kelamin wajib dipilih' }) }),
-    dormitoryId: z.string().optional(),
+    dormitoryId: z.string().min(1, 'Asrama wajib dipilih'),
     provinceId: z.coerce.number().optional(),
     regencyId: z.coerce.number().optional(),
     districtId: z.coerce.number().optional(),
-    villageId: z.coerce.number().optional()
+    villageId: z.coerce.number().optional(),
   })
   .refine(data => data.provinceId !== undefined && data.provinceId > 0, {
     message: 'Provinsi wajib dipilih',
-    path: ['provinceId']
+    path: ['provinceId'],
   })
   .refine(data => data.regencyId !== undefined && data.regencyId > 0, {
     message: 'Kabupaten/Kota wajib dipilih',
-    path: ['regencyId']
+    path: ['regencyId'],
   })
   .refine(data => data.districtId !== undefined && data.districtId > 0, {
     message: 'Kecamatan wajib dipilih',
-    path: ['districtId']
+    path: ['districtId'],
   })
   .refine(data => data.villageId !== undefined && data.villageId > 0, {
     message: 'Desa/Kelurahan wajib dipilih',
-    path: ['villageId']
+    path: ['villageId'],
   })
 
 export type StudentFormInput = z.infer<typeof studentFormSchema>
