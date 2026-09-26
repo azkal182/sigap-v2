@@ -159,6 +159,7 @@ export default function StudentForm() {
   const [villageOpen, setVillageOpen] = useState(false)
   const [isImportModalOpen, setIsImportModalOpen] = useState(false)
   const [isImportingExternalStudent, setIsImportingExternalStudent] = useState(false)
+  const [importedFields, setImportedFields] = useState<Set<keyof StudentFormInput>>(new Set())
   const isApplyingImportedAddress = useRef(false)
 
   // Fetch data menggunakan React Query
@@ -247,6 +248,13 @@ export default function StudentForm() {
     clearErrors(field)
   }
 
+  const applyImportedField = <K extends keyof StudentFormInput>(field: K, value: StudentFormInput[K] | undefined) => {
+    if (value === undefined || value === null || value === '') return
+
+    setImportedFields(current => new Set(current).add(field))
+    applyFieldIfExists(field, value)
+  }
+
   const resolveGeoSelection = async (student: ExternalStudentItem) => {
     const addressNames = getExternalStudentAddressNames(student)
 
@@ -294,6 +302,7 @@ export default function StudentForm() {
 
   const handleImportExternalStudent = async (student: ExternalStudentItem) => {
     setIsImportingExternalStudent(true)
+    setImportedFields(new Set())
 
     try {
       const addressNames = getExternalStudentAddressNames(student)
@@ -301,15 +310,15 @@ export default function StudentForm() {
       const genderValue = mapExternalGenderToFormValue(student.kelamin)
       const parentPhone = normalizePhone(student.kontak?.hp_ortu || student.kontak?.hp)
 
-      applyFieldIfExists('idAnggota', normalizeText(student.id_anggota))
-      applyFieldIfExists('nis', normalizeText(student.nis_santri || student.id_anggota))
-      applyFieldIfExists('name', normalizeText(student.nama))
-      applyFieldIfExists('placeOfBirth', normalizeText(student.tempat_lahir))
-      applyFieldIfExists('dateOfBirth', parseBirthDate(student.tgl_lahir) as StudentFormInput['dateOfBirth'])
-      applyFieldIfExists('fatherName', normalizeText(student.keluarga?.nama_ayah))
-      applyFieldIfExists('motherName', normalizeText(student.keluarga?.nama_ibu))
-      applyFieldIfExists('parentPhone', parentPhone)
-      applyFieldIfExists('gender', genderValue)
+      applyImportedField('idAnggota', normalizeText(student.id_anggota))
+      applyImportedField('nis', normalizeText(student.nis_santri))
+      applyImportedField('name', normalizeText(student.nama))
+      applyImportedField('placeOfBirth', normalizeText(student.tempat_lahir))
+      applyImportedField('dateOfBirth', parseBirthDate(student.tgl_lahir) as StudentFormInput['dateOfBirth'])
+      applyImportedField('fatherName', normalizeText(student.keluarga?.nama_ayah))
+      applyImportedField('motherName', normalizeText(student.keluarga?.nama_ibu))
+      applyImportedField('parentPhone', parentPhone)
+      applyImportedField('gender', genderValue)
 
       isApplyingImportedAddress.current = true
 
@@ -363,6 +372,7 @@ export default function StudentForm() {
       onSuccess: data => {
         toast.success(data.message ?? 'santri berhasil dibuat!')
         reset()
+        setImportedFields(new Set())
         setProvinceSearch('')
         setRegencySearch('')
         setDistrictSearch('')
@@ -425,7 +435,7 @@ export default function StudentForm() {
                   label='ID Anggota'
                   fullWidth
                   required
-                  inputProps={{ readOnly: true }}
+                  inputProps={{ readOnly: importedFields.has('idAnggota') }}
                   error={!!errors.idAnggota}
                   helperText={errors.idAnggota?.message || 'Diambil dari API eksternal'}
                 />
@@ -442,7 +452,7 @@ export default function StudentForm() {
                   label='NIS (Nomor Induk Santri)'
                   fullWidth
                   required
-                  inputProps={{ readOnly: true }}
+                  inputProps={{ readOnly: importedFields.has('nis') }}
                   error={!!errors.nis}
                   helperText={errors.nis?.message}
                 />
@@ -459,7 +469,7 @@ export default function StudentForm() {
                   label='Nama Lengkap'
                   fullWidth
                   required
-                  inputProps={{ readOnly: true }}
+                  inputProps={{ readOnly: importedFields.has('name') }}
                   error={!!errors.name}
                   helperText={errors.name?.message}
                 />
@@ -476,7 +486,7 @@ export default function StudentForm() {
                   label='Tempat Lahir'
                   fullWidth
                   required
-                  inputProps={{ readOnly: true }}
+                  inputProps={{ readOnly: importedFields.has('placeOfBirth') }}
                   error={!!errors.placeOfBirth}
                   helperText={errors.placeOfBirth?.message}
                 />
@@ -493,7 +503,7 @@ export default function StudentForm() {
                   showMonthDropdown
                   selected={field.value}
                   onChange={date => field.onChange(date)}
-                  disabled
+                  disabled={importedFields.has('dateOfBirth')}
                   customInput={
                     <CustomTextField
                       label='Tanggal Lahir'
@@ -515,8 +525,16 @@ export default function StudentForm() {
                 control={control}
                 render={({ field }) => (
                   <RadioGroup {...field} row>
-                    <FormControlLabel value='PUTRA' control={<Radio disabled />} label='Putra' />
-                    <FormControlLabel value='PUTRI' control={<Radio disabled />} label='Putri' />
+                    <FormControlLabel
+                      value='PUTRA'
+                      control={<Radio disabled={importedFields.has('gender')} />}
+                      label='Putra'
+                    />
+                    <FormControlLabel
+                      value='PUTRI'
+                      control={<Radio disabled={importedFields.has('gender')} />}
+                      label='Putri'
+                    />
                   </RadioGroup>
                 )}
               />
@@ -535,7 +553,7 @@ export default function StudentForm() {
                   label='Nama Ayah'
                   fullWidth
                   required
-                  inputProps={{ readOnly: true }}
+                  inputProps={{ readOnly: importedFields.has('fatherName') }}
                   error={!!errors.fatherName}
                   helperText={errors.fatherName?.message}
                 />
@@ -552,7 +570,7 @@ export default function StudentForm() {
                   label='Nama Ibu'
                   fullWidth
                   required
-                  inputProps={{ readOnly: true }}
+                  inputProps={{ readOnly: importedFields.has('motherName') }}
                   error={!!errors.motherName}
                   helperText={errors.motherName?.message}
                 />
@@ -570,7 +588,7 @@ export default function StudentForm() {
                   type='tel'
                   fullWidth
                   required
-                  inputProps={{ readOnly: true }}
+                  inputProps={{ readOnly: importedFields.has('parentPhone') }}
                   error={!!errors.parentPhone}
                   helperText={errors.parentPhone?.message}
                 />
