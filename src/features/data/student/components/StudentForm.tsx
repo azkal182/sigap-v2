@@ -52,9 +52,18 @@ function normalizeText(value?: string | null) {
 }
 
 function parseBirthDate(value?: string | null) {
-  if (!value) return null
+  const normalized = value?.trim()
+  if (!normalized) return null
 
-  const parsed = new Date(`${value}T00:00:00`)
+  // Ambil bagian tanggal agar ISO UTC tidak bergeser ke hari sebelumnya/sesudahnya.
+  const dateOnly = normalized.match(/^([0-9]{4}-[0-9]{2}-[0-9]{2})/)?.[1]
+  const dayMonthYear = normalized.match(/^([0-9]{2})-([0-9]{2})-([0-9]{4})/)
+
+  const parsed = dayMonthYear
+    ? new Date([dayMonthYear[3], dayMonthYear[2], dayMonthYear[1]].join('-') + 'T00:00:00')
+    : dateOnly
+      ? new Date(dateOnly + 'T00:00:00')
+      : new Date(normalized)
 
   return Number.isNaN(parsed.getTime()) ? null : parsed
 }
@@ -505,7 +514,7 @@ export default function StudentForm() {
                 name='gender'
                 control={control}
                 render={({ field }) => (
-                    <RadioGroup {...field} row>
+                  <RadioGroup {...field} row>
                     <FormControlLabel value='PUTRA' control={<Radio disabled />} label='Putra' />
                     <FormControlLabel value='PUTRI' control={<Radio disabled />} label='Putri' />
                   </RadioGroup>

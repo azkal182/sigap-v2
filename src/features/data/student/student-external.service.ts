@@ -52,8 +52,9 @@ export interface ExternalStudentItem {
 }
 
 interface ExternalStudentApiResponse {
-  success: boolean
+  success?: boolean
   message?: string
+  items?: ExternalStudentItem[]
   data?: {
     items?: ExternalStudentItem[]
   }
@@ -85,11 +86,12 @@ export async function searchExternalStudents(search: string): Promise<ExternalSt
 
   const payload = (await response.json()) as ExternalStudentApiResponse
 
-  if (!payload.success) {
+  if (payload.success === false) {
     throw new Error(payload.message ?? 'API eksternal mengembalikan respons tidak valid')
   }
 
-  return payload.data?.items ?? []
+  // API eksternal dapat mengembalikan items langsung atau di dalam data.items.
+  return payload.items ?? payload.data?.items ?? []
 }
 
 export async function getExternalStudentByIdAnggota(idAnggota: string): Promise<ExternalStudentItem | null> {
@@ -104,11 +106,11 @@ export function getExternalStudentVillageName(student: ExternalStudentItem) {
   const desaBaru = student.alamat_new?.desa
 
   if (desaBaru && typeof desaBaru !== 'string') {
-    return desaBaru.nama ?? undefined
+    if (desaBaru.nama) return desaBaru.nama
   }
 
   if (typeof desaBaru === 'string') {
-    return desaBaru
+    if (desaBaru.trim()) return desaBaru
   }
 
   const desaLama = student.alamat?.desa
